@@ -140,3 +140,5 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .answer-text-input:focus { border-color: rgba(83,224,186,.55); outline: 0; }
 .profile-button { cursor: pointer; }
 .profile-button:hover .profile-menu { color: var(--mint); }
+.answer-hint { margin: 9px 0 0; padding: 9px 10px; border: 1px solid rgba(240,190,104,.2); border-radius: 6px; color: #e6c98f; background: rgba(240,190,104,.06); font-size: 10px; line-height: 1.55; }
+.answer-hint strong { color: #f2dba9; }

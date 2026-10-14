@@ -22,6 +22,7 @@ Configure `.env.local` a partir de `.env.example` com o Project URL e a publisha
 - Lições e cards carregados do banco Supabase.
 - Exercícios com múltipla escolha, resposta digitada e áudio; o banco corrige respostas sem revelar o gabarito ao navegador.
 - Tentativas e progresso sincronizados por usuário; a conclusão do nível libera o próximo.
+- Correção de respostas tolerante a pontuação e espaços; dicas aparecem após cinco respostas incorretas na mesma questão.
 - Perfis e progresso persistidos no Supabase.
 
 ## Preparar o Supabase
@@ -30,7 +31,7 @@ A estrutura do banco está em `supabase/migrations/`, organizada em migrations n
 
 Para preparar o projeto Supabase:
 
-1. No painel, abra **SQL Editor** e execute as migrations em ordem. Se as duas primeiras já foram executadas, execute apenas `20261014192000_expand_beginner_elementary_questions.sql` para carregar o lote ampliado.
+1. No painel, abra **SQL Editor** e execute as migrations em ordem. Se as três primeiras já foram executadas, execute apenas `20261014195000_hints_and_flexible_answer_matching.sql`.
 2. Em **Authentication → URL Configuration**, permita o endereço local `http://localhost:3000` e os endereços de produção que você usar.
 3. Em **Authentication → Providers**, habilite e configure o provedor de e-mail/senha.
 4. Configure `.env.local` com `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_ANON_KEY`, usando a publishable key do projeto.
@@ -38,7 +39,7 @@ Para preparar o projeto Supabase:
 
 As respostas corretas ficam em uma tabela sem acesso direto para os clientes; `submit_question_answer` valida a resposta e salva a tentativa do usuário autenticado. Questões publicadas são expostas sem gabarito. As políticas RLS isolam os perfis e tentativas por usuário. O bucket de áudio é público para reprodução dos arquivos das lições; mantenha uploads restritos à administração do conteúdo.
 
-A migration `20261014192000_expand_beginner_elementary_questions.sql` amplia as trilhas para 50 questões Beginner/A1 e 75 Elementary/A2, distribuídas em lições curtas com múltipla escolha, respostas digitadas e escuta. As 25 questões de listening usam arquivos WAV incluídos em `public/audio/`; os arquivos novos são reproduzidos pelo próprio domínio da aplicação.
+A migration `20261014192000_expand_beginner_elementary_questions.sql` amplia as trilhas para 50 questões Beginner/A1 e 75 Elementary/A2, distribuídas em lições curtas com múltipla escolha, respostas digitadas e escuta. As 25 questões de listening usam arquivos WAV incluídos em `public/audio/`; os arquivos novos são reproduzidos pelo próprio domínio da aplicação. A migration `20261014195000_hints_and_flexible_answer_matching.sql` ignora diferenças de pontuação e espaços ao corrigir e oferece uma dica depois de cinco respostas erradas na mesma questão.
 
 ## Tecnologias
 

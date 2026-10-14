@@ -143,6 +143,8 @@ export type Database = {
           is_correct: boolean;
           explanation: string;
           level_advanced: boolean;
+          wrong_attempts: number;
+          hint: string | null;
         }[];
       };
     };
