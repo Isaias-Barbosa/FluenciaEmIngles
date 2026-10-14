@@ -319,6 +319,12 @@ export type Database = {
           question_count: number;
         }[];
       };
+      get_listening_transcript: {
+        Args: {
+          p_question_id: string;
+        };
+        Returns: string;
+      };
       submit_proficiency_exam: {
         Args: {
           p_exam_id: string;
