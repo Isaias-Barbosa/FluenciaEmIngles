@@ -21,6 +21,7 @@ npm install
    - `20261014195000_hints_and_flexible_answer_matching.sql`
    - `20261014196000_fix_answer_attempt_column_ambiguity.sql`
    - `20261014197000_allow_placement_level_updates.sql`
+   - `20261014198000_import_english_workbook_questions.sql`
 2. Em **Authentication → Providers**, habilite o cadastro por e-mail e senha.
 3. Em **Authentication → URL Configuration**, adicione `http://localhost:3000` como endereço permitido. Adicione também o endereço de produção quando publicar o app.
 4. Copie `.env.example` para `.env.local` e preencha os valores do projeto:
@@ -55,6 +56,7 @@ Abra [http://localhost:3000](http://localhost:3000) para acessar a página inici
 - **Perfil:** consulte e atualize seu nome, objetivo e tempo diário de estudo; veja também seu nível e progresso.
 - **Teste de nível:** novos estudantes respondem a uma avaliação de 18 questões corrigida pelo Supabase; o nível recomendado é aplicado antes de liberar a trilha. Estudantes já cadastrados podem refazer a avaliação pelo perfil e escolher se querem aplicar o resultado.
 - **Administração:** dashboard com usuários ativos (atividade nos últimos 30 dias), questões por nível, lista de estudantes e criação/publicação de lições e questões em `/admin`. O acesso é restrito aos e-mails configurados em `ADMIN_EMAILS`.
+- **Banco de questões:** migration opcional de conteúdo do caderno com 95 enunciados disponíveis, classificados por nível CEFR e dificuldade fácil, intermediária ou difícil. As lições importadas começam como rascunho para revisão antes da publicação.
 - **Dicas:** após cinco respostas incorretas na mesma questão, o estudante recebe uma pista.
 - **Correção flexível:** diferenças de maiúsculas, pontuação e espaços não invalidam uma resposta equivalente.
 
@@ -72,6 +74,9 @@ As migrations criam e preenchem o banco. Elas devem ser executadas **uma única 
 | `20261014195000_hints_and_flexible_answer_matching.sql` | Dicas após cinco erros e correção tolerante a pontuação e espaços |
 | `20261014196000_fix_answer_attempt_column_ambiguity.sql` | Correção da função de resposta para evitar ambiguidade entre nomes de colunas |
 | `20261014197000_allow_placement_level_updates.sql` | Corrige o teste de nivelamento com segurança e permite aplicar o nível recomendado ao perfil |
+| `20261014198000_import_english_workbook_questions.sql` | Adiciona dificuldade às questões e importa 95 enunciados do caderno como rascunhos A1–B1 |
+
+O PDF fornecido não contém os enunciados 19, 20 e 98–100. As questões abertas 86, 96 e 97 também ficam como rascunhos, pois o próprio gabarito as identifica como exemplos/respostas pessoais.
 
 As respostas corretas não são disponibilizadas diretamente ao navegador. O Supabase corrige as respostas e registra as tentativas; políticas RLS protegem os perfis e o progresso de cada estudante.
 

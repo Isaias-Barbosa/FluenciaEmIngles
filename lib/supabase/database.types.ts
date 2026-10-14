@@ -119,6 +119,7 @@ export type Database = {
           choices: Json;
           audio_path: string | null;
           sort_order: number;
+          difficulty: "easy" | "intermediate" | "hard";
           is_published: boolean;
           created_at: string;
         },
@@ -130,6 +131,7 @@ export type Database = {
           choices?: Json;
           audio_path?: string | null;
           sort_order: number;
+          difficulty?: "easy" | "intermediate" | "hard";
           is_published?: boolean;
         },
         {
@@ -139,6 +141,7 @@ export type Database = {
           choices?: Json;
           audio_path?: string | null;
           sort_order?: number;
+          difficulty?: "easy" | "intermediate" | "hard";
           is_published?: boolean;
         }
       >;
@@ -216,6 +219,7 @@ export type Database = {
           choices: Json;
           audio_path: string | null;
           question_sort_order: number;
+          difficulty: "easy" | "intermediate" | "hard";
         };
         Relationships: [];
       };
