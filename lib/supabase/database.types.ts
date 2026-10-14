@@ -16,6 +16,20 @@ type Table<Row, Insert, Update> = {
 export type Database = {
   public: {
     Tables: {
+      languages: Table<
+        {
+          id: string;
+          code: string;
+          name: string;
+          created_at: string;
+        },
+        {
+          id?: string;
+          code: string;
+          name: string;
+        },
+        never
+      >;
       profiles: Table<
         {
           user_id: string;
@@ -61,6 +75,87 @@ export type Database = {
         {
           title?: string;
           sort_order?: number;
+        }
+      >;
+      lessons: Table<
+        {
+          id: string;
+          level_id: string;
+          slug: string;
+          title: string;
+          description: string;
+          category: string;
+          duration_minutes: number;
+          sort_order: number;
+          is_published: boolean;
+          created_at: string;
+        },
+        {
+          id?: string;
+          level_id: string;
+          slug: string;
+          title: string;
+          description: string;
+          category: string;
+          duration_minutes: number;
+          sort_order: number;
+          is_published?: boolean;
+        },
+        {
+          title?: string;
+          description?: string;
+          category?: string;
+          duration_minutes?: number;
+          sort_order?: number;
+          is_published?: boolean;
+        }
+      >;
+      questions: Table<
+        {
+          id: string;
+          lesson_id: string;
+          question_type: "multiple_choice" | "fill_blank" | "listening";
+          prompt: string;
+          choices: Json;
+          audio_path: string | null;
+          sort_order: number;
+          is_published: boolean;
+          created_at: string;
+        },
+        {
+          id?: string;
+          lesson_id: string;
+          question_type: "multiple_choice" | "fill_blank" | "listening";
+          prompt: string;
+          choices?: Json;
+          audio_path?: string | null;
+          sort_order: number;
+          is_published?: boolean;
+        },
+        {
+          lesson_id?: string;
+          question_type?: "multiple_choice" | "fill_blank" | "listening";
+          prompt?: string;
+          choices?: Json;
+          audio_path?: string | null;
+          sort_order?: number;
+          is_published?: boolean;
+        }
+      >;
+      question_answers: Table<
+        {
+          question_id: string;
+          accepted_answers: string[];
+          explanation: string;
+        },
+        {
+          question_id: string;
+          accepted_answers: string[];
+          explanation?: string;
+        },
+        {
+          accepted_answers?: string[];
+          explanation?: string;
         }
       >;
       question_attempts: Table<
@@ -126,6 +221,12 @@ export type Database = {
       };
     };
     Functions: {
+      apply_placement_level: {
+        Args: {
+          p_level_code: string;
+        };
+        Returns: undefined;
+      };
       complete_onboarding: {
         Args: {
           p_level_code: string;
@@ -145,6 +246,20 @@ export type Database = {
           level_advanced: boolean;
           wrong_attempts: number;
           hint: string | null;
+        }[];
+      };
+      submit_placement_test: {
+        Args: {
+          p_answers: number[];
+        };
+        Returns: {
+          recommended_level: string;
+          a1_score: number;
+          a2_score: number;
+          b1_score: number;
+          b2_score: number;
+          c1_score: number;
+          c2_score: number;
         }[];
       };
     };

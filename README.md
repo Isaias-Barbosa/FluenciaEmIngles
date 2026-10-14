@@ -20,6 +20,7 @@ npm install
    - `20261014192000_expand_beginner_elementary_questions.sql`
    - `20261014195000_hints_and_flexible_answer_matching.sql`
    - `20261014196000_fix_answer_attempt_column_ambiguity.sql`
+   - `20261014197000_allow_placement_level_updates.sql`
 2. Em **Authentication → Providers**, habilite o cadastro por e-mail e senha.
 3. Em **Authentication → URL Configuration**, adicione `http://localhost:3000` como endereço permitido. Adicione também o endereço de produção quando publicar o app.
 4. Copie `.env.example` para `.env.local` e preencha os valores do projeto:
@@ -31,7 +32,9 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=SUA_SUPABASE_PUBLISHABLE_KEY
 
 Use a **publishable key** (ou a chave `anon` legada). **Nunca coloque a `service_role` key em variáveis `NEXT_PUBLIC_*` nem no código do navegador.** O arquivo `.env.local` é ignorado pelo Git.
 
-> Se as migrations já foram aplicadas, execute somente as que ainda não estão no projeto. Por exemplo, se você já aplicou até a migration de dicas, execute apenas `20261014196000_fix_answer_attempt_column_ambiguity.sql`.
+> Se as migrations já foram aplicadas, execute somente as que ainda não estão no projeto. Por exemplo, se você já aplicou até `20261014196000_fix_answer_attempt_column_ambiguity.sql`, execute `20261014197000_allow_placement_level_updates.sql`.
+
+Para habilitar o painel administrativo em `/admin`, configure `SUPABASE_SERVICE_ROLE_KEY` e `ADMIN_EMAILS` no `.env.local`. Informe os e-mails autorizados separados por vírgula em `ADMIN_EMAILS`. A service-role key é usada somente no servidor: nunca a coloque em uma variável `NEXT_PUBLIC_*`, no código do navegador ou no Git.
 
 ### 3. Inicie a aplicação
 
@@ -49,6 +52,9 @@ Abra [http://localhost:3000](http://localhost:3000).
 - **Listening:** áudios WAV no diretório `public/audio/`.
 - **Cards:** vocabulário carregado de acordo com o nível atual.
 - **Progresso:** tentativas e lições concluídas associadas à conta do estudante.
+- **Perfil:** consulte e atualize seu nome, objetivo e tempo diário de estudo; veja também seu nível e progresso.
+- **Teste de nível:** responda a uma avaliação de 18 questões corrigida pelo Supabase para receber uma recomendação. O teste não altera seu histórico; você escolhe se quer aplicar o nível, e suas tentativas e lições já concluídas são preservadas.
+- **Administração:** dashboard com usuários ativos (atividade nos últimos 30 dias), questões por nível, lista de estudantes e criação/publicação de lições e questões em `/admin`. O acesso é restrito aos e-mails configurados em `ADMIN_EMAILS`.
 - **Dicas:** após cinco respostas incorretas na mesma questão, o estudante recebe uma pista.
 - **Correção flexível:** diferenças de maiúsculas, pontuação e espaços não invalidam uma resposta equivalente.
 
@@ -65,6 +71,7 @@ As migrations criam e preenchem o banco. Elas devem ser executadas **uma única 
 | `20261014192000_expand_beginner_elementary_questions.sql` | Questões A1/A2 e questões com áudio |
 | `20261014195000_hints_and_flexible_answer_matching.sql` | Dicas após cinco erros e correção tolerante a pontuação e espaços |
 | `20261014196000_fix_answer_attempt_column_ambiguity.sql` | Correção da função de resposta para evitar ambiguidade entre nomes de colunas |
+| `20261014197000_allow_placement_level_updates.sql` | Corrige o teste de nivelamento com segurança e permite aplicar o nível recomendado ao perfil |
 
 As respostas corretas não são disponibilizadas diretamente ao navegador. O Supabase corrige as respostas e registra as tentativas; políticas RLS protegem os perfis e o progresso de cada estudante.
 

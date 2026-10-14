@@ -6,7 +6,7 @@ import { supabase } from "@/lib/supabase/client";
 import type { Database, Json } from "@/lib/supabase/database.types";
 
 type LevelId = "A1" | "A2" | "B1" | "B2" | "C1" | "C2";
-type PageId = "home" | "lessons" | "cards" | "progress";
+type PageId = "home" | "lessons" | "cards" | "progress" | "profile";
 type AuthMode = "signup" | "signin";
 type QuestionType = "multiple_choice" | "fill_blank" | "listening";
 type LessonQuestion = {
@@ -62,6 +62,31 @@ const goals = [
   "Entender filmes e séries",
   "Estudar ou morar fora",
   "Aprender por prazer",
+];
+
+const placementQuestions: {
+  level: LevelId;
+  prompt: string;
+  options: string[];
+}[] = [
+  { level: "A1", prompt: "Choose the correct greeting for the morning.", options: ["Good morning", "Good night", "Good evening", "Goodbye"] },
+  { level: "A1", prompt: "Complete: She ___ a student.", options: ["am", "is", "are", "be"] },
+  { level: "A1", prompt: "What is the plural of “child”?", options: ["childs", "childes", "children", "childrens"] },
+  { level: "A2", prompt: "Complete: We ___ to the cinema last night.", options: ["go", "went", "gone", "going"] },
+  { level: "A2", prompt: "Choose the natural sentence.", options: ["I have 20 years.", "I am 20 years old.", "I have 20 old.", "I am with 20 years."] },
+  { level: "A2", prompt: "Complete: There isn’t ___ milk in the fridge.", options: ["some", "many", "any", "few"] },
+  { level: "B1", prompt: "Complete: If I ___ more time, I would learn another language.", options: ["have", "had", "will have", "would have"] },
+  { level: "B1", prompt: "Choose the correct reported speech: “I’m tired,” she said.", options: ["She said she is tired.", "She said I was tired.", "She said she was tired.", "She told that tired."] },
+  { level: "B1", prompt: "Complete: I’ve lived here ___ 2021.", options: ["for", "since", "during", "from"] },
+  { level: "B2", prompt: "Complete: By the time we arrived, the meeting ___.", options: ["started", "has started", "had started", "was starting"] },
+  { level: "B2", prompt: "Choose the best meaning of “to bring about a change.”", options: ["To prevent a change", "To cause a change", "To explain a change", "To delay a change"] },
+  { level: "B2", prompt: "Complete: The proposal, ___ was submitted yesterday, needs revision.", options: ["that", "who", "which", "whose"] },
+  { level: "C1", prompt: "Complete: Rarely ___ such a compelling argument.", options: ["I have heard", "have I heard", "I heard", "heard I"] },
+  { level: "C1", prompt: "Choose the closest meaning of “the evidence is tenuous.”", options: ["The evidence is conclusive.", "The evidence is weak.", "The evidence is irrelevant.", "The evidence is extensive."] },
+  { level: "C1", prompt: "Complete: Had they informed us earlier, we ___ the issue.", options: ["could resolve", "could have resolved", "will resolve", "had resolved"] },
+  { level: "C2", prompt: "Choose the sentence with the most precise use of “disinterested.”", options: ["She was disinterested in the lecture and fell asleep.", "As a disinterested mediator, he had no stake in the outcome.", "The disinterested book was hard to finish.", "They disinterested the proposal."] },
+  { level: "C2", prompt: "Complete: So nuanced ___ the account that it resisted easy interpretation.", options: ["the account was", "was the account", "did the account", "the account did"] },
+  { level: "C2", prompt: "Which phrase means “to make a bad situation worse”?", options: ["To cut corners", "To take the plunge", "To add fuel to the fire", "To call it a day"] },
 ];
 
 function choicesFromJson(value: Json): string[] {
@@ -433,6 +458,32 @@ export default function Dashboard() {
     }
   }
 
+  async function saveProfileDetails(name: string, learningGoal: string, minutes: number) {
+    if (!supabase || !profile) throw new Error("Não foi possível salvar seu perfil.");
+    const { error } = await supabase
+      .from("profiles")
+      .update({
+        display_name: name.trim(),
+        learning_goal: learningGoal,
+        daily_goal_minutes: minutes,
+      })
+      .eq("user_id", profile.userId);
+    if (error) throw new Error(error.message);
+    setProfile((current) =>
+      current?.userId === profile.userId
+        ? { ...current, name: name.trim(), goal: learningGoal, dailyMinutes: minutes }
+        : current,
+    );
+  }
+
+  async function applyPlacementLevel(level: LevelId) {
+    if (!supabase || !session) throw new Error("Sua sessão expirou. Entre novamente para atualizar o nível.");
+    const { error } = await supabase.rpc("apply_placement_level", { p_level_code: level });
+    if (error) throw new Error(error.message);
+    const updatedProfile = await loadProfile(session);
+    await loadStudyData(updatedProfile);
+  }
+
   async function signOut() {
     if (!supabase) return;
     const { error } = await supabase.auth.signOut();
@@ -557,6 +608,7 @@ export default function Dashboard() {
     { id: "lessons", icon: "▤", label: "Conteúdo" },
     { id: "cards", icon: "▧", label: "Cards" },
     { id: "progress", icon: "◷", label: "Meu progresso" },
+    { id: "profile", icon: "◎", label: "Meu perfil" },
   ];
 
   return (
@@ -580,6 +632,7 @@ export default function Dashboard() {
           {page === "lessons" && <LessonsPage profile={profile} lessons={lessons} onSelectLesson={openLesson} />}
           {page === "cards" && <CardsPage level={profile.level} card={activeCard} index={cardIndex} total={cards.length} flipped={cardFlipped} onFlip={() => setCardFlipped((value) => !value)} onNext={() => { setCardIndex((value) => (cards.length ? (value + 1) % cards.length : 0)); setCardFlipped(false); }} />}
           {page === "progress" && <ProgressPage profile={profile} levelIndex={currentLevelIndex} lessons={lessons} />}
+          {page === "profile" && <ProfilePage profile={profile} levelIndex={currentLevelIndex} levelProgress={progressPercent} completedInLevel={completedInLevel} totalQuestions={profile.completedQuestionIds.length} onSave={saveProfileDetails} onApplyLevel={applyPlacementLevel} />}
           <footer className="app-footer"><span>Pequenos passos também levam longe. <span className="footer-heart">♥</span></span><span>Seu progresso fica sincronizado com sua conta.</span></footer>
         </div>
       </div>
@@ -622,6 +675,209 @@ function LessonsPage({ profile, lessons: allLessons, onSelectLesson }: { profile
 
 function CardsPage({ level, card, index, total, flipped, onFlip, onNext }: { level: LevelId; card: Flashcard | null; index: number; total: number; flipped: boolean; onFlip: () => void; onNext: () => void }) {
   return <section className="inner-page cards-page"><div className="page-heading"><span className="eyebrow"><span className="live-dot" /> REVISÃO INTELIGENTE · {level}</span><h1>Palavras que <span>ficam.</span></h1><p>Cards selecionados para o seu nível. Tente lembrar antes de virar.</p></div>{card ? <><div className="flashcard-wrap"><div className={`flashcard ${flipped ? "flashcard-flipped" : ""}`} role="button" tabIndex={0} onClick={onFlip} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") onFlip(); }}><div className="flashcard-top"><span>{flipped ? "SIGNIFICADO" : "PALAVRA OU EXPRESSÃO"}</span><span>{String(index + 1).padStart(2, "0")} <i>/ {String(total).padStart(2, "0")}</i></span></div><div className="flashcard-content"><span className="flashcard-spark">✳</span><strong>{flipped ? card.back : card.front}</strong><small>{flipped ? card.front : card.pronunciation}</small></div><div className="flashcard-bottom"><span>✦ {flipped ? "Toque para ver a palavra" : "Toque para revelar o significado"}</span><span>↗</span></div></div><div className="cards-controls"><div className="cards-dots">{Array.from({ length: total }, (_, dot) => <span key={dot} className={dot === index ? "active-card-dot" : ""} />)}</div><button className="button button-primary" onClick={onNext}>Próximo card <span>→</span></button></div></div><div className="cards-tip"><span>✧</span><div><strong>Dica de estudo</strong><p>Fale a palavra em voz alta e tente montar uma frase antes de virar o card.</p></div></div></> : <div className="empty-state">Ainda não há cards publicados para este nível.</div>}</section>;
+}
+
+function ProfilePage({
+  profile,
+  levelIndex,
+  levelProgress,
+  completedInLevel,
+  totalQuestions,
+  onSave,
+  onApplyLevel,
+}: {
+  profile: Profile;
+  levelIndex: number;
+  levelProgress: number;
+  completedInLevel: number;
+  totalQuestions: number;
+  onSave: (name: string, goal: string, minutes: number) => Promise<void>;
+  onApplyLevel: (level: LevelId) => Promise<void>;
+}) {
+  const [name, setName] = useState(profile.name);
+  const [goal, setGoal] = useState(profile.goal);
+  const [minutes, setMinutes] = useState(profile.dailyMinutes);
+  const [saveBusy, setSaveBusy] = useState(false);
+  const [saveMessage, setSaveMessage] = useState("");
+  const [formError, setFormError] = useState("");
+  const [testStarted, setTestStarted] = useState(false);
+  const [testFinished, setTestFinished] = useState(false);
+  const [questionIndex, setQuestionIndex] = useState(0);
+  const [answers, setAnswers] = useState<number[]>([]);
+  const [placementResult, setPlacementResult] = useState<{
+    recommended_level: string;
+    a1_score: number;
+    a2_score: number;
+    b1_score: number;
+    b2_score: number;
+    c1_score: number;
+    c2_score: number;
+  } | null>(null);
+  const [testBusy, setTestBusy] = useState(false);
+  const [applyBusy, setApplyBusy] = useState(false);
+  const [applyMessage, setApplyMessage] = useState("");
+  const [testError, setTestError] = useState("");
+
+  const scores = placementResult
+    ? [
+        placementResult.a1_score,
+        placementResult.a2_score,
+        placementResult.b1_score,
+        placementResult.b2_score,
+        placementResult.c1_score,
+        placementResult.c2_score,
+      ]
+    : [];
+  const recommendedLevel =
+    levels.find((level) => level.id === placementResult?.recommended_level) ?? levels[0];
+  const currentQuestion = placementQuestions[questionIndex];
+
+  async function submitProfile(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSaveBusy(true);
+    setFormError("");
+    setSaveMessage("");
+    try {
+      await onSave(name, goal, minutes);
+      setSaveMessage("Perfil atualizado com sucesso.");
+    } catch (error) {
+      setFormError(error instanceof Error ? error.message : "Não foi possível atualizar seu perfil.");
+    } finally {
+      setSaveBusy(false);
+    }
+  }
+
+  function startTest() {
+    setAnswers([]);
+    setQuestionIndex(0);
+    setTestFinished(false);
+    setTestStarted(true);
+    setPlacementResult(null);
+    setTestError("");
+    setApplyMessage("");
+  }
+
+  function selectAnswer(optionIndex: number) {
+    setAnswers((current) => {
+      const next = [...current];
+      next[questionIndex] = optionIndex;
+      return next;
+    });
+  }
+
+  async function continueTest() {
+    if (answers[questionIndex] === undefined) return;
+    if (questionIndex === placementQuestions.length - 1) {
+      if (!supabase) {
+        setTestError("O Supabase não está configurado.");
+        return;
+      }
+      setTestBusy(true);
+      setTestError("");
+      try {
+        const { data, error } = await supabase.rpc("submit_placement_test", {
+          p_answers: answers,
+        });
+        if (error) throw new Error(error.message);
+        const result = data[0];
+        if (!result) throw new Error("O Supabase não retornou o resultado da avaliação.");
+        setPlacementResult(result);
+        setTestFinished(true);
+      } catch (error) {
+        setTestError(error instanceof Error ? error.message : "Não foi possível corrigir a avaliação.");
+      } finally {
+        setTestBusy(false);
+      }
+      return;
+    }
+    setQuestionIndex((current) => current + 1);
+  }
+
+  async function applyRecommendation() {
+    setApplyBusy(true);
+    setTestError("");
+    setApplyMessage("");
+    try {
+      await onApplyLevel(recommendedLevel.id);
+      setApplyMessage(`Seu nível foi atualizado para ${recommendedLevel.id}. Seu histórico de estudos foi preservado.`);
+    } catch (error) {
+      setTestError(error instanceof Error ? error.message : "Não foi possível atualizar seu nível.");
+    } finally {
+      setApplyBusy(false);
+    }
+  }
+
+  return (
+    <section className="inner-page profile-page">
+      <div className="page-heading">
+        <span className="eyebrow"><span className="live-dot" /> SEU ESPAÇO PESSOAL</span>
+        <h1>Seu perfil, <span>sua jornada.</span></h1>
+        <p>Cuide dos seus dados e acompanhe como seu inglês está evoluindo.</p>
+      </div>
+
+      <div className="profile-overview">
+        <div className="profile-overview-avatar">{profile.name.charAt(0).toUpperCase()}</div>
+        <div className="profile-overview-copy">
+          <span className="section-kicker">NÍVEL ATUAL</span>
+          <h2>{profile.level} <span>·</span> {profile.levelTitle}</h2>
+          <p>{levels[levelIndex]?.subtitle} · {levelProgress}% do nível concluído</p>
+        </div>
+        <div className="profile-overview-progress"><div className="progress-track"><span style={{ width: `${levelProgress}%` }} /></div><small>{completedInLevel} lições concluídas neste nível</small></div>
+      </div>
+
+      <div className="profile-layout">
+        <form className="profile-panel profile-form" onSubmit={submitProfile}>
+          <div className="section-title-row"><div><span className="section-kicker">INFORMAÇÕES PESSOAIS</span><h2>Seus dados</h2></div></div>
+          <label htmlFor="profile-name">Nome</label>
+          <input id="profile-name" value={name} onChange={(event) => setName(event.target.value)} required minLength={2} maxLength={80} />
+          <label htmlFor="profile-email">E-mail</label>
+          <input id="profile-email" type="email" value={profile.email} readOnly />
+          <small className="profile-field-note">O e-mail da conta é gerenciado pelas configurações de autenticação.</small>
+          <label htmlFor="profile-goal">Seu objetivo</label>
+          <select id="profile-goal" value={goal} onChange={(event) => setGoal(event.target.value)}>{goals.map((option) => <option key={option}>{option}</option>)}</select>
+          <label htmlFor="profile-minutes">Tempo diário de estudo</label>
+          <select id="profile-minutes" value={minutes} onChange={(event) => setMinutes(Number(event.target.value))}><option value={10}>10 minutos</option><option value={20}>20 minutos</option><option value={30}>30 minutos</option><option value={45}>45 minutos</option></select>
+          {formError && <p className="form-message form-error" role="alert">{formError}</p>}
+          {saveMessage && <p className="form-message form-success" role="status">{saveMessage}</p>}
+          <button className="button button-primary" type="submit" disabled={saveBusy}>{saveBusy ? "Salvando..." : "Salvar alterações"} <span>↗</span></button>
+        </form>
+
+        <div className="profile-side-column">
+          <section className="profile-panel profile-stats-panel">
+            <div className="section-title-row"><div><span className="section-kicker">SEU PROGRESSO</span><h2>Conquistas até aqui</h2></div></div>
+            <div className="profile-stat-row"><span className="stat-icon stat-mint">✦</span><div><strong>{profile.completedLessons.length}</strong><small>lições concluídas</small></div></div>
+            <div className="profile-stat-row"><span className="stat-icon stat-violet">✓</span><div><strong>{totalQuestions}</strong><small>questões respondidas corretamente</small></div></div>
+            <div className="profile-stat-row"><span className="stat-icon stat-pink">↗</span><div><strong>{levelIndex + 1} <small>/ 6</small></strong><small>nível atual na jornada</small></div></div>
+          </section>
+
+          <section className="profile-panel placement-panel">
+            <div className="placement-heading"><span className="placement-icon">✧</span><div><span className="section-kicker">AVALIAÇÃO DE NÍVEL</span><h2>Descubra seu ponto de partida</h2></div></div>
+            <p>Faça uma prova rápida de 18 questões. No final, você recebe uma recomendação de nível que pode aplicar quando quiser.</p>
+            {!testStarted && <button className="button button-dark" onClick={startTest}>Começar prova <span>→</span></button>}
+            {testStarted && !testFinished && currentQuestion && <div className="placement-test">
+              <div className="placement-progress"><span>Questão {questionIndex + 1} de {placementQuestions.length}</span><strong>{currentQuestion.level}</strong></div>
+              <div className="progress-track"><span style={{ width: `${((questionIndex + 1) / placementQuestions.length) * 100}%` }} /></div>
+              <h3>{currentQuestion.prompt}</h3>
+              <div className="placement-options">{currentQuestion.options.map((option, index) => <button key={option} type="button" className={`placement-option ${answers[questionIndex] === index ? "selected" : ""}`} onClick={() => selectAnswer(index)}><span>{String.fromCharCode(65 + index)}</span>{option}</button>)}</div>
+              {testError && <p className="form-message form-error" role="alert">{testError}</p>}
+              <button className="button button-primary" onClick={continueTest} disabled={answers[questionIndex] === undefined || testBusy}>{testBusy ? "Corrigindo..." : questionIndex === placementQuestions.length - 1 ? "Ver resultado" : "Próxima questão"} <span>→</span></button>
+            </div>}
+            {testFinished && <div className="placement-result">
+              <span className="section-kicker">SUA RECOMENDAÇÃO</span>
+              <div className="recommendation-level">{recommendedLevel.id}</div>
+              <h3>{recommendedLevel.name}</h3>
+              <p>Com base nas suas respostas, sugerimos começar no nível {recommendedLevel.id}. Esta avaliação é uma orientação de aprendizagem, não uma certificação oficial.</p>
+              <div className="placement-scores">{levels.map((level, index) => <span key={level.id}>{level.id} <strong>{scores[index]}/3</strong></span>)}</div>
+              {testError && <p className="form-message form-error" role="alert">{testError}</p>}
+              {applyMessage && <p className="form-message form-success" role="status">{applyMessage}</p>}
+              <div className="placement-actions"><button className="button button-primary" onClick={applyRecommendation} disabled={applyBusy || profile.level === recommendedLevel.id}>{applyBusy ? "Atualizando..." : profile.level === recommendedLevel.id ? "Você já está neste nível" : "Aplicar nível recomendado"} <span>↗</span></button><button className="text-link" onClick={startTest}>Fazer novamente</button></div>
+              <small className="placement-preservation">Aplicar o nível não apaga suas lições concluídas nem suas tentativas.</small>
+            </div>}
+          </section>
+        </div>
+      </div>
+    </section>
+  );
 }
 
 function ProgressPage({ profile, levelIndex, lessons: allLessons }: { profile: Profile; levelIndex: number; lessons: Lesson[] }) {
