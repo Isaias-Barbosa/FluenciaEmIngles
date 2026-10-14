@@ -91,6 +91,8 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .onboarding-extras { display: grid; grid-template-columns: 1fr 1fr; gap: 17px; margin-top: 9px; }.onboarding-extras label { margin-top: 9px; }.onboarding-extras select { height: 40px; font-size: 11px; color-scheme: dark; }
 .onboarding-bottom { margin-top: 23px; padding-top: 19px; border-top: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; }.onboarding-bottom > span { color: var(--muted); font-size: 10px; }.onboarding-bottom .button { min-height: 40px; }
 .onboarding-note { margin: 14px 0 0 2px; color: var(--muted); font-size: 10px; }.onboarding-note span { color: var(--mint); margin-right: 6px; }
+.onboarding-placement-options { margin: 20px 0; display: grid; gap: 9px; }.onboarding-placement-options .placement-option { min-height: 48px; padding: 9px 12px; font-size: 12px; }.onboarding-placement-options .placement-option > span { width: 23px; height: 23px; font-size: 10px; }.onboarding-card > .placement-progress { font-size: 10px; }.onboarding-card > .progress-track { margin-top: 8px; }
+.onboarding-result { padding: 8px 0 4px; }.onboarding-result h2 { margin: 10px 0 5px; font-family: Outfit, sans-serif; font-size: 20px; font-weight: 500; }.onboarding-result > p { max-width: 570px; margin: 0; color: var(--copy); font-size: 12px; line-height: 1.7; }.onboarding-actions { display: flex; flex-wrap: wrap; gap: 9px; }
 
 /* Main learning workspace */
 .app-shell { min-height: 100vh; background: var(--bg); }

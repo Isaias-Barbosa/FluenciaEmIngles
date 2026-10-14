@@ -1,6 +1,6 @@
 # Fluência
 
-Uma plataforma para aprender inglês no seu ritmo. Faça seu cadastro, escolha seu nível e pratique com lições, exercícios interativos, áudios e cards de vocabulário.
+Uma plataforma para aprender inglês no seu ritmo. Faça seu cadastro, descubra seu nível com uma avaliação de proficiência e pratique com lições, exercícios interativos, áudios e cards de vocabulário.
 
 ## Começar em 3 passos
 
@@ -42,18 +42,18 @@ Para habilitar o painel administrativo em `/admin`, configure `SUPABASE_SERVICE_
 npm run dev
 ```
 
-Abra [http://localhost:3000](http://localhost:3000).
+Abra [http://localhost:3000](http://localhost:3000) para acessar a página inicial. Clique em **Começar Agora** para criar sua conta ou em **Entrar** para fazer login. Depois do cadastro, novos estudantes respondem a uma avaliação de 18 questões que define automaticamente o nível inicial antes de liberar as lições.
 
 ## O que você encontra na plataforma
 
-- **Conta e perfil:** cadastro e login com Supabase Auth, além de uma configuração inicial de nível, objetivo e tempo de estudo.
+- **Conta e perfil:** cadastro e login com Supabase Auth, avaliação obrigatória de proficiência para novos estudantes e configuração de objetivo e tempo de estudo.
 - **Trilha de inglês:** conteúdo organizado nos níveis CEFR A1 a C2.
 - **Exercícios:** múltipla escolha, respostas digitadas e questões de compreensão oral.
 - **Listening:** áudios WAV no diretório `public/audio/`.
 - **Cards:** vocabulário carregado de acordo com o nível atual.
 - **Progresso:** tentativas e lições concluídas associadas à conta do estudante.
 - **Perfil:** consulte e atualize seu nome, objetivo e tempo diário de estudo; veja também seu nível e progresso.
-- **Teste de nível:** responda a uma avaliação de 18 questões corrigida pelo Supabase para receber uma recomendação. O teste não altera seu histórico; você escolhe se quer aplicar o nível, e suas tentativas e lições já concluídas são preservadas.
+- **Teste de nível:** novos estudantes respondem a uma avaliação de 18 questões corrigida pelo Supabase; o nível recomendado é aplicado antes de liberar a trilha. Estudantes já cadastrados podem refazer a avaliação pelo perfil e escolher se querem aplicar o resultado.
 - **Administração:** dashboard com usuários ativos (atividade nos últimos 30 dias), questões por nível, lista de estudantes e criação/publicação de lições e questões em `/admin`. O acesso é restrito aos e-mails configurados em `ADMIN_EMAILS`.
 - **Dicas:** após cinco respostas incorretas na mesma questão, o estudante recebe uma pista.
 - **Correção flexível:** diferenças de maiúsculas, pontuação e espaços não invalidam uma resposta equivalente.
@@ -91,4 +91,4 @@ npm run start      # Inicia a versão de produção
 - Supabase Auth, PostgreSQL e Storage
 - CSS responsivo
 
-O arquivo `aprender-ingles.html` permanece no repositório como a versão original do guia estático.
+O conteúdo e o visual da página inicial em `aprender-ingles.html` são exibidos na rota `/`; a plataforma de estudos e autenticação fica em `/learn`.
