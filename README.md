@@ -1,130 +1,33 @@
-# 🌍 Fluência em Inglês
+# Fluência
 
-> *Seu guia completo para dominar o inglês do zero ao avançado — do jeito certo!*
+Uma plataforma de estudos de idiomas que transforma o guia de inglês em uma experiência personalizada: a pessoa cria seu perfil, indica seu nível e objetivo e recebe uma trilha de aprendizagem com lições, exercícios, cards de vocabulário e acompanhamento de progresso.
 
-<div align="center">
+## Executar localmente
 
-[![Preview](https://img.shields.io/badge/Preview-Acessar-brightgreen?style=for-the-badge&logo=google-chrome)](https://isaias-barbosa.github.io/FluenciaEmIngles/)
-[![License](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](LICENSE)
-[![Stars](https://img.shields.io/github/stars/Isaias-Barbosa/FluenciaEmIngles?style=for-the-badge&color=yellow)](https://github.com/Isaias-Barbosa/FluenciaEmIngles/stargazers)
-
-</div>
-
----
-
-## ✨ O que é este projeto?
-
-Um site interativo e moderno que te guia através da jornada de aprendizado do inglês. Desde os primeiros passos no nível A1 até a fluência no nível C2, com:
-
-- 📊 **Níveis CEFR** explicados de forma visual
-- 🛠️ **Métodos de estudo** comprovados
-- 📚 **Recursos recomendados** (gratuitos e pagos)
-- 📅 **Cronograma** de 12-24 meses até a fluência
-
----
-
-## 🚀 Como usar
-
-### 🔹 Abra no navegador
-Basta clicar no arquivo `aprender-ingles.html` ou usar a versão online:
-
-```
-https://isaias-barbosa.github.io/FluenciaEmIngles/
-```
-
-### 🔹 Para desenvolvedores
+Requisitos: Node.js 20.9 ou superior.
 
 ```bash
-# Clone o repositório
-git clone https://github.com/Isaias-Barbosa/FluenciaEmIngles.git
-
-# Entre na pasta
-cd FluenciaEmIngles
-
-# Abra no navegador (Linux/Mac)
-open aprender-ingles.html
-
-# Ou no Windows
-start aprender-ingles.html
+npm install
+npm run dev
 ```
 
----
+Abra [http://localhost:3000](http://localhost:3000).
 
-## 📋 Estrutura do Site
+## O que já funciona
 
-| Seção | Descrição |
-|-------|-----------|
-| **Hero** | Introdução poderosa com estatísticas |
-| **Níveis CEFR** | 6 níveis interativos: A1 → C2 |
-| **Métodos** | 6 abordagens de aprendizado |
-| **Recursos** | Ferramentas recomendadas |
-| **Cronograma** | Timeline visual de progresso |
-| **CTA** | Call-to-action para começar |
+- Cadastro demonstrativo e questionário de nivelamento.
+- Área de estudos com trilha organizada nos níveis CEFR A1 a C2.
+- Lições com exercícios interativos; respostas corretas salvam o progresso e liberam o próximo nível.
+- Cards de vocabulário selecionados conforme o nível atual.
+- Visão de progresso, objetivo pessoal e rotina semanal demonstrativa.
+- Perfil e progresso salvos no armazenamento local do navegador.
 
----
+> Esta versão é um protótipo: não há autenticação real nem backend. O cadastro e os dados de aprendizagem ficam somente no dispositivo atual.
 
-## 🎯 Principais Recursos
+## Tecnologias
 
-### Níveis de fluency
-- 🌱 **A1** - Beginner (Iniciante)
-- 🌿 **A2** - Elementary (Básico)
-- 🌳 **B1** - Intermediate (Intermediário)
-- 🚀 **B2** - Upper Intermediate (Intermediário Alto)
-- ⭐ **C1** - Advanced (Avançado)
-- 👑 **C2** - Proficient (Proficiente)
+- Next.js com App Router
+- React e TypeScript
+- CSS responsivo sem biblioteca de componentes
 
-### Métodos de Estudo
-1. 🎧 **Immersão Sonora** - Podcasts, músicas, filmes
-2. 📖 **Input Massivo** - Leitura extensiva
-3. 🗣️ **Prática Oral** - Speaking desde o primeiro dia
-4. 📝 **Anki & Repetição Espaçada**
-5. 🎯 **Metodologia Ativa** - Use o idioma!
-6. 🏗️ **Gramática em Contexto**
-
----
-
-## 🛠️ Tecnologias Usadas
-
-- **HTML5** - Semântica e estrutura
-- **CSS3** - Moderno com CSS Variables, Flexbox, Grid
-- **JavaScript** - Animações e interatividade
-- **Google Fonts** - Outfit + Space Mono
-- **0 dependências** - Totalmente offline!
-
----
-
-## 🤝 Contribuindo
-
-Quer melhorar este projeto? São bem-vindos!
-
-1. Faça um fork
-2. Crie sua branch (`git checkout -b feature/nova-funcionalidade`)
-3. Commit suas mudanças (`git commit -m 'Adicionarnova funcionalidade'`)
-4. Push para a branch (`git push origin feature/nova-funcionalidade`)
-5. Abra um Pull Request
-
----
-
-## 📝 LICENSE
-
-Este projeto está sob licença MIT — sinta-se livre para usar, modificar e distribuir!
-
----
-
-## 💪 Próximos Passos
-
-- [ ] Deploy no GitHub Pages (já está pronto! ✅)
-- [ ] Adicionar versão em inglês do site
-- [ ] Criar página com exercícios interativos
-- [ ] Adicionar modo escuro/claro
-- [ ] Tornar o site multilíngue
-
----
-
-<div align="center">
-
-**⭐ Não esqueça de dar uma estrela se gostou!**
-
-*Feito com 💚 para ajudar você a alcançar a fluência em inglês*
-
-</div>
+O arquivo `aprender-ingles.html` permanece no repositório como a versão original do guia estático.
