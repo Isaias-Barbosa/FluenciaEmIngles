@@ -6,10 +6,25 @@ import { supabase } from "@/lib/supabase/client";
 import type { Database, Json } from "@/lib/supabase/database.types";
 
 type LevelId = "A1" | "A2" | "B1" | "B2" | "C1" | "C2";
-type PageId = "home" | "lessons" | "cards" | "progress" | "profile";
+type PageId = "home" | "lessons" | "cards" | "progress" | "profile" | "exam";
 type AuthMode = "signup" | "signin";
-type PlacementResult = {
-  recommended_level: string;
+type ProficiencyExamQuestion = {
+  id: string;
+  level: LevelId;
+  prompt: string;
+  options: string[];
+};
+type ProficiencyExam = {
+  id: string;
+  type: "placement" | "promotion";
+  questions: ProficiencyExamQuestion[];
+};
+type ProficiencyExamResult = {
+  exam_type: string;
+  score: number;
+  passed: boolean;
+  recommended_level: string | null;
+  advanced_level: string | null;
   a1_score: number;
   a2_score: number;
   b1_score: number;
@@ -73,36 +88,41 @@ const goals = [
   "Aprender por prazer",
 ];
 
-const placementQuestions: {
-  level: LevelId;
-  prompt: string;
-  options: string[];
-}[] = [
-  { level: "A1", prompt: "Choose the correct greeting for the morning.", options: ["Good morning", "Good night", "Good evening", "Goodbye"] },
-  { level: "A1", prompt: "Complete: She ___ a student.", options: ["am", "is", "are", "be"] },
-  { level: "A1", prompt: "What is the plural of “child”?", options: ["childs", "childes", "children", "childrens"] },
-  { level: "A2", prompt: "Complete: We ___ to the cinema last night.", options: ["go", "went", "gone", "going"] },
-  { level: "A2", prompt: "Choose the natural sentence.", options: ["I have 20 years.", "I am 20 years old.", "I have 20 old.", "I am with 20 years."] },
-  { level: "A2", prompt: "Complete: There isn’t ___ milk in the fridge.", options: ["some", "many", "any", "few"] },
-  { level: "B1", prompt: "Complete: If I ___ more time, I would learn another language.", options: ["have", "had", "will have", "would have"] },
-  { level: "B1", prompt: "Choose the correct reported speech: “I’m tired,” she said.", options: ["She said she is tired.", "She said I was tired.", "She said she was tired.", "She told that tired."] },
-  { level: "B1", prompt: "Complete: I’ve lived here ___ 2021.", options: ["for", "since", "during", "from"] },
-  { level: "B2", prompt: "Complete: By the time we arrived, the meeting ___.", options: ["started", "has started", "had started", "was starting"] },
-  { level: "B2", prompt: "Choose the best meaning of “to bring about a change.”", options: ["To prevent a change", "To cause a change", "To explain a change", "To delay a change"] },
-  { level: "B2", prompt: "Complete: The proposal, ___ was submitted yesterday, needs revision.", options: ["that", "who", "which", "whose"] },
-  { level: "C1", prompt: "Complete: Rarely ___ such a compelling argument.", options: ["I have heard", "have I heard", "I heard", "heard I"] },
-  { level: "C1", prompt: "Choose the closest meaning of “the evidence is tenuous.”", options: ["The evidence is conclusive.", "The evidence is weak.", "The evidence is irrelevant.", "The evidence is extensive."] },
-  { level: "C1", prompt: "Complete: Had they informed us earlier, we ___ the issue.", options: ["could resolve", "could have resolved", "will resolve", "had resolved"] },
-  { level: "C2", prompt: "Choose the sentence with the most precise use of “disinterested.”", options: ["She was disinterested in the lecture and fell asleep.", "As a disinterested mediator, he had no stake in the outcome.", "The disinterested book was hard to finish.", "They disinterested the proposal."] },
-  { level: "C2", prompt: "Complete: So nuanced ___ the account that it resisted easy interpretation.", options: ["the account was", "was the account", "did the account", "the account did"] },
-  { level: "C2", prompt: "Which phrase means “to make a bad situation worse”?", options: ["To cut corners", "To take the plunge", "To add fuel to the fire", "To call it a day"] },
-];
-
 function choicesFromJson(value: Json): string[] {
   if (!Array.isArray(value) || !value.every((item) => typeof item === "string")) {
     throw new Error("Uma questão publicada contém alternativas inválidas.");
   }
   return value;
+}
+
+async function fetchProficiencyExam(type: ProficiencyExam["type"]): Promise<ProficiencyExam> {
+  if (!supabase) throw new Error("Supabase não está configurado.");
+  const { data, error } = await supabase.rpc("get_proficiency_exam", {
+    p_exam_type: type,
+  });
+  if (error) throw new Error(error.message);
+  if (!data.length) throw new Error("O Supabase não retornou questões para a prova.");
+
+  const examId = data[0].exam_id;
+  const expectedCount = type === "placement" ? 18 : 10;
+  if (data.length !== expectedCount || data.some((row) => row.exam_id !== examId)) {
+    throw new Error("A prova retornada pelo Supabase está incompleta ou inconsistente.");
+  }
+
+  return {
+    id: examId,
+    type,
+    questions: data.map((row) => {
+      const level = levels.find((item) => item.id === row.level_code);
+      if (!level) throw new Error(`O nível ${row.level_code} da prova é inválido.`);
+      return {
+        id: row.question_id,
+        level: level.id,
+        prompt: row.prompt,
+        options: choicesFromJson(row.choices),
+      };
+    }),
+  };
 }
 
 function profileErrorMessage(error: { message: string; code?: string }) {
@@ -126,9 +146,11 @@ export default function Dashboard() {
   const [passwordInput, setPasswordInput] = useState("");
   const [goal, setGoal] = useState(goals[0]);
   const [dailyMinutes, setDailyMinutes] = useState(20);
+  const [onboardingExam, setOnboardingExam] = useState<ProficiencyExam | null>(null);
+  const [onboardingExamLoading, setOnboardingExamLoading] = useState(false);
   const [placementQuestionIndex, setPlacementQuestionIndex] = useState(0);
   const [placementAnswers, setPlacementAnswers] = useState<number[]>([]);
-  const [placementResult, setPlacementResult] = useState<PlacementResult | null>(null);
+  const [placementResult, setPlacementResult] = useState<ProficiencyExamResult | null>(null);
   const [placementBusy, setPlacementBusy] = useState(false);
   const [activeLesson, setActiveLesson] = useState<Lesson | null>(null);
   const [questionIndex, setQuestionIndex] = useState(0);
@@ -137,7 +159,7 @@ export default function Dashboard() {
   const [answerFeedback, setAnswerFeedback] = useState("");
   const [answerHint, setAnswerHint] = useState("");
   const [wrongAttempts, setWrongAttempts] = useState(0);
-  const [levelAdvanced, setLevelAdvanced] = useState(false);
+  const [levelCompleted, setLevelCompleted] = useState(false);
   const [answerSaving, setAnswerSaving] = useState(false);
   const [authBusy, setAuthBusy] = useState(false);
   const [authMessage, setAuthMessage] = useState("");
@@ -146,7 +168,8 @@ export default function Dashboard() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const configured = supabase !== null;
-  const onboardingQuestion = placementQuestions[placementQuestionIndex];
+  const onboardingQuestions = onboardingExam?.questions ?? [];
+  const onboardingQuestion = onboardingQuestions[placementQuestionIndex];
   const recommendedOnboardingLevel =
     levels.find((level) => level.id === placementResult?.recommended_level) ?? levels[0];
 
@@ -315,6 +338,7 @@ export default function Dashboard() {
         setPlacementQuestionIndex(0);
         setPlacementAnswers([]);
         setPlacementResult(null);
+        setOnboardingExam(null);
       }
       if (!nextSession) {
         setProfile(null);
@@ -364,6 +388,28 @@ export default function Dashboard() {
       active = false;
     };
   }, [session?.user.id, loadProfile, loadStudyData]);
+
+  useEffect(() => {
+    if (!profile || profile.onboardingComplete || !supabase) return;
+    let active = true;
+    setOnboardingExam(null);
+    setOnboardingExamLoading(true);
+    void fetchProficiencyExam("placement")
+      .then((exam) => {
+        if (active) setOnboardingExam(exam);
+      })
+      .catch((error: unknown) => {
+        if (active) {
+          setAppError(error instanceof Error ? error.message : "Não foi possível preparar a avaliação.");
+        }
+      })
+      .finally(() => {
+        if (active) setOnboardingExamLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [profile?.userId, profile?.onboardingComplete]);
 
   const currentLessons = useMemo(
     () => lessons.filter((lesson) => lesson.level === profile?.level),
@@ -418,21 +464,39 @@ export default function Dashboard() {
   }
 
   async function submitPlacementTest() {
-    if (!supabase || placementAnswers.length !== placementQuestions.length) return;
+    if (!supabase || !onboardingExam || placementAnswers.length !== onboardingExam.questions.length) return;
     setPlacementBusy(true);
     setAppError("");
     try {
-      const { data, error } = await supabase.rpc("submit_placement_test", {
+      const { data, error } = await supabase.rpc("submit_proficiency_exam", {
+        p_exam_id: onboardingExam.id,
         p_answers: placementAnswers,
       });
       if (error) throw new Error(error.message);
       const result = data[0];
       if (!result) throw new Error("O Supabase não retornou o resultado da avaliação.");
+      if (result.exam_type !== "placement" || !result.recommended_level) {
+        throw new Error("O Supabase retornou um resultado de avaliação inválido.");
+      }
       setPlacementResult(result);
     } catch (error) {
       setAppError(error instanceof Error ? error.message : "Não foi possível corrigir a avaliação.");
     } finally {
       setPlacementBusy(false);
+    }
+  }
+
+  async function retryOnboardingExam() {
+    setOnboardingExamLoading(true);
+    setAppError("");
+    try {
+      setOnboardingExam(await fetchProficiencyExam("placement"));
+      setPlacementQuestionIndex(0);
+      setPlacementAnswers([]);
+    } catch (error) {
+      setAppError(error instanceof Error ? error.message : "Não foi possível preparar a avaliação.");
+    } finally {
+      setOnboardingExamLoading(false);
     }
   }
 
@@ -469,7 +533,7 @@ export default function Dashboard() {
     setAnswerFeedback("");
     setAnswerHint("");
     setWrongAttempts(0);
-    setLevelAdvanced(false);
+    setLevelCompleted(false);
   }
 
   async function submitAnswer() {
@@ -489,7 +553,7 @@ export default function Dashboard() {
       setAnswerFeedback(result.explanation || "");
       setAnswerHint(result.hint || "");
       setWrongAttempts(result.wrong_attempts);
-      setLevelAdvanced(result.level_advanced);
+      setLevelCompleted(result.level_completed);
       const updatedProfile = await loadProfile(session);
       await loadStudyData(updatedProfile);
     } catch (error) {
@@ -523,6 +587,13 @@ export default function Dashboard() {
     if (error) throw new Error(error.message);
     const updatedProfile = await loadProfile(session);
     await loadStudyData(updatedProfile);
+  }
+
+  async function refreshProfileAfterPromotion() {
+    if (!session) return;
+    const updatedProfile = await loadProfile(session);
+    await loadStudyData(updatedProfile);
+    setPage("home");
   }
 
   async function signOut() {
@@ -614,15 +685,15 @@ export default function Dashboard() {
       <main className="onboarding-screen">
         <header className="onboarding-header"><a className="brand" href="#"><span className="brand-mark">f.</span> fluência<span className="brand-dot">.</span></a><span className="onboarding-progress-label">PERFIL DE APRENDIZAGEM <strong>01 <i>/ 01</i></strong></span></header>
         <div className="onboarding-wrap">
-          <div className="onboarding-heading"><span className="eyebrow"><span className="live-dot" /> AVALIAÇÃO DE PROFICIÊNCIA</span><h1>Vamos descobrir <span>seu nível.</span></h1><p>Responda 18 questões rápidas. Sua trilha começa no nível indicado pelas suas respostas.</p></div>
+          <div className="onboarding-heading"><span className="eyebrow"><span className="live-dot" /> AVALIAÇÃO DE PROFICIÊNCIA</span><h1>Vamos descobrir <span>seu nível.</span></h1><p>Responda 18 questões sorteadas do nosso banco. Sua trilha começa no nível indicado pelas suas respostas.</p></div>
           <div className="onboarding-card">
-            {!placementResult ? <>
-              <div className="question-block"><div className="question-number">{String(placementQuestionIndex + 1).padStart(2, "0")} <span>—</span> 18</div><div><h2>{onboardingQuestion.prompt}</h2><p>Escolha a melhor resposta. Você precisa responder cada questão para continuar.</p></div></div>
+            {!placementResult ? onboardingExamLoading ? <p className="onboarding-note">Preparando suas questões...</p> : !onboardingQuestion ? <div className="onboarding-note">Não foi possível carregar a avaliação. <button className="text-link" type="button" onClick={retryOnboardingExam}>Tentar novamente</button></div> : <>
+              <div className="question-block"><div className="question-number">{String(placementQuestionIndex + 1).padStart(2, "0")} <span>—</span> {onboardingQuestions.length}</div><div><h2>{onboardingQuestion.prompt}</h2><p>Escolha a melhor resposta. Você precisa responder cada questão para continuar.</p></div></div>
               <div className="onboarding-placement-options" role="group" aria-label={`Questão ${placementQuestionIndex + 1}`}>
                 {onboardingQuestion.options.map((option, index) => <button key={option} className={`placement-option ${placementAnswers[placementQuestionIndex] === index ? "selected" : ""}`} type="button" onClick={() => setPlacementAnswers((current) => { const next = [...current]; next[placementQuestionIndex] = index; return next; })}><span>{String.fromCharCode(65 + index)}</span>{option}</button>)}
               </div>
-              <div className="placement-progress"><span>Questão {placementQuestionIndex + 1} de {placementQuestions.length}</span><strong>{onboardingQuestion.level}</strong></div>
-              <div className="progress-track"><span style={{ width: `${((placementQuestionIndex + 1) / placementQuestions.length) * 100}%` }} /></div>
+              <div className="placement-progress"><span>Questão {placementQuestionIndex + 1} de {onboardingQuestions.length}</span><strong>{onboardingQuestion.level}</strong></div>
+              <div className="progress-track"><span style={{ width: `${((placementQuestionIndex + 1) / onboardingQuestions.length) * 100}%` }} /></div>
             </> : <div className="onboarding-result">
               <span className="section-kicker">AVALIAÇÃO CONCLUÍDA</span>
               <div className="recommendation-level">{recommendedOnboardingLevel.id}</div>
@@ -639,8 +710,8 @@ export default function Dashboard() {
               <span>{placementResult ? "Seu nível será definido pela avaliação." : "Você pode voltar e revisar suas respostas."}</span>
               <div className="onboarding-actions">
                 {placementQuestionIndex > 0 && !placementResult && <button className="button button-dark" type="button" onClick={() => setPlacementQuestionIndex((current) => current - 1)}>Voltar</button>}
-                {!placementResult && placementQuestionIndex < placementQuestions.length - 1 && <button className="button button-primary" type="button" disabled={placementAnswers[placementQuestionIndex] === undefined} onClick={() => setPlacementQuestionIndex((current) => current + 1)}>Próxima questão <span>→</span></button>}
-                {!placementResult && placementQuestionIndex === placementQuestions.length - 1 && <button className="button button-primary" type="button" disabled={placementAnswers[placementQuestionIndex] === undefined || placementBusy} onClick={submitPlacementTest}>{placementBusy ? "Corrigindo..." : "Concluir avaliação"} <span>↗</span></button>}
+                {!placementResult && placementQuestionIndex < onboardingQuestions.length - 1 && <button className="button button-primary" type="button" disabled={!onboardingQuestion || placementAnswers[placementQuestionIndex] === undefined} onClick={() => setPlacementQuestionIndex((current) => current + 1)}>Próxima questão <span>→</span></button>}
+                {!placementResult && onboardingQuestions.length > 0 && placementQuestionIndex === onboardingQuestions.length - 1 && <button className="button button-primary" type="button" disabled={placementAnswers[placementQuestionIndex] === undefined || placementBusy} onClick={submitPlacementTest}>{placementBusy ? "Corrigindo..." : "Concluir avaliação"} <span>↗</span></button>}
                 {placementResult && <button className="button button-primary" type="button" disabled={profileLoading} onClick={finishOnboarding}>{profileLoading ? "Preparando sua trilha..." : "Começar a aprender"} <span>↗</span></button>}
               </div>
             </div>
@@ -677,24 +748,25 @@ export default function Dashboard() {
       </aside>
       {mobileMenuOpen && <button aria-label="Fechar menu" className="menu-backdrop" onClick={() => setMobileMenuOpen(false)} />}
       <div className="app-main">
-        <header className="topbar"><button className="mobile-menu-button" onClick={() => setMobileMenuOpen(true)} aria-label="Abrir menu">☰</button><div className="breadcrumb">Meu espaço <span>/</span> <strong>{navItems.find((item) => item.id === page)?.label}</strong></div><div className="topbar-right"><span className="streak"><span>✦</span> {profile.completedLessons.length} lições</span><span className="topbar-divider" /><span className="topbar-date">{new Intl.DateTimeFormat("pt-BR", { weekday: "short", day: "numeric", month: "short" }).format(new Date())}</span></div></header>
+        <header className="topbar"><button className="mobile-menu-button" onClick={() => setMobileMenuOpen(true)} aria-label="Abrir menu">☰</button><div className="breadcrumb">Meu espaço <span>/</span> <strong>{page === "exam" ? "Prova de avanço" : navItems.find((item) => item.id === page)?.label}</strong></div><div className="topbar-right"><span className="streak"><span>✦</span> {profile.completedLessons.length} lições</span><span className="topbar-divider" /><span className="topbar-date">{new Intl.DateTimeFormat("pt-BR", { weekday: "short", day: "numeric", month: "short" }).format(new Date())}</span></div></header>
         <div className="page-content">
           {appError && <div className="app-error" role="alert">{appError}<button onClick={() => setAppError("")} aria-label="Fechar aviso">×</button></div>}
-          {page === "home" && <div className="home-page"><HomePage profile={profile} lessons={currentLessons} progressPercent={progressPercent} completedInLevel={completedInLevel} levelIndex={currentLevelIndex} nextLesson={nextLesson} onStudy={() => nextLesson && openLesson(nextLesson)} onPage={setPage} onSelectLesson={openLesson} /></div>}
+          {page === "home" && <div className="home-page"><HomePage profile={profile} lessons={currentLessons} progressPercent={progressPercent} completedInLevel={completedInLevel} levelIndex={currentLevelIndex} nextLesson={nextLesson} canTakePromotionExam={currentLessons.length > 0 && currentLessons.every((lesson) => profile.completedLessons.includes(lesson.id)) && profile.level !== "C2"} onPromotionExam={() => setPage("exam")} onStudy={() => nextLesson && openLesson(nextLesson)} onPage={setPage} onSelectLesson={openLesson} /></div>}
           {page === "lessons" && <LessonsPage profile={profile} lessons={lessons} onSelectLesson={openLesson} />}
           {page === "cards" && <CardsPage key={profile.level} level={profile.level} cards={cards} />}
           {page === "progress" && <ProgressPage profile={profile} levelIndex={currentLevelIndex} lessons={lessons} />}
           {page === "profile" && <ProfilePage profile={profile} levelIndex={currentLevelIndex} levelProgress={progressPercent} completedInLevel={completedInLevel} totalQuestions={profile.completedQuestionIds.length} onSave={saveProfileDetails} onApplyLevel={applyPlacementLevel} />}
+          {page === "exam" && <PromotionExamPage level={profile.level} onExit={() => setPage("home")} onPassed={refreshProfileAfterPromotion} />}
           <footer className="app-footer"><span>Pequenos passos também levam longe. <span className="footer-heart">♥</span></span><span>Seu progresso fica sincronizado com sua conta.</span></footer>
         </div>
       </div>
-      {activeLesson && activeQuestion && <LessonModal lesson={activeLesson} question={activeQuestion} questionIndex={questionIndex} selectedAnswer={selectedAnswer} result={answerResult} feedback={answerFeedback} hint={answerHint} wrongAttempts={wrongAttempts} levelAdvanced={levelAdvanced} saving={answerSaving} completed={profile.completedQuestionIds.includes(activeQuestion.id)} onSelect={(answer) => { setSelectedAnswer(answer); setAnswerResult(null); setAnswerFeedback(""); }} onSubmit={submitAnswer} onNext={nextQuestion} onClose={() => setActiveLesson(null)} />}
+      {activeLesson && activeQuestion && <LessonModal lesson={activeLesson} question={activeQuestion} questionIndex={questionIndex} selectedAnswer={selectedAnswer} result={answerResult} feedback={answerFeedback} hint={answerHint} wrongAttempts={wrongAttempts} levelCompleted={levelCompleted && profile.level !== "C2"} saving={answerSaving} completed={profile.completedQuestionIds.includes(activeQuestion.id)} onSelect={(answer) => { setSelectedAnswer(answer); setAnswerResult(null); setAnswerFeedback(""); }} onSubmit={submitAnswer} onNext={nextQuestion} onClose={() => setActiveLesson(null)} onStartPromotionExam={() => { setActiveLesson(null); setPage("exam"); }} />}
     </main>
   );
 }
 
-function HomePage({ profile, lessons: currentLessons, progressPercent, completedInLevel, levelIndex, nextLesson, onStudy, onPage, onSelectLesson }: {
-  profile: Profile; lessons: Lesson[]; progressPercent: number; completedInLevel: number; levelIndex: number; nextLesson?: Lesson; onStudy: () => void; onPage: (page: PageId) => void; onSelectLesson: (lesson: Lesson) => void;
+function HomePage({ profile, lessons: currentLessons, progressPercent, completedInLevel, levelIndex, nextLesson, canTakePromotionExam, onPromotionExam, onStudy, onPage, onSelectLesson }: {
+  profile: Profile; lessons: Lesson[]; progressPercent: number; completedInLevel: number; levelIndex: number; nextLesson?: Lesson; canTakePromotionExam: boolean; onPromotionExam: () => void; onStudy: () => void; onPage: (page: PageId) => void; onSelectLesson: (lesson: Lesson) => void;
 }) {
   const recommendations = currentLessons.slice(0, 3);
   const firstName = profile.name.split(" ")[0];
@@ -705,7 +777,7 @@ function HomePage({ profile, lessons: currentLessons, progressPercent, completed
         <div className="main-column">
           <article className="level-banner"><div className="banner-orbit orbit-one" /><div className="banner-orbit orbit-two" /><div className="level-banner-content"><div className="banner-top"><span className="banner-label"><span className="banner-spark">✦</span> SUA JORNADA ATUAL</span><span className="level-pill">{profile.level} <span>·</span> {profile.levelTitle}</span></div><h2>O começo de algo <em>grande.</em></h2><p>Você está construindo sua base no inglês. Cada pequena conquista conta — continue no seu ritmo.</p><div className="banner-progress"><div className="progress-meta"><span>Progresso neste nível</span><strong>{completedInLevel} <small>/ {currentLessons.length} lições</small></strong></div><div className="progress-track"><span style={{ width: `${progressPercent}%` }} /></div><div className="progress-caption"><span>{progressPercent}% concluído</span><span>Nível {levelIndex + 1} de 6</span></div></div></div><div className="banner-art"><div className="art-circle"><span>✦</span></div><span className="art-spark spark-one">✳</span><span className="art-spark spark-two">✧</span><span className="art-spark spark-three">·</span><div className="art-word">hello<span>.</span></div><div className="art-label">uma palavra<br />de cada vez</div></div></article>
           <section className="section-block"><div className="section-title-row"><div><span className="section-kicker">SUA TRILHA</span><h2>Continue aprendendo</h2></div><button className="text-link" onClick={() => onPage("lessons")}>Ver todas <span>↗</span></button></div>
-            <div className="lesson-feature">{nextLesson ? <><div className="lesson-feature-icon">{nextLesson.category === "Conversação" ? "◉" : nextLesson.category === "Gramática" ? "⌘" : "✦"}</div><div className="lesson-feature-info"><span className="lesson-category">{nextLesson.category} <i /> {nextLesson.duration} min · {nextLesson.questions.length} questões</span><h3>{nextLesson.title}</h3><p>{nextLesson.description}</p><div className="lesson-feature-bottom"><span><span className="lesson-dot" /> PRÓXIMA NA SUA TRILHA</span><button className="button button-dark" onClick={onStudy}>Começar lição <span>→</span></button></div></div></> : currentLessons.length ? <div className="level-finished"><span>🎉</span><h3>Você concluiu este nível!</h3><p>Seu próximo nível já está liberado. Explore a nova trilha.</p><button className="button button-primary" onClick={() => onPage("lessons")}>Ver próxima trilha <span>→</span></button></div> : <div className="level-finished"><span>📚</span><h3>Estamos preparando sua trilha</h3><p>Ainda não há lições publicadas para este nível.</p></div>}</div>
+            <div className="lesson-feature">{nextLesson ? <><div className="lesson-feature-icon">{nextLesson.category === "Conversação" ? "◉" : nextLesson.category === "Gramática" ? "⌘" : "✦"}</div><div className="lesson-feature-info"><span className="lesson-category">{nextLesson.category} <i /> {nextLesson.duration} min · {nextLesson.questions.length} questões</span><h3>{nextLesson.title}</h3><p>{nextLesson.description}</p><div className="lesson-feature-bottom"><span><span className="lesson-dot" /> PRÓXIMA NA SUA TRILHA</span><button className="button button-dark" onClick={onStudy}>Começar lição <span>→</span></button></div></div></> : currentLessons.length ? <div className="level-finished"><span>🎉</span><h3>{profile.level === "C2" ? "Você concluiu toda a trilha!" : "Você concluiu este nível!"}</h3><p>{canTakePromotionExam ? `Faça a prova de 10 questões para avançar do ${profile.level} ao próximo nível. É preciso acertar pelo menos 7.` : "Explore suas lições concluídas e acompanhe seu progresso."}</p>{canTakePromotionExam ? <button className="button button-primary" onClick={onPromotionExam}>Fazer prova de avanço <span>→</span></button> : <button className="button button-primary" onClick={() => onPage("progress")}>Ver meu progresso <span>→</span></button>}</div> : <div className="level-finished"><span>📚</span><h3>Estamos preparando sua trilha</h3><p>Ainda não há lições publicadas para este nível.</p></div>}</div>
           </section>
           <section className="section-block"><div className="section-title-row"><div><span className="section-kicker">PARA VOCÊ</span><h2>Na sua trilha de hoje</h2></div><span className="tiny-count">{profile.level} · {recommendations.length} lições</span></div><div className="lesson-list">{recommendations.length ? recommendations.map((lesson, index) => { const done = profile.completedLessons.includes(lesson.id); return <button key={lesson.id} className={`lesson-row ${done ? "lesson-done" : ""}`} onClick={() => onSelectLesson(lesson)}><span className={`lesson-index ${done ? "index-done" : ""}`}>{done ? "✓" : `0${index + 1}`}</span><span className="lesson-row-title"><strong>{lesson.title}</strong><small>{lesson.category} <i /> {lesson.duration} min · {lesson.questions.length} questões</small></span><span className="lesson-row-status">{done ? "Concluída" : "→"}</span></button>; }) : <div className="empty-state">As lições publicadas aparecerão aqui.</div>}</div></section>
         </div>
@@ -842,15 +914,9 @@ function ProfilePage({
   const [testFinished, setTestFinished] = useState(false);
   const [questionIndex, setQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<number[]>([]);
-  const [placementResult, setPlacementResult] = useState<{
-    recommended_level: string;
-    a1_score: number;
-    a2_score: number;
-    b1_score: number;
-    b2_score: number;
-    c1_score: number;
-    c2_score: number;
-  } | null>(null);
+  const [placementResult, setPlacementResult] = useState<ProficiencyExamResult | null>(null);
+  const [placementExam, setPlacementExam] = useState<ProficiencyExam | null>(null);
+  const [placementLoading, setPlacementLoading] = useState(false);
   const [testBusy, setTestBusy] = useState(false);
   const [applyBusy, setApplyBusy] = useState(false);
   const [applyMessage, setApplyMessage] = useState("");
@@ -868,6 +934,9 @@ function ProfilePage({
     : [];
   const recommendedLevel =
     levels.find((level) => level.id === placementResult?.recommended_level) ?? levels[0];
+  const recommendsHigherLevel =
+    levels.findIndex((level) => level.id === recommendedLevel.id) > levelIndex;
+  const placementQuestions = placementExam?.questions ?? [];
   const currentQuestion = placementQuestions[questionIndex];
 
   async function submitProfile(event: FormEvent<HTMLFormElement>) {
@@ -885,13 +954,23 @@ function ProfilePage({
     }
   }
 
-  function startTest() {
-    setAnswers([]);
-    setQuestionIndex(0);
-    setTestFinished(false);
-    setTestStarted(true);
-    setPlacementResult(null);
+  async function startTest() {
+    setPlacementLoading(true);
     setTestError("");
+    setPlacementResult(null);
+    setTestFinished(false);
+    setTestStarted(false);
+    setPlacementExam(null);
+    try {
+      setPlacementExam(await fetchProficiencyExam("placement"));
+      setAnswers([]);
+      setQuestionIndex(0);
+      setTestStarted(true);
+    } catch (error) {
+      setTestError(error instanceof Error ? error.message : "Não foi possível preparar a avaliação.");
+    } finally {
+      setPlacementLoading(false);
+    }
     setApplyMessage("");
   }
 
@@ -906,19 +985,23 @@ function ProfilePage({
   async function continueTest() {
     if (answers[questionIndex] === undefined) return;
     if (questionIndex === placementQuestions.length - 1) {
-      if (!supabase) {
+      if (!supabase || !placementExam) {
         setTestError("O Supabase não está configurado.");
         return;
       }
       setTestBusy(true);
       setTestError("");
       try {
-        const { data, error } = await supabase.rpc("submit_placement_test", {
+        const { data, error } = await supabase.rpc("submit_proficiency_exam", {
+          p_exam_id: placementExam.id,
           p_answers: answers,
         });
         if (error) throw new Error(error.message);
         const result = data[0];
         if (!result) throw new Error("O Supabase não retornou o resultado da avaliação.");
+        if (result.exam_type !== "placement" || !result.recommended_level) {
+          throw new Error("O Supabase retornou um resultado de avaliação inválido.");
+        }
         setPlacementResult(result);
         setTestFinished(true);
       } catch (error) {
@@ -932,6 +1015,10 @@ function ProfilePage({
   }
 
   async function applyRecommendation() {
+    if (recommendsHigherLevel) {
+      setTestError("Para avançar, conclua todas as lições do seu nível e passe na prova de avanço.");
+      return;
+    }
     setApplyBusy(true);
     setTestError("");
     setApplyMessage("");
@@ -990,8 +1077,9 @@ function ProfilePage({
 
           <section className="profile-panel placement-panel">
             <div className="placement-heading"><span className="placement-icon">✧</span><div><span className="section-kicker">AVALIAÇÃO DE NÍVEL</span><h2>Descubra seu ponto de partida</h2></div></div>
-            <p>Faça uma prova rápida de 18 questões. No final, você recebe uma recomendação de nível que pode aplicar quando quiser.</p>
-            {!testStarted && <button className="button button-dark" onClick={startTest}>Começar prova <span>→</span></button>}
+            <p>Faça uma avaliação de 18 questões para revisar seu ponto de partida. Para avançar, conclua as lições do nível atual e passe na prova de avanço.</p>
+            {!testStarted && <button className="button button-dark" disabled={placementLoading} onClick={() => void startTest()}>{placementLoading ? "Preparando prova..." : "Começar prova"} <span>→</span></button>}
+            {!testStarted && testError && <p className="form-message form-error" role="alert">{testError}</p>}
             {testStarted && !testFinished && currentQuestion && <div className="placement-test">
               <div className="placement-progress"><span>Questão {questionIndex + 1} de {placementQuestions.length}</span><strong>{currentQuestion.level}</strong></div>
               <div className="progress-track"><span style={{ width: `${((questionIndex + 1) / placementQuestions.length) * 100}%` }} /></div>
@@ -1008,8 +1096,8 @@ function ProfilePage({
               <div className="placement-scores">{levels.map((level, index) => <span key={level.id}>{level.id} <strong>{scores[index]}/3</strong></span>)}</div>
               {testError && <p className="form-message form-error" role="alert">{testError}</p>}
               {applyMessage && <p className="form-message form-success" role="status">{applyMessage}</p>}
-              <div className="placement-actions"><button className="button button-primary" onClick={applyRecommendation} disabled={applyBusy || profile.level === recommendedLevel.id}>{applyBusy ? "Atualizando..." : profile.level === recommendedLevel.id ? "Você já está neste nível" : "Aplicar nível recomendado"} <span>↗</span></button><button className="text-link" onClick={startTest}>Fazer novamente</button></div>
-              <small className="placement-preservation">Aplicar o nível não apaga suas lições concluídas nem suas tentativas.</small>
+              <div className="placement-actions"><button className="button button-primary" onClick={applyRecommendation} disabled={applyBusy || profile.level === recommendedLevel.id || recommendsHigherLevel}>{applyBusy ? "Atualizando..." : profile.level === recommendedLevel.id ? "Você já está neste nível" : recommendsHigherLevel ? "Avance pela prova de nível" : "Aplicar nível recomendado"} <span>↗</span></button><button className="text-link" onClick={() => void startTest()}>Fazer novamente</button></div>
+              <small className="placement-preservation">A avaliação pode sugerir um nível anterior, mas as promoções exigem a prova específica após concluir as lições.</small>
             </div>}
           </section>
         </div>
@@ -1023,10 +1111,131 @@ function ProgressPage({ profile, levelIndex, lessons: allLessons }: { profile: P
   return <section className="inner-page progress-page"><div className="page-heading"><span className="eyebrow"><span className="live-dot" /> SUA EVOLUÇÃO</span><h1>Olha só até onde <span>você chegou.</span></h1><p>Progresso de verdade é feito de pequenas conquistas repetidas.</p></div><div className="progress-summary"><article className="progress-stat"><span className="stat-icon stat-mint">✦</span><strong>{profile.completedLessons.length}</strong><small>lições concluídas</small></article><article className="progress-stat"><span className="stat-icon stat-violet">↗</span><strong>{levelIndex + 1}<small> / 6</small></strong><small>nível atual: {profile.level}</small></article><article className="progress-stat"><span className="stat-icon stat-pink">◷</span><strong>{totalCompleted}<small> questões</small></strong><small>respondidas corretamente</small></article></div><div className="progress-map"><div className="section-title-row"><div><span className="section-kicker">SEU CAMINHO</span><h2>Do primeiro hello ao próximo nível</h2></div><span className="tiny-count">{Math.round((levelIndex / 5) * 100)}% da jornada</span></div><div className="map-levels">{levels.map((level, index) => { const reached = index <= levelIndex; const complete = index < levelIndex; const levelLessons = allLessons.filter((lesson) => lesson.level === level.id); const done = levelLessons.filter((lesson) => profile.completedLessons.includes(lesson.id)).length; return <div key={level.id} className={`map-level ${reached ? "map-reached" : ""} ${complete ? "map-complete" : ""}`}><span className="map-marker">{complete ? "✓" : reached ? "✦" : "·"}</span><div className="map-level-content"><div><strong>{level.id} <span>·</span> {level.name}</strong><small>{level.subtitle}</small></div><span className="map-level-status">{complete ? "Concluído" : reached ? `${done} / ${levelLessons.length} lições` : "A desbloquear"}</span></div></div>; })}</div></div><div className="progress-encouragement"><span>🌱</span><div><strong>Consistência acima de velocidade.</strong><p>Seu objetivo — {profile.goal.toLowerCase()} — começa com cada pequena sessão.</p></div></div></section>;
 }
 
-function LessonModal({ lesson, question, questionIndex, selectedAnswer, result, feedback, hint, wrongAttempts, levelAdvanced, saving, completed, onSelect, onSubmit, onNext, onClose }: {
-  lesson: Lesson; question: LessonQuestion; questionIndex: number; selectedAnswer: string; result: "correct" | "incorrect" | null; feedback: string; hint: string; wrongAttempts: number; levelAdvanced: boolean; saving: boolean; completed: boolean; onSelect: (answer: string) => void; onSubmit: () => void; onNext: () => void; onClose: () => void;
+function PromotionExamPage({ level, onExit, onPassed }: {
+  level: LevelId;
+  onExit: () => void;
+  onPassed: () => Promise<void>;
+}) {
+  const [exam, setExam] = useState<ProficiencyExam | null>(null);
+  const [questionIndex, setQuestionIndex] = useState(0);
+  const [answers, setAnswers] = useState<number[]>([]);
+  const [result, setResult] = useState<ProficiencyExamResult | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+
+  const loadExam = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    setExam(null);
+    setResult(null);
+    setAnswers([]);
+    setQuestionIndex(0);
+    try {
+      setExam(await fetchProficiencyExam("promotion"));
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : "Não foi possível preparar a prova.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadExam();
+  }, [loadExam]);
+
+  const question = exam?.questions[questionIndex];
+
+  async function submitExam() {
+    if (!supabase || !exam || answers.length !== 10 || answers.some((answer) => answer === undefined)) return;
+    setSubmitting(true);
+    setError("");
+    try {
+      const { data, error: submitError } = await supabase.rpc("submit_proficiency_exam", {
+        p_exam_id: exam.id,
+        p_answers: answers,
+      });
+      if (submitError) throw new Error(submitError.message);
+      const examResult = data[0];
+      if (!examResult || examResult.exam_type !== "promotion") {
+        throw new Error("O Supabase não retornou um resultado válido para a prova.");
+      }
+      setResult(examResult);
+      if (examResult.passed) await onPassed();
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : "Não foi possível corrigir a prova.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <section className="inner-page promotion-exam-page">
+      <div className="page-heading">
+        <span className="eyebrow"><span className="live-dot" /> PROVA DE AVANÇO · {level}</span>
+        <h1>Pronto para o <span>próximo nível?</span></h1>
+        <p>Responda 10 questões sobre o conteúdo de {level}. Você precisa acertar pelo menos 7 para avançar.</p>
+      </div>
+      <div className="promotion-exam-card">
+        {loading ? <p>Preparando uma nova prova...</p> : error && !exam ? <>
+          <p className="form-message form-error" role="alert">{error}</p>
+          <button className="button button-dark" type="button" onClick={() => void loadExam()}>Tentar novamente</button>
+        </> : result ? <>
+          <div className={`promotion-result ${result.passed ? "promotion-passed" : ""}`}>
+            <span className="section-kicker">{result.passed ? "APROVADO" : "AINDA NÃO FOI DESTA VEZ"}</span>
+            <strong>{result.score}/10</strong>
+            <p>{result.passed
+              ? `Parabéns! Você avançou para o nível ${result.advanced_level}.`
+              : `Você precisa de 7 acertos. Revise o conteúdo de ${level} e tente uma nova prova.`}</p>
+          </div>
+          {error && <p className="form-message form-error" role="alert">{error}</p>}
+          <div className="promotion-exam-actions">
+            {!result.passed && <button className="button button-primary" type="button" onClick={() => void loadExam()}>Tentar outra prova <span>↗</span></button>}
+            <button className="button button-dark" type="button" onClick={onExit}>Voltar à visão geral</button>
+          </div>
+        </> : question ? <>
+          <div className="placement-progress"><span>Questão {questionIndex + 1} de 10</span><strong>{level}</strong></div>
+          <div className="progress-track"><span style={{ width: `${((questionIndex + 1) / 10) * 100}%` }} /></div>
+          <h2>{question.prompt}</h2>
+          <div className="placement-options" role="group" aria-label={`Questão ${questionIndex + 1}`}>
+            {question.options.map((option, index) => <button key={option} type="button" className={`placement-option ${answers[questionIndex] === index ? "selected" : ""}`} onClick={() => setAnswers((current) => {
+              const next = [...current];
+              next[questionIndex] = index;
+              return next;
+            })}><span>{String.fromCharCode(65 + index)}</span>{option}</button>)}
+          </div>
+          {error && <p className="form-message form-error" role="alert">{error}</p>}
+          <div className="promotion-exam-actions">
+            <button className="button button-dark" type="button" disabled={questionIndex === 0} onClick={() => setQuestionIndex((current) => current - 1)}>Anterior</button>
+            {questionIndex < 9
+              ? <button className="button button-primary" type="button" disabled={answers[questionIndex] === undefined} onClick={() => setQuestionIndex((current) => current + 1)}>Próxima questão <span>→</span></button>
+              : <button className="button button-primary" type="button" disabled={answers.some((answer) => answer === undefined) || submitting} onClick={submitExam}>{submitting ? "Corrigindo..." : "Concluir prova"} <span>↗</span></button>}
+          </div>
+        </> : null}
+      </div>
+    </section>
+  );
+}
+
+function LessonModal({ lesson, question, questionIndex, selectedAnswer, result, feedback, hint, wrongAttempts, levelCompleted, saving, completed, onSelect, onSubmit, onNext, onClose, onStartPromotionExam }: {
+  lesson: Lesson;
+  question: LessonQuestion;
+  questionIndex: number;
+  selectedAnswer: string;
+  result: "correct" | "incorrect" | null;
+  feedback: string;
+  hint: string;
+  wrongAttempts: number;
+  levelCompleted: boolean;
+  saving: boolean;
+  completed: boolean;
+  onSelect: (answer: string) => void;
+  onSubmit: () => void;
+  onNext: () => void;
+  onClose: () => void;
+  onStartPromotionExam: () => void;
 }) {
   const isLastQuestion = questionIndex === lesson.questions.length - 1;
   const answeredCorrectly = result === "correct" || completed;
-  return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><section className="lesson-modal" role="dialog" aria-modal="true" aria-labelledby="lesson-title"><button className="modal-close" onClick={onClose} aria-label="Fechar lição">×</button><span className="eyebrow"><span className="live-dot" /> {lesson.category.toUpperCase()} · {lesson.duration} MIN</span><div className="modal-step"><span>QUESTÃO {String(questionIndex + 1).padStart(2, "0")} DE {String(lesson.questions.length).padStart(2, "0")}</span><span>✦ PRÁTICA</span></div><h2 id="lesson-title">{lesson.title}</h2><p className="modal-description">{lesson.description}</p><div className="exercise-box"><span className="exercise-label">{question.type === "listening" ? "OUÇA E ESCREVA" : question.type === "fill_blank" ? "COMPLETE A FRASE" : "HORA DE PRATICAR"}</span>{question.audioUrl && <audio className="audio-player" controls preload="none" src={question.audioUrl}>Seu navegador não suporta áudio.</audio>}<h3>{question.prompt}</h3><div className="answer-options">{question.type === "multiple_choice" ? question.options.map((option, index) => <button key={option} className={`answer-option ${selectedAnswer === option ? "answer-selected" : ""} ${result === "incorrect" && selectedAnswer === option ? "answer-incorrect" : ""}`} onClick={() => onSelect(option)} disabled={answeredCorrectly}><span>{String.fromCharCode(65 + index)}</span>{option}<i>{result === "correct" && selectedAnswer === option ? "✓" : ""}</i></button>) : <input className="answer-text-input" value={selectedAnswer} onChange={(event) => onSelect(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && selectedAnswer.trim()) onSubmit(); }} placeholder={question.type === "listening" ? "Digite o que você ouviu" : "Digite sua resposta"} disabled={answeredCorrectly} />}</div>{result === "incorrect" && <p className="answer-feedback feedback-error">{feedback || "Quase! Tente outra vez."} {wrongAttempts > 0 && !hint && `(${wrongAttempts} de 5 tentativas)`}</p>}{result === "incorrect" && hint && <p className="answer-hint"><strong>Dica após {wrongAttempts} tentativas:</strong> {hint}</p>}{answeredCorrectly && <p className="answer-feedback feedback-success">{feedback || "Muito bem! Resposta certa."} {levelAdvanced ? "Você avançou para o próximo nível! ✨" : "Seu progresso foi atualizado. ✨"}</p>}</div>{!answeredCorrectly ? <button className="button button-primary modal-submit" onClick={onSubmit} disabled={!selectedAnswer.trim() || saving}>{saving ? "Conferindo..." : "Conferir resposta"} <span>→</span></button> : <button className="button button-primary modal-submit" onClick={isLastQuestion ? onClose : onNext}>{isLastQuestion ? "Concluir lição" : "Próxima questão"} <span>→</span></button>}<div className="modal-footer-note"><span>◈</span> Errar faz parte. Você pode tentar quantas vezes quiser.</div></section></div>;
+  return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><section className="lesson-modal" role="dialog" aria-modal="true" aria-labelledby="lesson-title"><button className="modal-close" onClick={onClose} aria-label="Fechar lição">×</button><span className="eyebrow"><span className="live-dot" /> {lesson.category.toUpperCase()} · {lesson.duration} MIN</span><div className="modal-step"><span>QUESTÃO {String(questionIndex + 1).padStart(2, "0")} DE {String(lesson.questions.length).padStart(2, "0")}</span><span>✦ PRÁTICA</span></div><h2 id="lesson-title">{lesson.title}</h2><p className="modal-description">{lesson.description}</p><div className="exercise-box"><span className="exercise-label">{question.type === "listening" ? "OUÇA E ESCREVA" : question.type === "fill_blank" ? "COMPLETE A FRASE" : "HORA DE PRATICAR"}</span>{question.audioUrl && <audio className="audio-player" controls preload="none" src={question.audioUrl}>Seu navegador não suporta áudio.</audio>}<h3>{question.prompt}</h3><div className="answer-options">{question.type === "multiple_choice" ? question.options.map((option, index) => <button key={option} className={`answer-option ${selectedAnswer === option ? "answer-selected" : ""} ${result === "incorrect" && selectedAnswer === option ? "answer-incorrect" : ""}`} onClick={() => onSelect(option)} disabled={answeredCorrectly}><span>{String.fromCharCode(65 + index)}</span>{option}<i>{result === "correct" && selectedAnswer === option ? "✓" : ""}</i></button>) : <input className="answer-text-input" value={selectedAnswer} onChange={(event) => onSelect(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && selectedAnswer.trim()) onSubmit(); }} placeholder={question.type === "listening" ? "Digite o que você ouviu" : "Digite sua resposta"} disabled={answeredCorrectly} />}</div>{result === "incorrect" && <p className="answer-feedback feedback-error">{feedback || "Quase! Tente outra vez."} {wrongAttempts > 0 && !hint && `(${wrongAttempts} de 5 tentativas)`}</p>}{result === "incorrect" && hint && <p className="answer-hint"><strong>Dica após {wrongAttempts} tentativas:</strong> {hint}</p>}{answeredCorrectly && <p className="answer-feedback feedback-success">{feedback || "Muito bem! Resposta certa."} {levelCompleted ? "Você concluiu todas as questões do nível. Faça a prova de avanço para continuar." : "Seu progresso foi atualizado. ✨"}</p>}</div>{!answeredCorrectly ? <button className="button button-primary modal-submit" onClick={onSubmit} disabled={!selectedAnswer.trim() || saving}>{saving ? "Conferindo..." : "Conferir resposta"} <span>→</span></button> : levelCompleted ? <button className="button button-primary modal-submit" onClick={onStartPromotionExam}>Fazer prova de avanço <span>→</span></button> : <button className="button button-primary modal-submit" onClick={isLastQuestion ? onClose : onNext}>{isLastQuestion ? "Concluir lição" : "Próxima questão"} <span>→</span></button>}<div className="modal-footer-note"><span>◈</span> Errar faz parte. Você pode tentar quantas vezes quiser.</div></section></div>;
 }

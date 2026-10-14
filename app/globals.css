@@ -242,3 +242,12 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .profile-page .placement-scores span { font-size: 11px; }
 .profile-page .placement-scores strong { font-size: 12px; }
 .profile-page .placement-actions .button, .profile-page .placement-panel > .button, .profile-page .placement-test > .button, .profile-page .profile-form .button { font-size: 13px; }
+.promotion-exam-page { max-width: 760px; }
+.promotion-exam-card { max-width: 560px; margin: 0 auto; padding: 22px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+.promotion-exam-card > h2 { margin: 20px 0; font-family: Outfit, sans-serif; font-size: 20px; font-weight: 500; }
+.promotion-exam-actions { margin-top: 18px; display: flex; justify-content: space-between; gap: 10px; }
+.promotion-result { padding: 12px 0; text-align: center; }
+.promotion-result > span, .promotion-result > strong { display: block; }
+.promotion-result > strong { margin-top: 12px; color: #f1a5a5; font-family: Outfit, sans-serif; font-size: 44px; font-weight: 500; }
+.promotion-passed > strong { color: var(--mint); }
+.promotion-result > p { color: var(--copy); font-size: 14px; line-height: 1.7; }

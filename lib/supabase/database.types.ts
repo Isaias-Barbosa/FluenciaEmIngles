@@ -200,6 +200,43 @@ export type Database = {
         },
         never
       >;
+      proficiency_questions: Table<
+        {
+          id: string;
+          level_id: string;
+          sort_order: number;
+          prompt: string;
+          choices: Json;
+          correct_option: number;
+          is_published: boolean;
+        },
+        {
+          id?: string;
+          level_id: string;
+          sort_order: number;
+          prompt: string;
+          choices: Json;
+          correct_option: number;
+          is_published?: boolean;
+        },
+        never
+      >;
+      proficiency_exam_sessions: Table<
+        {
+          id: string;
+          user_id: string;
+          exam_type: "placement" | "promotion";
+          source_level_id: string | null;
+          question_ids: string[];
+          recommended_level_id: string | null;
+          score: number | null;
+          passed: boolean | null;
+          created_at: string;
+          completed_at: string | null;
+        },
+        never,
+        never
+      >;
     };
     Views: {
       published_lesson_questions: {
@@ -263,9 +300,42 @@ export type Database = {
         Returns: {
           is_correct: boolean;
           explanation: string;
-          level_advanced: boolean;
+          level_completed: boolean;
           wrong_attempts: number;
           hint: string | null;
+        }[];
+      };
+      get_proficiency_exam: {
+        Args: {
+          p_exam_type: "placement" | "promotion";
+        };
+        Returns: {
+          exam_id: string;
+          question_id: string;
+          level_code: string;
+          prompt: string;
+          choices: Json;
+          question_number: number;
+          question_count: number;
+        }[];
+      };
+      submit_proficiency_exam: {
+        Args: {
+          p_exam_id: string;
+          p_answers: number[];
+        };
+        Returns: {
+          exam_type: string;
+          score: number;
+          passed: boolean;
+          recommended_level: string | null;
+          advanced_level: string | null;
+          a1_score: number;
+          a2_score: number;
+          b1_score: number;
+          b2_score: number;
+          c1_score: number;
+          c2_score: number;
         }[];
       };
       submit_placement_test: {
