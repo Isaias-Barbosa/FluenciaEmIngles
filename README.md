@@ -25,6 +25,7 @@ npm install
    - `20261014199000_import_advanced_english_workbook_questions.sql`
    - `20261014200000_import_b2_english_workbook_questions.sql`
    - `20261014201000_import_listening_practice_all_levels.sql`
+   - `20261014202000_admin_user_management.sql`
 2. Em **Authentication → Providers**, habilite o cadastro por e-mail e senha.
 3. Em **Authentication → URL Configuration**, adicione `http://localhost:3000` como endereço permitido. Adicione também o endereço de produção quando publicar o app.
 4. Copie `.env.example` para `.env.local` e preencha os valores do projeto:
@@ -58,7 +59,7 @@ Abra [http://localhost:3000](http://localhost:3000) para acessar a página inici
 - **Progresso:** tentativas e lições concluídas associadas à conta do estudante.
 - **Perfil:** consulte e atualize seu nome, objetivo e tempo diário de estudo; veja também seu nível e progresso.
 - **Teste de nível:** novos estudantes respondem a uma avaliação de 18 questões corrigida pelo Supabase; o nível recomendado é aplicado antes de liberar a trilha. Estudantes já cadastrados podem refazer a avaliação pelo perfil e escolher se querem aplicar o resultado.
-- **Administração:** dashboard com usuários ativos (atividade nos últimos 30 dias), questões por nível, lista de estudantes e criação/publicação de lições e questões em `/admin`. O acesso é restrito aos e-mails configurados em `ADMIN_EMAILS`.
+- **Administração:** dashboard com usuários ativos (atividade nos últimos 30 dias), questões por nível, lista de estudantes e criação/publicação de lições e questões em `/admin`. Administradores também podem editar nome, e-mail, nível e metas de estudo, bloquear/reativar o login sem apagar dados e reiniciar tentativas e nivelamento. O acesso é restrito aos e-mails configurados em `ADMIN_EMAILS`.
 - **Banco de questões:** migrations opcionais importam 95 questões do caderno geral, 120 do caderno B2 Upper-Intermediate, 150 do caderno avançado e 120 exercícios originais de compreensão oral (20 para cada nível A1–C2). Os exercícios de áudio estão classificados por dificuldade fácil, intermediária ou difícil. As lições importadas começam como rascunho para revisão antes da publicação.
 - **Dicas:** após cinco respostas incorretas na mesma questão, o estudante recebe uma pista.
 - **Correção flexível:** diferenças de maiúsculas, pontuação e espaços não invalidam uma resposta equivalente.
@@ -81,6 +82,7 @@ As migrations criam e preenchem o banco. Elas devem ser executadas **uma única 
 | `20261014199000_import_advanced_english_workbook_questions.sql` | Importa 150 questões avançadas como rascunhos: 75 para C1 e 75 para C2, incluindo respostas abertas e níveis de dificuldade |
 | `20261014200000_import_b2_english_workbook_questions.sql` | Importa 120 questões do caderno B2 Upper-Intermediate como rascunhos, incluindo 90 de múltipla escolha e 30 de completar frases |
 | `20261014201000_import_listening_practice_all_levels.sql` | Importa 120 questões de compreensão oral como rascunhos: 20 em cada nível A1–C2, com arquivos WAV correspondentes em `public/audio/listening/` |
+| `20261014202000_admin_user_management.sql` | Adiciona funções seguras para editar o perfil e reiniciar o progresso pelo painel administrativo |
 
 O PDF fornecido não contém os enunciados 19, 20 e 98–100. As questões abertas 86, 96 e 97 também ficam como rascunhos, pois o próprio gabarito as identifica como exemplos/respostas pessoais.
 O caderno avançado contém as 150 questões e seus gabaritos. A migration divide o conteúdo igualmente entre C1 e C2; revise as lições em rascunho no painel administrativo antes de publicá-las.

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import type { User } from "@supabase/supabase-js";
 import type { Json } from "@/lib/supabase/database.types";
 import type { Database } from "@/lib/supabase/database.types";
 import {
@@ -30,7 +31,13 @@ type LessonPayload = {
 };
 type ProfileRow = Pick<
   Database["public"]["Tables"]["profiles"]["Row"],
-  "user_id" | "display_name" | "current_level_id" | "onboarding_completed" | "created_at"
+  | "user_id"
+  | "display_name"
+  | "current_level_id"
+  | "learning_goal"
+  | "daily_goal_minutes"
+  | "onboarding_completed"
+  | "created_at"
 >;
 type LevelRow = Pick<
   Database["public"]["Tables"]["language_levels"]["Row"],
@@ -69,7 +76,26 @@ async function authorize(request: NextRequest) {
   if (!isConfiguredAdmin(data.user.email)) {
     return { response: errorResponse("Sua conta não tem acesso ao painel administrativo.", 403) };
   }
-  return { client: adminServiceClient };
+  return { client: adminServiceClient, userId: data.user.id };
+}
+
+const learningGoals = [
+  "Conversar em viagens",
+  "Crescer na carreira",
+  "Entender filmes e séries",
+  "Estudar ou morar fora",
+  "Aprender por prazer",
+];
+
+async function readAuthUsers(client: NonNullable<typeof adminServiceClient>) {
+  const users: User[] = [];
+  const pageSize = 1000;
+  for (let page = 1; ; page += 1) {
+    const { data, error } = await client.auth.admin.listUsers({ page, perPage: pageSize });
+    if (error) throw new Error(error.message);
+    users.push(...data.users);
+    if (data.users.length < pageSize) return users;
+  }
 }
 
 async function readAll<T>(
@@ -143,14 +169,15 @@ export async function GET(request: NextRequest) {
   const client = auth.client;
 
   try {
-    const [languages, profiles, levels, lessons, questions, answers, attempts] = await Promise.all([
+    const [languages, profiles, levels, lessons, questions, answers, attempts, authUsers] = await Promise.all([
       client.from("languages").select("id, code").eq("code", "en").limit(1),
-      readAll<ProfileRow>((from, to) => client.from("profiles").select("user_id, display_name, current_level_id, onboarding_completed, created_at").order("created_at", { ascending: false }).range(from, to)),
+      readAll<ProfileRow>((from, to) => client.from("profiles").select("user_id, display_name, current_level_id, learning_goal, daily_goal_minutes, onboarding_completed, created_at").order("created_at", { ascending: false }).range(from, to)),
       readAll<LevelRow>((from, to) => client.from("language_levels").select("id, code, title, sort_order, language_id").order("sort_order").range(from, to)),
       readAll<LessonRow>((from, to) => client.from("lessons").select("id, level_id, title, category, is_published").order("sort_order").range(from, to)),
       readAll<QuestionRow>((from, to) => client.from("questions").select("id, lesson_id, question_type, prompt, choices, audio_path, sort_order, difficulty, is_published, created_at").order("created_at", { ascending: false }).range(from, to)),
       readAll<AnswerRow>((from, to) => client.from("question_answers").select("question_id, accepted_answers, explanation").range(from, to)),
       readAll<AttemptRow>((from, to) => client.from("question_attempts").select("user_id, created_at").gte("created_at", new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()).range(from, to)),
+      readAuthUsers(client),
     ]);
     if (languages.error) throw new Error(languages.error.message);
     const englishId = languages.data[0]?.id;
@@ -160,7 +187,15 @@ export async function GET(request: NextRequest) {
     const englishLessons = lessons.filter((lesson) => levelById.has(lesson.level_id));
     const lessonById = new Map(englishLessons.map((lesson) => [lesson.id, lesson]));
     const answerByQuestionId = new Map(answers.map((answer) => [answer.question_id, answer]));
-    const activeUserIds = new Set(attempts.map((attempt) => attempt.user_id));
+    const authUserById = new Map(authUsers.map((user) => [user.id, user]));
+    const activeUserIds = new Set(
+      attempts
+        .filter((attempt) => {
+          const bannedUntil = authUserById.get(attempt.user_id)?.banned_until;
+          return !bannedUntil || Date.parse(bannedUntil) <= Date.now();
+        })
+        .map((attempt) => attempt.user_id),
+    );
 
     return NextResponse.json({
       stats: {
@@ -179,9 +214,17 @@ export async function GET(request: NextRequest) {
       users: profiles.map((profile) => ({
         id: profile.user_id,
         name: profile.display_name || "Estudante",
+        email: authUserById.get(profile.user_id)?.email ?? "",
+        levelId: profile.current_level_id,
         level: levelById.get(profile.current_level_id ?? "")?.code ?? "—",
+        learningGoal: profile.learning_goal,
+        dailyGoalMinutes: profile.daily_goal_minutes,
         onboardingComplete: profile.onboarding_completed,
         active: activeUserIds.has(profile.user_id),
+        disabled: Boolean(
+          authUserById.get(profile.user_id)?.banned_until &&
+          Date.parse(authUserById.get(profile.user_id)!.banned_until!) > Date.now(),
+        ),
         createdAt: profile.created_at,
       })),
       lessons: englishLessons.map((lesson) => ({
@@ -269,6 +312,112 @@ export async function POST(request: NextRequest) {
       });
       if (error) throw new Error(error.message);
       return NextResponse.json({ message: "Lição criada como rascunho." }, { status: 201 });
+    }
+
+    if (body.action === "updateUser") {
+      if (
+        !isRecord(body.user) ||
+        typeof body.user.id !== "string" ||
+        typeof body.user.name !== "string" ||
+        typeof body.user.email !== "string" ||
+        typeof body.user.levelId !== "string" ||
+        typeof body.user.learningGoal !== "string" ||
+        typeof body.user.dailyGoalMinutes !== "number"
+      ) {
+        return errorResponse("Dados do usuário inválidos.", 400);
+      }
+      const id = body.user.id;
+      const name = body.user.name.trim();
+      const email = body.user.email.trim().toLowerCase();
+      const learningGoal = body.user.learningGoal;
+      const dailyGoalMinutes = body.user.dailyGoalMinutes;
+      if (
+        !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id) ||
+        name.length < 1 ||
+        name.length > 80 ||
+        email.length > 254 ||
+        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ||
+        !learningGoals.includes(learningGoal) ||
+        ![10, 20, 30, 45].includes(dailyGoalMinutes)
+      ) {
+        return errorResponse("Revise o nome, e-mail e metas informados.", 400);
+      }
+
+      const { data: targetUserResult, error: targetUserError } = await client.auth.admin.getUserById(id);
+      if (targetUserError || !targetUserResult.user) return errorResponse("O usuário selecionado não existe.", 404);
+      let selectedLevelId: string | null = null;
+      if (body.user.levelId) {
+        const selectedLevel = await client
+          .from("language_levels")
+          .select("id, language_id")
+          .eq("id", body.user.levelId)
+          .single();
+        if (selectedLevel.error || !selectedLevel.data) return errorResponse("O nível selecionado não existe.", 400);
+        const language = await client
+          .from("languages")
+          .select("code")
+          .eq("id", selectedLevel.data.language_id)
+          .single();
+        if (language.error || language.data?.code !== "en") return errorResponse("Selecione um nível de inglês válido.", 400);
+        selectedLevelId = selectedLevel.data.id;
+      }
+
+      const currentEmail = targetUserResult.user.email;
+      const emailChanged = currentEmail?.toLowerCase() !== email;
+      if (emailChanged) {
+        const { error } = await client.auth.admin.updateUserById(id, { email, email_confirm: true });
+        if (error) throw new Error(`Não foi possível atualizar o e-mail: ${error.message}`);
+      }
+      const { error: updateError } = await client.rpc("admin_update_user_profile", {
+        p_user_id: id,
+        p_display_name: name,
+        p_level_id: selectedLevelId,
+        p_learning_goal: learningGoal,
+        p_daily_goal_minutes: dailyGoalMinutes,
+      });
+      if (updateError) {
+        if (emailChanged && currentEmail) {
+          const { error: rollbackError } = await client.auth.admin.updateUserById(id, { email: currentEmail });
+          if (rollbackError) {
+            throw new Error(`O e-mail foi atualizado, mas o perfil falhou e não foi possível restaurar o e-mail: ${updateError.message}; ${rollbackError.message}`);
+          }
+        }
+        throw new Error(updateError.message);
+      }
+      return NextResponse.json({ message: "Dados do usuário atualizados." });
+    }
+
+    if (body.action === "setUserDisabled") {
+      if (!isRecord(body.user) || typeof body.user.id !== "string" || typeof body.user.disabled !== "boolean") {
+        return errorResponse("Dados de status do usuário inválidos.", 400);
+      }
+      if (body.user.id === auth.userId && body.user.disabled) {
+        return errorResponse("Você não pode desativar sua própria conta administrativa.", 400);
+      }
+      const { data: targetUser, error: targetUserError } = await client.auth.admin.getUserById(body.user.id);
+      if (targetUserError || !targetUser.user) return errorResponse("O usuário selecionado não existe.", 404);
+      const { error } = await client.auth.admin.updateUserById(body.user.id, {
+        ban_duration: body.user.disabled ? "876000h" : "none",
+      });
+      if (error) throw new Error(error.message);
+      return NextResponse.json({
+        message: body.user.disabled ? "Conta desativada. O usuário não pode entrar, e os dados foram preservados." : "Conta reativada.",
+      });
+    }
+
+    if (body.action === "resetUserProgress") {
+      if (!isRecord(body.user) || typeof body.user.id !== "string") {
+        return errorResponse("Usuário inválido para reiniciar o progresso.", 400);
+      }
+      if (body.user.id === auth.userId) {
+        return errorResponse("Por segurança, não é possível reiniciar o progresso da própria conta administrativa.", 400);
+      }
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(body.user.id)) {
+        return errorResponse("Identificador de usuário inválido.", 400);
+      }
+      const { error } = await client.rpc("admin_reset_user_progress", { p_user_id: body.user.id });
+      if (error) throw new Error(error.message);
+      return NextResponse.json({ message: "Progresso reiniciado. As tentativas foram apagadas e o usuário deverá refazer a prova de proficiência." });
     }
 
     if (body.action === "setLessonPublished") {

@@ -225,6 +225,22 @@ export type Database = {
       };
     };
     Functions: {
+      admin_update_user_profile: {
+        Args: {
+          p_user_id: string;
+          p_display_name: string;
+          p_level_id: string | null;
+          p_learning_goal: string;
+          p_daily_goal_minutes: number;
+        };
+        Returns: undefined;
+      };
+      admin_reset_user_progress: {
+        Args: {
+          p_user_id: string;
+        };
+        Returns: undefined;
+      };
       apply_placement_level: {
         Args: {
           p_level_code: string;

@@ -35,9 +35,14 @@ type AdminQuestion = {
 type AdminUser = {
   id: string;
   name: string;
+  email: string;
+  levelId: string | null;
   level: string;
+  learningGoal: string;
+  dailyGoalMinutes: number;
   onboardingComplete: boolean;
   active: boolean;
+  disabled: boolean;
   createdAt: string;
 };
 type AdminData = {
@@ -65,6 +70,13 @@ const difficultyLabels: Record<AdminQuestion["difficulty"], string> = {
   intermediate: "Intermediária",
   hard: "Difícil",
 };
+const learningGoals = [
+  "Conversar em viagens",
+  "Crescer na carreira",
+  "Entender filmes e séries",
+  "Estudar ou morar fora",
+  "Aprender por prazer",
+];
 
 const emptyData: AdminData = {
   stats: { totalUsers: 0, activeUsers: 0, totalQuestions: 0, publishedQuestions: 0 },
@@ -79,11 +91,18 @@ export default function AdminPage() {
   const [view, setView] = useState<AdminView>("overview");
   const [selectedLevelId, setSelectedLevelId] = useState("");
   const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [lessonFormOpen, setLessonFormOpen] = useState(false);
   const [questionType, setQuestionType] = useState<QuestionType>("multiple_choice");
+  const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
+  const [userName, setUserName] = useState("");
+  const [userEmail, setUserEmail] = useState("");
+  const [userLevelId, setUserLevelId] = useState("");
+  const [userLearningGoal, setUserLearningGoal] = useState(learningGoals[0]);
+  const [userDailyGoalMinutes, setUserDailyGoalMinutes] = useState(20);
 
   const [lessonTitle, setLessonTitle] = useState("");
   const [lessonDescription, setLessonDescription] = useState("");
@@ -133,6 +152,7 @@ export default function AdminPage() {
 
   const loadAdminData = useCallback(async () => {
     setLoading(true);
+    setLoadFailed(false);
     setError("");
     try {
       const result = (await adminRequest("GET")) as AdminData;
@@ -140,6 +160,7 @@ export default function AdminPage() {
       setSelectedLevelId((current) => current || result.levels[0]?.id || "");
       setQuestionLessonId((current) => current || result.lessons[0]?.id || "");
     } catch (loadError) {
+      setLoadFailed(true);
       setError(loadError instanceof Error ? loadError.message : "Não foi possível carregar o painel.");
     } finally {
       setLoading(false);
@@ -233,6 +254,54 @@ export default function AdminPage() {
     }
   }
 
+  function startEditingUser(user: AdminUser) {
+    setEditingUser(user);
+    setUserName(user.name);
+    setUserEmail(user.email);
+    setUserLevelId(user.levelId ?? "");
+    setUserLearningGoal(user.learningGoal);
+    setUserDailyGoalMinutes(user.dailyGoalMinutes);
+  }
+
+  async function saveUser(event: FormEvent<HTMLFormElement>) {
+    if (!editingUser) return;
+    const success = await submitAdminAction(event, "updateUser", {
+      user: {
+        id: editingUser.id,
+        name: userName,
+        email: userEmail,
+        levelId: userLevelId,
+        learningGoal: userLearningGoal,
+        dailyGoalMinutes: userDailyGoalMinutes,
+      },
+    });
+    if (success) setEditingUser(null);
+  }
+
+  async function performUserAction(action: "setUserDisabled" | "resetUserProgress", user: AdminUser) {
+    const confirmation = action === "resetUserProgress"
+      ? `Isso apagará todas as tentativas de ${user.name} e exigirá que refaça a prova de proficiência. Continuar?`
+      : `${user.disabled ? "Reativar" : "Desativar"} a conta de ${user.name}? ${user.disabled ? "O usuário poderá entrar novamente." : "O login será bloqueado, sem apagar a conta ou os dados."}`;
+    if (!window.confirm(confirmation)) return;
+    setSaving(true);
+    setError("");
+    setNotice("");
+    try {
+      const result = (await adminRequest("POST", {
+        action,
+        user: action === "resetUserProgress"
+          ? { id: user.id }
+          : { id: user.id, disabled: !user.disabled },
+      })) as { message?: string };
+      setNotice(result.message ?? "Ação concluída.");
+      await loadAdminData();
+    } catch (actionError) {
+      setError(actionError instanceof Error ? actionError.message : "Não foi possível atualizar o usuário.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <main className="admin-shell">
       <aside className="admin-sidebar">
@@ -261,7 +330,8 @@ export default function AdminPage() {
         </header>
         <div className="admin-content">
           {notice && <div className="admin-message success" role="status">{notice}<button onClick={() => setNotice("")} aria-label="Fechar aviso">×</button></div>}
-          {loading ? <div className="admin-loading"><span className="live-dot" /> Carregando dados administrativos...</div> : error ? <div className="admin-access-error" role="alert"><span>!</span><h2>Painel indisponível</h2><p>{error}</p><button className="button button-dark" onClick={() => void loadAdminData()}>Tentar novamente <span>↻</span></button></div> : <>
+          {loading ? <div className="admin-loading"><span className="live-dot" /> Carregando dados administrativos...</div> : loadFailed ? <div className="admin-access-error" role="alert"><span>!</span><h2>Painel indisponível</h2><p>{error}</p><button className="button button-dark" onClick={() => void loadAdminData()}>Tentar novamente <span>↻</span></button></div> : <>
+            {error && <div className="admin-message error" role="alert">{error}<button onClick={() => setError("")} aria-label="Fechar aviso">×</button></div>}
             {view === "overview" && <section className="admin-view">
               <div className="admin-welcome"><div><span className="section-kicker">VISÃO GERAL DA PLATAFORMA</span><h2>Uma visão clara do aprendizado.</h2><p>Indicadores e atividade dos últimos 30 dias.</p></div><span className="admin-welcome-spark">✦</span></div>
               <div className="admin-stat-grid">
@@ -323,7 +393,33 @@ export default function AdminPage() {
 
             {view === "users" && <section className="admin-view">
               <div className="admin-page-intro"><div><span className="section-kicker">BASE DE ESTUDANTES</span><h2>Usuários e níveis atuais.</h2><p>Atividade marcada quando houve ao menos uma tentativa de questão nos últimos 30 dias.</p></div><span className="admin-total-count">{data.users.length} contas</span></div>
-              <section className="admin-panel"><UserTable users={data.users} showAll /></section>
+              <section className="admin-panel">
+                <UserTable
+                  users={data.users}
+                  showAll
+                  saving={saving}
+                  onEdit={startEditingUser}
+                  onToggleDisabled={(user) => void performUserAction("setUserDisabled", user)}
+                  onResetProgress={(user) => void performUserAction("resetUserProgress", user)}
+                />
+              </section>
+              {editingUser && <div className="admin-modal-backdrop" role="presentation" onMouseDown={(event) => {
+                if (event.target === event.currentTarget && !saving) setEditingUser(null);
+              }}>
+                <section className="admin-user-editor" role="dialog" aria-modal="true" aria-labelledby="admin-user-editor-title">
+                  <div className="admin-panel-heading"><div><span className="section-kicker">EDITAR CONTA</span><h2 id="admin-user-editor-title">{editingUser.name}</h2></div><button className="admin-icon-button" type="button" onClick={() => setEditingUser(null)} disabled={saving} aria-label="Fechar edição">×</button></div>
+                  {error && <div className="admin-message error" role="alert">{error}</div>}
+                  <form onSubmit={saveUser} className="admin-form">
+                    <label htmlFor="admin-user-name">Nome</label><input id="admin-user-name" value={userName} onChange={(event) => setUserName(event.target.value)} required maxLength={80} />
+                    <label htmlFor="admin-user-email">E-mail</label><input id="admin-user-email" type="email" value={userEmail} onChange={(event) => setUserEmail(event.target.value)} required maxLength={254} />
+                    <label htmlFor="admin-user-level">Nível atual</label><select id="admin-user-level" value={userLevelId} onChange={(event) => setUserLevelId(event.target.value)}><option value="">Sem nível — exigir prova</option>{data.levels.map((level) => <option key={level.id} value={level.id}>{level.code} · {level.title}</option>)}</select>
+                    <p className="admin-form-note">Definir um nível marca o nivelamento como concluído. Escolha “Sem nível” para exigir a prova de proficiência.</p>
+                    <label htmlFor="admin-user-goal">Objetivo de estudo</label><select id="admin-user-goal" value={userLearningGoal} onChange={(event) => setUserLearningGoal(event.target.value)}>{learningGoals.map((goal) => <option key={goal} value={goal}>{goal}</option>)}</select>
+                    <label htmlFor="admin-user-daily-goal">Meta diária</label><select id="admin-user-daily-goal" value={userDailyGoalMinutes} onChange={(event) => setUserDailyGoalMinutes(Number(event.target.value))}><option value={10}>10 minutos</option><option value={20}>20 minutos</option><option value={30}>30 minutos</option><option value={45}>45 minutos</option></select>
+                    <div className="admin-user-editor-actions"><button className="admin-action-button" type="button" onClick={() => setEditingUser(null)} disabled={saving}>Cancelar</button><button className="button button-primary" type="submit" disabled={saving}>{saving ? "Salvando..." : "Salvar alterações"}</button></div>
+                  </form>
+                </section>
+              </div>}
             </section>}
           </>}
         </div>
@@ -332,17 +428,36 @@ export default function AdminPage() {
   );
 }
 
-function UserTable({ users, showAll = false }: { users: AdminUser[]; showAll?: boolean }) {
+function UserTable({
+  users,
+  showAll = false,
+  saving = false,
+  onEdit,
+  onToggleDisabled,
+  onResetProgress,
+}: {
+  users: AdminUser[];
+  showAll?: boolean;
+  saving?: boolean;
+  onEdit?: (user: AdminUser) => void;
+  onToggleDisabled?: (user: AdminUser) => void;
+  onResetProgress?: (user: AdminUser) => void;
+}) {
   if (!users.length) return <div className="admin-empty">Nenhum estudante cadastrado.</div>;
   return (
     <div className={`admin-table-wrap ${showAll ? "full-table" : ""}`}>
       <table className="admin-table">
-        <thead><tr><th>ESTUDANTE</th><th>NÍVEL</th><th>CADASTRO</th><th>STATUS</th></tr></thead>
+        <thead><tr><th>ESTUDANTE</th><th>NÍVEL</th><th>CADASTRO</th><th>STATUS</th>{showAll && <th>AÇÕES</th>}</tr></thead>
         <tbody>{users.map((user) => <tr key={user.id}>
-          <td><span className="admin-user-avatar">{user.name.charAt(0).toUpperCase()}</span><span className="admin-user-name">{user.name}</span></td>
+          <td><span className="admin-user-avatar">{user.name.charAt(0).toUpperCase()}</span><span className="admin-user-details"><span className="admin-user-name">{user.name}</span><small>{user.email || "E-mail indisponível"}</small></span></td>
           <td><span className={`admin-user-level ${user.level === "—" ? "no-level" : ""}`}>{user.level}</span></td>
           <td>{new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(user.createdAt))}</td>
-          <td><span className={`admin-user-status ${user.active ? "active" : ""}`}><i />{user.active ? "Ativo" : user.onboardingComplete ? "Sem atividade recente" : "Cadastro incompleto"}</span></td>
+          <td><span className={`admin-user-status ${user.disabled ? "disabled" : user.active ? "active" : ""}`}><i />{user.disabled ? "Desativado" : user.active ? "Ativo" : user.onboardingComplete ? "Sem atividade recente" : "Cadastro incompleto"}</span></td>
+          {showAll && <td><div className="admin-user-actions">
+            <button className="admin-action-button" type="button" disabled={saving} onClick={() => onEdit?.(user)}>Editar</button>
+            <button className={`admin-action-button ${user.disabled ? "reactivate" : "deactivate"}`} type="button" disabled={saving} onClick={() => onToggleDisabled?.(user)}>{user.disabled ? "Reativar" : "Desativar"}</button>
+            <button className="admin-action-button reset" type="button" disabled={saving} onClick={() => onResetProgress?.(user)}>Zerar progresso</button>
+          </div></td>}
         </tr>)}</tbody>
       </table>
     </div>
