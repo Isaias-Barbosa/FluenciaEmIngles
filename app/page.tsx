@@ -1,19 +1,21 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import type { Session } from "@supabase/supabase-js";
+import { supabase } from "@/lib/supabase/client";
+import type { Database, Json } from "@/lib/supabase/database.types";
 
 type LevelId = "A1" | "A2" | "B1" | "B2" | "C1" | "C2";
 type PageId = "home" | "lessons" | "cards" | "progress";
-type Profile = {
-  name: string;
-  email: string;
-  level: LevelId;
-  goal: string;
-  dailyMinutes: number;
-  onboardingComplete: boolean;
-  completedLessons: string[];
+type AuthMode = "signup" | "signin";
+type QuestionType = "multiple_choice" | "fill_blank" | "listening";
+type LessonQuestion = {
+  id: string;
+  type: QuestionType;
+  prompt: string;
+  options: string[];
+  audioUrl: string | null;
 };
-
 type Lesson = {
   id: string;
   level: LevelId;
@@ -21,12 +23,29 @@ type Lesson = {
   category: string;
   duration: number;
   description: string;
-  question: string;
-  options: string[];
-  answer: string;
+  sortOrder: number;
+  questions: LessonQuestion[];
 };
-
-type Flashcard = { front: string; back: string; pronunciation: string };
+type Flashcard = {
+  front: string;
+  back: string;
+  pronunciation: string;
+};
+type Profile = {
+  userId: string;
+  name: string;
+  email: string;
+  level: LevelId;
+  levelTitle: string;
+  currentLevelId: string;
+  goal: string;
+  dailyMinutes: number;
+  onboardingComplete: boolean;
+  completedLessons: string[];
+  completedQuestionIds: string[];
+};
+type PublishedQuestionRow =
+  Database["public"]["Views"]["published_lesson_questions"]["Row"];
 
 const levels: { id: LevelId; name: string; subtitle: string }[] = [
   { id: "A1", name: "Beginner", subtitle: "Primeiros passos" },
@@ -37,172 +56,429 @@ const levels: { id: LevelId; name: string; subtitle: string }[] = [
   { id: "C2", name: "Proficient", subtitle: "Domínio completo" },
 ];
 
-const lessons: Lesson[] = [
-  { id: "a1-1", level: "A1", title: "Diga olá e se apresente", category: "Conversação", duration: 8, description: "Aprenda cumprimentos e como dizer seu nome em uma conversa.", question: "Como você diz “Meu nome é Ana” em inglês?", options: ["I am name Ana.", "My name is Ana.", "I name Ana."], answer: "My name is Ana." },
-  { id: "a1-2", level: "A1", title: "O verbo to be: I am, you are", category: "Gramática", duration: 10, description: "Monte suas primeiras frases usando o verbo mais importante do inglês.", question: "Complete: “They ___ happy.”", options: ["is", "am", "are"], answer: "are" },
-  { id: "a1-3", level: "A1", title: "Números e idade", category: "Vocabulário", duration: 7, description: "Conte de zero a vinte e fale quantos anos você tem.", question: "Qual frase significa “Eu tenho 20 anos”?", options: ["I have 20 years old.", "I am 20 years old.", "I has 20."], answer: "I am 20 years old." },
-  { id: "a1-4", level: "A1", title: "Sua rotina em inglês", category: "Vocabulário", duration: 9, description: "Fale sobre seu dia com verbos simples e o presente.", question: "Complete: “I ___ coffee every morning.”", options: ["drink", "drinks", "drinking"], answer: "drink" },
-  { id: "a2-1", level: "A2", title: "Conte o que aconteceu", category: "Gramática", duration: 12, description: "Use o passado simples para falar sobre experiências recentes.", question: "Complete: “We ___ a movie last night.”", options: ["watch", "watched", "watches"], answer: "watched" },
-  { id: "a2-2", level: "A2", title: "Peça comida no restaurante", category: "Conversação", duration: 9, description: "Faça um pedido e converse com confiança em um restaurante.", question: "Qual é uma forma educada de pedir água?", options: ["Water now!", "Can I have some water, please?", "Give water to me."], answer: "Can I have some water, please?" },
-  { id: "a2-3", level: "A2", title: "Planos para o futuro", category: "Gramática", duration: 10, description: "Fale sobre planos e intenções com going to.", question: "Complete: “She is ___ visit London.”", options: ["going to", "go to", "will to"], answer: "going to" },
-  { id: "b1-1", level: "B1", title: "Experiências de vida", category: "Gramática", duration: 12, description: "Conecte experiências passadas ao presente com present perfect.", question: "Complete: “I have ___ to New York twice.”", options: ["be", "been", "was"], answer: "been" },
-  { id: "b1-2", level: "B1", title: "Dê sua opinião", category: "Conversação", duration: 10, description: "Compartilhe ideias, concorde e discorde com naturalidade.", question: "Como começar uma opinião? “___, this is a great idea.”", options: ["In my opinion", "I am opinion", "For my think"], answer: "In my opinion" },
-  { id: "b1-3", level: "B1", title: "Conecte suas ideias", category: "Escrita", duration: 11, description: "Use conectores para deixar suas histórias mais claras.", question: "Complete: “It was raining, ___ we stayed home.”", options: ["because", "so", "although"], answer: "so" },
-  { id: "b2-1", level: "B2", title: "Explique possibilidades", category: "Gramática", duration: 12, description: "Explore condicionais para falar de hipóteses e consequências.", question: "Complete: “If I had more time, I ___ travel more.”", options: ["will", "would", "did"], answer: "would" },
-  { id: "b2-2", level: "B2", title: "O inglês no trabalho", category: "Vocabulário", duration: 10, description: "Participe de reuniões e apresente suas ideias profissionalmente.", question: "O que significa “deadline”?", options: ["Prazo final", "Reunião inicial", "Promoção"], answer: "Prazo final" },
-  { id: "b2-3", level: "B2", title: "Debata com confiança", category: "Conversação", duration: 13, description: "Construa argumentos e reconheça pontos de vista diferentes.", question: "O que “on the other hand” indica?", options: ["Uma conclusão", "Um contraste", "Um exemplo"], answer: "Um contraste" },
-  { id: "c1-1", level: "C1", title: "Nuances e expressões", category: "Vocabulário", duration: 14, description: "Entenda expressões idiomáticas e o que elas comunicam além do literal.", question: "“To hit the nail on the head” significa:", options: ["Acertar em cheio", "Começar uma tarefa", "Desistir de algo"], answer: "Acertar em cheio" },
-  { id: "c1-2", level: "C1", title: "Escrita persuasiva", category: "Escrita", duration: 15, description: "Organize argumentos complexos em textos claros e convincentes.", question: "Qual conector introduz uma ressalva formal?", options: ["Nevertheless", "By the way", "First of all"], answer: "Nevertheless" },
-  { id: "c1-3", level: "C1", title: "Comunique com precisão", category: "Conversação", duration: 12, description: "Ajuste tom e escolha de palavras a diferentes situações.", question: "Qual expressão soa mais diplomática?", options: ["You are wrong.", "I see your point, however…", "That makes no sense."], answer: "I see your point, however…" },
-  { id: "c2-1", level: "C2", title: "Domínio de registros", category: "Comunicação", duration: 15, description: "Alterne entre registros formais, informais e acadêmicos com precisão.", question: "Qual opção é mais formal?", options: ["Kids", "Children", "Little ones"], answer: "Children" },
-  { id: "c2-2", level: "C2", title: "Leia nas entrelinhas", category: "Compreensão", duration: 14, description: "Interprete ironia, referências culturais e significados implícitos.", question: "Uma afirmação “tongue-in-cheek” é:", options: ["Levada literalmente", "Feita com humor ou ironia", "Muito formal"], answer: "Feita com humor ou ironia" },
-  { id: "c2-3", level: "C2", title: "Refine sua expressão", category: "Escrita", duration: 16, description: "Aprimore estilo, ritmo e precisão em textos sofisticados.", question: "“Concise” descreve um texto que é:", options: ["Breve e claro", "Complexo e longo", "Informal e engraçado"], answer: "Breve e claro" },
+const goals = [
+  "Conversar em viagens",
+  "Crescer na carreira",
+  "Entender filmes e séries",
+  "Estudar ou morar fora",
+  "Aprender por prazer",
 ];
 
-const cardsByLevel: Record<LevelId, Flashcard[]> = {
-  A1: [
-    { front: "Hello", back: "Olá", pronunciation: "/həˈloʊ/" },
-    { front: "Thank you", back: "Obrigado(a)", pronunciation: "/ˈθæŋk juː/" },
-    { front: "Good morning", back: "Bom dia", pronunciation: "/ɡʊd ˈmɔːrnɪŋ/" },
-    { front: "How are you?", back: "Como você está?", pronunciation: "/haʊ ɑːr juː/" },
-    { front: "Nice to meet you", back: "Prazer em conhecer você", pronunciation: "/naɪs tə miːt juː/" },
-  ],
-  A2: [
-    { front: "Yesterday", back: "Ontem", pronunciation: "/ˈjestərdeɪ/" },
-    { front: "Could you help me?", back: "Você poderia me ajudar?", pronunciation: "/kʊd juː help miː/" },
-    { front: "I would like…", back: "Eu gostaria de…", pronunciation: "/aɪ wʊd laɪk/" },
-    { front: "Around the corner", back: "Logo ali na esquina", pronunciation: "/əˈraʊnd ðə ˈkɔːrnər/" },
-  ],
-  B1: [
-    { front: "As far as I know", back: "Até onde eu sei", pronunciation: "/æz fɑːr æz aɪ noʊ/" },
-    { front: "I have been there", back: "Eu já estive lá", pronunciation: "/aɪ hæv bɪn ðer/" },
-    { front: "It depends on…", back: "Depende de…", pronunciation: "/ɪt dɪˈpendz ɑːn/" },
-    { front: "On the other hand", back: "Por outro lado", pronunciation: "/ɑːn ði ˈʌðər hænd/" },
-  ],
-  B2: [
-    { front: "To meet a deadline", back: "Cumprir um prazo", pronunciation: "/tə miːt ə ˈdedlaɪn/" },
-    { front: "That makes sense", back: "Isso faz sentido", pronunciation: "/ðæt meɪks sens/" },
-    { front: "To bring something up", back: "Mencionar um assunto", pronunciation: "/tə brɪŋ ˈsʌmθɪŋ ʌp/" },
-    { front: "As a matter of fact", back: "Na verdade / aliás", pronunciation: "/æz ə ˈmætər əv fækt/" },
-  ],
-  C1: [
-    { front: "To hit the nail on the head", back: "Acertar em cheio", pronunciation: "/tə hɪt ðə neɪl ɑːn ðə hed/" },
-    { front: "Nevertheless", back: "No entanto", pronunciation: "/ˌnevərðəˈles/" },
-    { front: "To shed light on", back: "Esclarecer / lançar luz sobre", pronunciation: "/tə ʃed laɪt ɑːn/" },
-    { front: "By all means", back: "Certamente / fique à vontade", pronunciation: "/baɪ ɔːl miːnz/" },
-  ],
-  C2: [
-    { front: "Tongue-in-cheek", back: "Irônico, dito com humor", pronunciation: "/ˌtʌŋ ɪn ˈtʃiːk/" },
-    { front: "To read between the lines", back: "Ler nas entrelinhas", pronunciation: "/tə riːd bɪˈtwiːn ðə laɪnz/" },
-    { front: "Notwithstanding", back: "Não obstante", pronunciation: "/ˌnɑːtwɪðˈstændɪŋ/" },
-    { front: "Concise", back: "Breve e claro", pronunciation: "/kənˈsaɪs/" },
-  ],
-};
+function choicesFromJson(value: Json): string[] {
+  if (!Array.isArray(value) || !value.every((item) => typeof item === "string")) {
+    throw new Error("Uma questão publicada contém alternativas inválidas.");
+  }
+  return value;
+}
 
-const initialProfile: Profile = {
-  name: "",
-  email: "",
-  level: "A1",
-  goal: "Conversar em viagens",
-  dailyMinutes: 20,
-  onboardingComplete: false,
-  completedLessons: [],
-};
-
-const levelNames: Record<LevelId, string> = { A1: "Beginner", A2: "Elementary", B1: "Intermediate", B2: "Upper intermediate", C1: "Advanced", C2: "Proficient" };
-const storageKey = "fluencia-profile-v1";
+function profileErrorMessage(error: { message: string; code?: string }) {
+  if (error.code === "PGRST116") {
+    return "Seu perfil ainda não foi criado no banco. Confira se as migrations do Supabase foram executadas.";
+  }
+  return error.message;
+}
 
 export default function Dashboard() {
-  const [profile, setProfile] = useState<Profile>(initialProfile);
-  const [ready, setReady] = useState(false);
+  const [session, setSession] = useState<Session | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [lessons, setLessons] = useState<Lesson[]>([]);
+  const [cards, setCards] = useState<Flashcard[]>([]);
   const [page, setPage] = useState<PageId>("home");
+  const [ready, setReady] = useState(false);
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [authMode, setAuthMode] = useState<AuthMode>("signup");
   const [nameInput, setNameInput] = useState("");
   const [emailInput, setEmailInput] = useState("");
-  const [goal, setGoal] = useState("Conversar em viagens");
-  const [dailyMinutes, setDailyMinutes] = useState(20);
+  const [passwordInput, setPasswordInput] = useState("");
   const [selectedLevel, setSelectedLevel] = useState<LevelId>("A1");
+  const [goal, setGoal] = useState(goals[0]);
+  const [dailyMinutes, setDailyMinutes] = useState(20);
   const [activeLesson, setActiveLesson] = useState<Lesson | null>(null);
+  const [questionIndex, setQuestionIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState("");
   const [answerResult, setAnswerResult] = useState<"correct" | "incorrect" | null>(null);
+  const [answerFeedback, setAnswerFeedback] = useState("");
+  const [levelAdvanced, setLevelAdvanced] = useState(false);
+  const [answerSaving, setAnswerSaving] = useState(false);
+  const [authBusy, setAuthBusy] = useState(false);
+  const [authMessage, setAuthMessage] = useState("");
+  const [authError, setAuthError] = useState("");
+  const [appError, setAppError] = useState("");
   const [cardIndex, setCardIndex] = useState(0);
   const [cardFlipped, setCardFlipped] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  useEffect(() => {
+  const configured = supabase !== null;
+
+  const loadProfile = useCallback(async (activeSession: Session) => {
+    if (!supabase) throw new Error("Supabase não está configurado.");
+    setProfileLoading(true);
+    setAppError("");
     try {
-      const stored = window.localStorage.getItem(storageKey);
-      if (stored) {
-        const parsed: unknown = JSON.parse(stored);
-        if (isProfile(parsed)) setProfile(parsed);
+      const { data: profileRow, error: profileQueryError } = await supabase
+        .from("profiles")
+        .select("user_id, display_name, current_level_id, learning_goal, daily_goal_minutes, onboarding_completed")
+        .eq("user_id", activeSession.user.id)
+        .single();
+
+      if (profileQueryError) throw new Error(profileErrorMessage(profileQueryError));
+      if (!profileRow.current_level_id) {
+        throw new Error("Seu perfil ainda não tem um nível de aprendizagem associado.");
       }
-    } catch {
-      window.localStorage.removeItem(storageKey);
+
+      const { data: levelRow, error: levelQueryError } = await supabase
+        .from("language_levels")
+        .select("id, code, title")
+        .eq("id", profileRow.current_level_id)
+        .single();
+
+      if (levelQueryError) throw new Error(levelQueryError.message);
+      const matchedLevel = levels.find((level) => level.id === levelRow.code);
+      if (!matchedLevel) {
+        throw new Error(`O nível ${levelRow.code} ainda não é compatível com a trilha atual.`);
+      }
+
+      const nextProfile: Profile = {
+        userId: activeSession.user.id,
+        name: profileRow.display_name || activeSession.user.email?.split("@")[0] || "Estudante",
+        email: activeSession.user.email || "",
+        level: matchedLevel.id,
+        levelTitle: levelRow.title,
+        currentLevelId: levelRow.id,
+        goal: profileRow.learning_goal,
+        dailyMinutes: profileRow.daily_goal_minutes,
+        onboardingComplete: profileRow.onboarding_completed,
+        completedLessons: [],
+        completedQuestionIds: [],
+      };
+      setProfile(nextProfile);
+      return nextProfile;
     } finally {
-      setReady(true);
+      setProfileLoading(false);
     }
   }, []);
 
-  useEffect(() => {
-    if (ready && profile.email) {
-      window.localStorage.setItem(storageKey, JSON.stringify(profile));
+  const loadStudyData = useCallback(async (activeProfile: Profile) => {
+    if (!supabase) throw new Error("Supabase não está configurado.");
+
+    const [questionsResult, cardsResult, attemptsResult] = await Promise.all([
+      supabase
+        .from("published_lesson_questions")
+        .select("*")
+        .order("lesson_sort_order")
+        .order("question_sort_order"),
+      supabase
+        .from("vocabulary_cards")
+        .select("front, back, pronunciation, sort_order")
+        .eq("level_id", activeProfile.currentLevelId)
+        .eq("is_published", true)
+        .order("sort_order"),
+      supabase
+        .from("question_attempts")
+        .select("question_id, is_correct")
+        .eq("user_id", activeProfile.userId),
+    ]);
+
+    if (questionsResult.error) {
+      throw new Error(`Não foi possível carregar as lições: ${questionsResult.error.message}`);
     }
-  }, [profile, ready]);
+    if (cardsResult.error) {
+      throw new Error(`Não foi possível carregar os cards: ${cardsResult.error.message}`);
+    }
+    if (attemptsResult.error) {
+      throw new Error(`Não foi possível carregar seu progresso: ${attemptsResult.error.message}`);
+    }
 
-  const currentLevelIndex = levels.findIndex((level) => level.id === profile.level);
-  const currentLessons = lessons.filter((lesson) => lesson.level === profile.level);
-  const completedInLevel = currentLessons.filter((lesson) => profile.completedLessons.includes(lesson.id)).length;
-  const progressPercent = Math.round((completedInLevel / currentLessons.length) * 100);
-  const nextLesson = currentLessons.find((lesson) => !profile.completedLessons.includes(lesson.id));
-  const allCards = useMemo(() => cardsByLevel[profile.level], [profile.level]);
-  const activeCard = allCards[cardIndex % allCards.length];
+    const groupedLessons = new Map<string, Lesson>();
+    for (const row of questionsResult.data) {
+      const matchedLevel = levels.find((level) => level.id === row.level_code);
+      if (!matchedLevel) {
+        throw new Error(`O nível ${row.level_code} de uma lição não é compatível com a trilha.`);
+      }
+      const question: LessonQuestion = {
+        id: row.question_id,
+        type: row.question_type,
+        prompt: row.prompt,
+        options: choicesFromJson(row.choices),
+        audioUrl: row.audio_path
+          ? row.audio_path.startsWith("public/")
+            ? `/${row.audio_path.slice("public/".length)}`
+            : supabase.storage.from("lesson-audio").getPublicUrl(row.audio_path).data.publicUrl
+          : null,
+      };
+      const lesson = groupedLessons.get(row.lesson_id);
+      if (lesson) {
+        lesson.questions.push(question);
+      } else {
+        groupedLessons.set(row.lesson_id, {
+          id: row.lesson_id,
+          level: matchedLevel.id,
+          title: row.lesson_title,
+          category: row.lesson_category,
+          duration: row.duration_minutes,
+          description: row.lesson_description,
+          sortOrder: row.lesson_sort_order,
+          questions: [question],
+        });
+      }
+    }
 
-  function updateProfile(nextProfile: Profile) {
-    setProfile(nextProfile);
-    window.localStorage.setItem(storageKey, JSON.stringify(nextProfile));
-  }
+    const nextLessons = [...groupedLessons.values()];
+    const correctQuestionIds = new Set(
+      attemptsResult.data
+        .filter((attempt) => attempt.is_correct)
+        .map((attempt) => attempt.question_id),
+    );
+    const completedLessons = nextLessons
+      .filter((lesson) => lesson.questions.every((question) => correctQuestionIds.has(question.id)))
+      .map((lesson) => lesson.id);
+    const nextCards = cardsResult.data.map((card) => ({
+      front: card.front,
+      back: card.back,
+      pronunciation: card.pronunciation,
+    }));
 
-  function register(event: FormEvent<HTMLFormElement>) {
+    setLessons(nextLessons);
+    setCards(nextCards);
+    setProfile((current) =>
+      current?.userId === activeProfile.userId
+        ? {
+            ...current,
+            completedLessons,
+            completedQuestionIds: [...correctQuestionIds],
+          }
+        : current,
+    );
+  }, []);
+
+  useEffect(() => {
+    if (!supabase) {
+      setReady(true);
+      return;
+    }
+
+    let mounted = true;
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      if (!mounted) return;
+      setSession(nextSession);
+      setAuthMessage("");
+      setAuthError("");
+      setAppError("");
+      if (!nextSession) {
+        setProfile(null);
+        setLessons([]);
+        setCards([]);
+        setReady(true);
+      }
+    });
+
+    void supabase.auth
+      .getSession()
+      .then(({ data, error }) => {
+        if (!mounted) return;
+        if (error) {
+          setAuthError(error.message);
+          setReady(true);
+          return;
+        }
+        setSession(data.session);
+        setReady(true);
+      })
+      .catch((error: unknown) => {
+        if (!mounted) return;
+        setAuthError(error instanceof Error ? error.message : "Não foi possível verificar sua sessão.");
+        setReady(true);
+      });
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!session) return;
+    let active = true;
+    void loadProfile(session)
+      .then((loadedProfile) => {
+        if (active) return loadStudyData(loadedProfile);
+      })
+      .catch((error: unknown) => {
+        if (active) {
+          setAppError(error instanceof Error ? error.message : "Não foi possível carregar seus dados.");
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, [session?.user.id, loadProfile, loadStudyData]);
+
+  const currentLessons = useMemo(
+    () => lessons.filter((lesson) => lesson.level === profile?.level),
+    [lessons, profile?.level],
+  );
+  const completedInLevel = currentLessons.filter((lesson) =>
+    profile?.completedLessons.includes(lesson.id),
+  ).length;
+  const progressPercent = currentLessons.length
+    ? Math.round((completedInLevel / currentLessons.length) * 100)
+    : 0;
+  const nextLesson = currentLessons.find(
+    (lesson) => !profile?.completedLessons.includes(lesson.id),
+  );
+  const activeCard = cards.length ? cards[cardIndex % cards.length] : null;
+  const activeQuestion = activeLesson?.questions[questionIndex] ?? null;
+  const currentLevelIndex = levels.findIndex((level) => level.id === profile?.level);
+
+  async function handleAuth(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const name = nameInput.trim();
-    const email = emailInput.trim();
-    if (name.length < 2 || !emailInput.includes("@")) return;
-    updateProfile({ ...initialProfile, name, email });
+    if (!supabase) return;
+    setAuthBusy(true);
+    setAuthError("");
+    setAuthMessage("");
+    try {
+      if (authMode === "signup") {
+        const { data, error } = await supabase.auth.signUp({
+          email: emailInput.trim(),
+          password: passwordInput,
+          options: {
+            data: { name: nameInput.trim() },
+            emailRedirectTo: window.location.origin,
+          },
+        });
+        if (error) throw error;
+        if (!data.session) {
+          setAuthMessage("Conta criada. Confira seu e-mail para confirmar o cadastro e depois entre na plataforma.");
+        } else {
+          setAuthMessage("Conta criada. Vamos preparar seu espaço de aprendizagem.");
+        }
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({
+          email: emailInput.trim(),
+          password: passwordInput,
+        });
+        if (error) throw error;
+      }
+    } catch (error) {
+      setAuthError(error instanceof Error ? error.message : "Não foi possível concluir a autenticação.");
+    } finally {
+      setAuthBusy(false);
+    }
   }
 
-  function finishOnboarding() {
-    updateProfile({ ...profile, level: selectedLevel, goal, dailyMinutes, onboardingComplete: true });
-    setPage("home");
+  async function finishOnboarding(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!supabase || !session) return;
+    setAppError("");
+    setProfileLoading(true);
+    try {
+      const { error } = await supabase.rpc("complete_onboarding", {
+        p_level_code: selectedLevel,
+        p_learning_goal: goal,
+        p_daily_goal_minutes: dailyMinutes,
+      });
+      if (error) throw new Error(error.message);
+      const nextProfile = await loadProfile(session);
+      await loadStudyData(nextProfile);
+      setPage("home");
+    } catch (error) {
+      setAppError(error instanceof Error ? error.message : "Não foi possível salvar seu perfil.");
+    } finally {
+      setProfileLoading(false);
+    }
   }
 
   function openLesson(lesson: Lesson) {
+    const nextQuestionIndex = lesson.questions.findIndex(
+      (question) => !profile?.completedQuestionIds.includes(question.id),
+    );
     setActiveLesson(lesson);
+    setQuestionIndex(nextQuestionIndex >= 0 ? nextQuestionIndex : 0);
     setSelectedAnswer("");
     setAnswerResult(null);
+    setAnswerFeedback("");
+    setLevelAdvanced(false);
   }
 
-  function submitAnswer() {
-    if (!activeLesson || !selectedAnswer) return;
-    const isCorrect = selectedAnswer === activeLesson.answer;
-    setAnswerResult(isCorrect ? "correct" : "incorrect");
-    if (isCorrect && !profile.completedLessons.includes(activeLesson.id)) {
-      const completedLessons = [...profile.completedLessons, activeLesson.id];
-      const levelLessonIds = lessons.filter((lesson) => lesson.level === profile.level).map((lesson) => lesson.id);
-      const levelComplete = levelLessonIds.every((id) => completedLessons.includes(id));
-      const nextLevel = levels[currentLevelIndex + 1];
-      updateProfile({ ...profile, completedLessons, level: levelComplete && nextLevel ? nextLevel.id : profile.level });
+  async function submitAnswer() {
+    if (!supabase || !profile || !session || !activeQuestion || !selectedAnswer.trim()) return;
+    setAnswerSaving(true);
+    setAppError("");
+    try {
+      const { data, error } = await supabase.rpc("submit_question_answer", {
+        p_question_id: activeQuestion.id,
+        p_submitted_answer: selectedAnswer.trim(),
+      });
+      if (error) throw new Error(error.message);
+      const result = data[0];
+      if (!result) throw new Error("O Supabase não retornou o resultado da correção.");
+
+      setAnswerResult(result.is_correct ? "correct" : "incorrect");
+      setAnswerFeedback(result.explanation || "");
+      setLevelAdvanced(result.level_advanced);
+      const updatedProfile = await loadProfile(session);
+      await loadStudyData(updatedProfile);
+    } catch (error) {
+      setAppError(error instanceof Error ? error.message : "Não foi possível enviar sua resposta.");
+    } finally {
+      setAnswerSaving(false);
     }
   }
 
-  if (!ready) {
-    return <main className="loading-screen"><div className="brand-mark">f.</div><span>Preparando seu espaço de estudos...</span></main>;
+  async function signOut() {
+    if (!supabase) return;
+    const { error } = await supabase.auth.signOut();
+    if (error) setAppError(`Não foi possível sair da conta: ${error.message}`);
   }
 
-  if (!profile.email) {
+  function nextQuestion() {
+    setQuestionIndex((index) => index + 1);
+    setSelectedAnswer("");
+    setAnswerResult(null);
+    setAnswerFeedback("");
+  }
+
+  if (!ready || (session && profileLoading && !profile)) {
+    return (
+      <main className="loading-screen">
+        <div className="brand-mark">f.</div>
+        <span>Preparando seu espaço de estudos...</span>
+      </main>
+    );
+  }
+
+  if (!configured) {
+    return (
+      <main className="loading-screen setup-screen">
+        <div className="brand-mark">f.</div>
+        <h1>Conecte seu projeto Supabase</h1>
+        <p>Configure NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY no arquivo .env.local e reinicie o servidor.</p>
+      </main>
+    );
+  }
+
+  if (session && appError && !profile) {
+    return (
+      <main className="loading-screen setup-screen">
+        <div className="brand-mark">!</div>
+        <h1>Não foi possível carregar sua conta</h1>
+        <p>{appError}</p>
+        <button className="button button-dark" onClick={signOut}>Sair e tentar novamente</button>
+      </main>
+    );
+  }
+
+  if (!session) {
     return (
       <main className="auth-screen">
         <div className="auth-glow auth-glow-one" />
         <div className="auth-glow auth-glow-two" />
-        <header className="auth-header"><a className="brand" href="#"><span className="brand-mark">f.</span> fluência<span className="brand-dot">.</span></a><span className="auth-header-note">Seu próximo capítulo começa aqui</span></header>
+        <header className="auth-header">
+          <a className="brand" href="#"><span className="brand-mark">f.</span> fluência<span className="brand-dot">.</span></a>
+          <span className="auth-header-note">Seu próximo capítulo começa aqui</span>
+        </header>
         <section className="auth-content">
           <div className="auth-copy">
             <span className="eyebrow"><span className="live-dot" /> SUA JORNADA, NO SEU RITMO</span>
@@ -211,17 +487,20 @@ export default function Dashboard() {
             <div className="auth-proof"><div className="avatar-stack"><span>J</span><span>M</span><span>A</span></div><div><strong>Aprenda fazendo</strong><small>Lições curtas. Progresso real.</small></div></div>
             <div className="auth-quote"><span>“</span><p>Você não precisa ser fluente para começar.<br />Só precisa começar.</p></div>
           </div>
-          <form className="auth-card" onSubmit={register}>
-            <div className="card-topline"><span>COMECE SUA JORNADA</span><span className="step-count">01 <i>/ 02</i></span></div>
-            <h2>Crie seu espaço</h2>
-            <p className="card-intro">Vamos preparar um plano de estudos com a sua cara.</p>
-            <label htmlFor="name">Como podemos te chamar?</label>
-            <input id="name" autoComplete="name" value={nameInput} onChange={(event) => setNameInput(event.target.value)} placeholder="Seu primeiro nome" required minLength={2} />
+          <form className="auth-card" onSubmit={handleAuth}>
+            <div className="card-topline"><span>{authMode === "signup" ? "COMECE SUA JORNADA" : "BOM TER VOCÊ DE VOLTA"}</span><span className="step-count">SUPABASE</span></div>
+            <h2>{authMode === "signup" ? "Crie sua conta" : "Entre na sua conta"}</h2>
+            <p className="card-intro">{authMode === "signup" ? "Vamos preparar um plano de estudos com a sua cara." : "Continue de onde você parou."}</p>
+            {authMode === "signup" && <><label htmlFor="name">Como podemos te chamar?</label><input id="name" autoComplete="name" value={nameInput} onChange={(event) => setNameInput(event.target.value)} placeholder="Seu primeiro nome" required minLength={2} /></>}
             <label htmlFor="email">Seu melhor e-mail</label>
             <input id="email" type="email" autoComplete="email" value={emailInput} onChange={(event) => setEmailInput(event.target.value)} placeholder="voce@exemplo.com" required />
-            <button className="button button-primary auth-submit" type="submit">Criar minha conta <span>↗</span></button>
-            <div className="privacy-note"><span>◈</span> Seus dados ficam somente neste dispositivo, por enquanto.</div>
-            <div className="auth-divider"><span /> <small>SEM PRESSÃO, SEM PRAZO</small> <span /></div>
+            <label htmlFor="password">Senha</label>
+            <input id="password" type="password" autoComplete={authMode === "signup" ? "new-password" : "current-password"} value={passwordInput} onChange={(event) => setPasswordInput(event.target.value)} placeholder="Pelo menos 8 caracteres" required minLength={8} />
+            {authError && <p className="form-message form-error" role="alert">{authError}</p>}
+            {authMessage && <p className="form-message form-success" role="status">{authMessage}</p>}
+            <button className="button button-primary auth-submit" type="submit" disabled={authBusy}>{authBusy ? "Aguarde..." : authMode === "signup" ? "Criar minha conta" : "Entrar"} <span>↗</span></button>
+            <div className="privacy-note"><span>◈</span> Sua conta e seu progresso ficam salvos com segurança.</div>
+            <div className="auth-divider"><span /> <small>{authMode === "signup" ? "JÁ TEM UMA CONTA?" : "AINDA NÃO TEM CONTA?"} <button type="button" onClick={() => { setAuthMode(authMode === "signup" ? "signin" : "signup"); setAuthError(""); setAuthMessage(""); }}> {authMode === "signup" ? "ENTRAR" : "CADASTRE-SE"}</button></small> <span /></div>
             <div className="auth-perks"><span>✦ No seu ritmo</span><span>✦ Conteúdo por nível</span></div>
           </form>
         </section>
@@ -230,17 +509,14 @@ export default function Dashboard() {
     );
   }
 
-  if (!profile.onboardingComplete) {
+  if (profile && !profile.onboardingComplete) {
     return (
       <main className="onboarding-screen">
         <header className="onboarding-header"><a className="brand" href="#"><span className="brand-mark">f.</span> fluência<span className="brand-dot">.</span></a><span className="onboarding-progress-label">PERFIL DE APRENDIZAGEM <strong>01 <i>/ 01</i></strong></span></header>
-        <section className="onboarding-wrap">
+        <form className="onboarding-wrap" onSubmit={finishOnboarding}>
           <div className="onboarding-heading"><span className="eyebrow"><span className="live-dot" /> UM PLANO COM A SUA CARA</span><h1>Conhecendo <span>você.</span></h1><p>Não é uma prova. É só um ponto de partida para a gente acertar o ritmo.</p></div>
           <div className="onboarding-card">
-            <div className="question-block">
-              <div className="question-number">01 <span>—</span> 03</div>
-              <div><h2>Como está seu inglês hoje?</h2><p>Escolha a opção que mais combina com você. Você poderá mudar de nível depois.</p></div>
-            </div>
+            <div className="question-block"><div className="question-number">01 <span>—</span> 03</div><div><h2>Como está seu inglês hoje?</h2><p>Escolha a opção que mais combina com você. Você poderá mudar de nível depois.</p></div></div>
             <div className="level-options">
               {[
                 { id: "A1" as LevelId, emoji: "🌱", label: "Estou começando", detail: "Quero aprender do zero." },
@@ -249,22 +525,23 @@ export default function Dashboard() {
                 { id: "B2" as LevelId, emoji: "🚀", label: "Tenho uma boa base", detail: "Me comunico bem, mas quero mais confiança." },
                 { id: "C1" as LevelId, emoji: "✨", label: "Quero aperfeiçoar", detail: "Já tenho fluência e busco mais precisão." },
                 { id: "C2" as LevelId, emoji: "👑", label: "Quero dominar os detalhes", detail: "Tenho domínio e quero refinar ainda mais." },
-              ].map((option) => (
-                <button key={option.id} className={`level-option ${selectedLevel === option.id ? "selected" : ""}`} onClick={() => setSelectedLevel(option.id)} type="button">
-                  <span className="level-emoji">{option.emoji}</span><span className="level-option-text"><strong>{option.label}</strong><small>{option.detail}</small></span><span className="radio-mark">{selectedLevel === option.id ? "✓" : ""}</span>
-                </button>
-              ))}
+              ].map((option) => <button key={option.id} className={`level-option ${selectedLevel === option.id ? "selected" : ""}`} onClick={() => setSelectedLevel(option.id)} type="button"><span className="level-emoji">{option.emoji}</span><span className="level-option-text"><strong>{option.label}</strong><small>{option.detail}</small></span><span className="radio-mark">{selectedLevel === option.id ? "✓" : ""}</span></button>)}
             </div>
             <div className="onboarding-extras">
-              <div><label htmlFor="goal">O que você quer conquistar?</label><select id="goal" value={goal} onChange={(event) => setGoal(event.target.value)}><option>Conversar em viagens</option><option>Crescer na carreira</option><option>Entender filmes e séries</option><option>Estudar ou morar fora</option><option>Aprender por prazer</option></select></div>
+              <div><label htmlFor="goal">O que você quer conquistar?</label><select id="goal" value={goal} onChange={(event) => setGoal(event.target.value)}>{goals.map((option) => <option key={option}>{option}</option>)}</select></div>
               <div><label htmlFor="minutes">Quanto tempo por dia?</label><select id="minutes" value={dailyMinutes} onChange={(event) => setDailyMinutes(Number(event.target.value))}><option value={10}>10 minutos</option><option value={20}>20 minutos</option><option value={30}>30 minutos</option><option value={45}>45 minutos</option></select></div>
             </div>
-            <div className="onboarding-bottom"><span>Você pode ajustar seu plano quando quiser.</span><button className="button button-primary" onClick={finishOnboarding}>Montar meu plano <span>↗</span></button></div>
+            {appError && <p className="form-message form-error" role="alert">{appError}</p>}
+            <div className="onboarding-bottom"><span>Você pode ajustar seu plano quando quiser.</span><button className="button button-primary" type="submit" disabled={profileLoading}>{profileLoading ? "Salvando..." : "Montar meu plano"} <span>↗</span></button></div>
           </div>
           <div className="onboarding-note"><span>✦</span> Sem testes longos. O melhor nível é aquele em que você se sente desafiado, mas confortável.</div>
-        </section>
+        </form>
       </main>
     );
+  }
+
+  if (!profile) {
+    return <main className="loading-screen"><span>Carregando seu perfil...</span></main>;
   }
 
   const navItems: { id: PageId; icon: string; label: string }[] = [
@@ -284,49 +561,44 @@ export default function Dashboard() {
         </nav>
         <div className="sidebar-spacer" />
         <div className="sidebar-language"><div className="language-icon">🇬🇧</div><div><small>APRENDENDO</small><strong>Inglês <span>⌄</span></strong></div></div>
-        <div className="profile-button"><span className="profile-avatar">{profile.name.charAt(0).toUpperCase()}</span><span className="profile-details"><strong>{profile.name}</strong><small>{levelNames[profile.level]} · {profile.level}</small></span></div>
+        <button className="profile-button" onClick={signOut} title="Sair da conta"><span className="profile-avatar">{profile.name.charAt(0).toUpperCase()}</span><span className="profile-details"><strong>{profile.name}</strong><small>{profile.levelTitle} · {profile.level}</small></span><span className="profile-menu">↗</span></button>
       </aside>
       {mobileMenuOpen && <button aria-label="Fechar menu" className="menu-backdrop" onClick={() => setMobileMenuOpen(false)} />}
       <div className="app-main">
-        <header className="topbar"><button className="mobile-menu-button" onClick={() => setMobileMenuOpen(true)} aria-label="Abrir menu">☰</button><div className="breadcrumb">Meu espaço <span>/</span> <strong>{navItems.find((item) => item.id === page)?.label}</strong></div><div className="topbar-right"><span className="streak"><span>✦</span> 3 dias</span><span className="topbar-divider" /><span className="topbar-date">{new Intl.DateTimeFormat("pt-BR", { weekday: "short", day: "numeric", month: "short" }).format(new Date())}</span></div></header>
+        <header className="topbar"><button className="mobile-menu-button" onClick={() => setMobileMenuOpen(true)} aria-label="Abrir menu">☰</button><div className="breadcrumb">Meu espaço <span>/</span> <strong>{navItems.find((item) => item.id === page)?.label}</strong></div><div className="topbar-right"><span className="streak"><span>✦</span> {profile.completedLessons.length} lições</span><span className="topbar-divider" /><span className="topbar-date">{new Intl.DateTimeFormat("pt-BR", { weekday: "short", day: "numeric", month: "short" }).format(new Date())}</span></div></header>
         <div className="page-content">
-          {page === "home" && <HomePage profile={profile} progressPercent={progressPercent} completedInLevel={completedInLevel} levelIndex={currentLevelIndex} nextLesson={nextLesson} onStudy={() => nextLesson && openLesson(nextLesson)} onPage={setPage} onSelectLesson={openLesson} />}
-          {page === "lessons" && <LessonsPage profile={profile} onSelectLesson={openLesson} />}
-          {page === "cards" && <CardsPage level={profile.level} card={activeCard} index={cardIndex} total={allCards.length} flipped={cardFlipped} onFlip={() => setCardFlipped((value) => !value)} onNext={() => { setCardIndex((value) => (value + 1) % allCards.length); setCardFlipped(false); }} />}
-          {page === "progress" && <ProgressPage profile={profile} levelIndex={currentLevelIndex} />}
-          <footer className="app-footer"><span>Pequenos passos também levam longe. <span className="footer-heart">♥</span></span><span>Seu progresso fica salvo neste dispositivo.</span></footer>
+          {appError && <div className="app-error" role="alert">{appError}<button onClick={() => setAppError("")} aria-label="Fechar aviso">×</button></div>}
+          {page === "home" && <HomePage profile={profile} lessons={currentLessons} progressPercent={progressPercent} completedInLevel={completedInLevel} levelIndex={currentLevelIndex} nextLesson={nextLesson} onStudy={() => nextLesson && openLesson(nextLesson)} onPage={setPage} onSelectLesson={openLesson} />}
+          {page === "lessons" && <LessonsPage profile={profile} lessons={lessons} onSelectLesson={openLesson} />}
+          {page === "cards" && <CardsPage level={profile.level} card={activeCard} index={cardIndex} total={cards.length} flipped={cardFlipped} onFlip={() => setCardFlipped((value) => !value)} onNext={() => { setCardIndex((value) => (cards.length ? (value + 1) % cards.length : 0)); setCardFlipped(false); }} />}
+          {page === "progress" && <ProgressPage profile={profile} levelIndex={currentLevelIndex} lessons={lessons} />}
+          <footer className="app-footer"><span>Pequenos passos também levam longe. <span className="footer-heart">♥</span></span><span>Seu progresso fica sincronizado com sua conta.</span></footer>
         </div>
       </div>
-      {activeLesson && <LessonModal lesson={activeLesson} selectedAnswer={selectedAnswer} result={answerResult} completed={profile.completedLessons.includes(activeLesson.id)} onSelect={setSelectedAnswer} onSubmit={submitAnswer} onClose={() => setActiveLesson(null)} />}
+      {activeLesson && activeQuestion && <LessonModal lesson={activeLesson} question={activeQuestion} questionIndex={questionIndex} selectedAnswer={selectedAnswer} result={answerResult} feedback={answerFeedback} levelAdvanced={levelAdvanced} saving={answerSaving} completed={profile.completedQuestionIds.includes(activeQuestion.id)} onSelect={(answer) => { setSelectedAnswer(answer); setAnswerResult(null); setAnswerFeedback(""); }} onSubmit={submitAnswer} onNext={nextQuestion} onClose={() => setActiveLesson(null)} />}
     </main>
   );
 }
 
-function isProfile(value: unknown): value is Profile {
-  if (!value || typeof value !== "object") return false;
-  const candidate = value as Partial<Profile>;
-  return typeof candidate.name === "string" && typeof candidate.email === "string" && typeof candidate.level === "string" && levels.some((level) => level.id === candidate.level) && typeof candidate.onboardingComplete === "boolean" && Array.isArray(candidate.completedLessons) && candidate.completedLessons.every((lesson) => typeof lesson === "string");
-}
-
-function HomePage({ profile, progressPercent, completedInLevel, levelIndex, nextLesson, onStudy, onPage, onSelectLesson }: {
-  profile: Profile; progressPercent: number; completedInLevel: number; levelIndex: number; nextLesson?: Lesson; onStudy: () => void; onPage: (page: PageId) => void; onSelectLesson: (lesson: Lesson) => void;
+function HomePage({ profile, lessons: currentLessons, progressPercent, completedInLevel, levelIndex, nextLesson, onStudy, onPage, onSelectLesson }: {
+  profile: Profile; lessons: Lesson[]; progressPercent: number; completedInLevel: number; levelIndex: number; nextLesson?: Lesson; onStudy: () => void; onPage: (page: PageId) => void; onSelectLesson: (lesson: Lesson) => void;
 }) {
-  const recommendations = lessons.filter((lesson) => lesson.level === profile.level).slice(0, 3);
+  const recommendations = currentLessons.slice(0, 3);
   const firstName = profile.name.split(" ")[0];
   return (
     <>
       <section className="welcome-row"><div><span className="eyebrow"><span className="live-dot" /> {new Intl.DateTimeFormat("pt-BR", { weekday: "long", day: "numeric", month: "long" }).format(new Date()).toUpperCase()}</span><h1>Seu próximo passo, <span>{firstName}.</span></h1><p>Um pouco de inglês hoje já faz diferença amanhã.</p></div><div className="welcome-day"><span>☀️</span><div><strong>Seu momento de aprender</strong><small>Uma pausa de {profile.dailyMinutes} min para você</small></div></div></section>
       <section className="dashboard-grid">
         <div className="main-column">
-          <article className="level-banner"><div className="banner-orbit orbit-one" /><div className="banner-orbit orbit-two" /><div className="level-banner-content"><div className="banner-top"><span className="banner-label"><span className="banner-spark">✦</span> SUA JORNADA ATUAL</span><span className="level-pill">{profile.level} <span>·</span> {levelNames[profile.level]}</span></div><h2>O começo de algo <em>grande.</em></h2><p>Você está construindo sua base no inglês. Cada pequena conquista conta — continue no seu ritmo.</p><div className="banner-progress"><div className="progress-meta"><span>Progresso neste nível</span><strong>{completedInLevel} <small>/ {lessons.filter((lesson) => lesson.level === profile.level).length} lições</small></strong></div><div className="progress-track"><span style={{ width: `${progressPercent}%` }} /></div><div className="progress-caption"><span>{progressPercent}% concluído</span><span>Nível {levelIndex + 1} de 6</span></div></div></div><div className="banner-art"><div className="art-circle"><span>✦</span></div><span className="art-spark spark-one">✳</span><span className="art-spark spark-two">✧</span><span className="art-spark spark-three">·</span><div className="art-word">hello<span>.</span></div><div className="art-label">uma palavra<br />de cada vez</div></div></article>
+          <article className="level-banner"><div className="banner-orbit orbit-one" /><div className="banner-orbit orbit-two" /><div className="level-banner-content"><div className="banner-top"><span className="banner-label"><span className="banner-spark">✦</span> SUA JORNADA ATUAL</span><span className="level-pill">{profile.level} <span>·</span> {profile.levelTitle}</span></div><h2>O começo de algo <em>grande.</em></h2><p>Você está construindo sua base no inglês. Cada pequena conquista conta — continue no seu ritmo.</p><div className="banner-progress"><div className="progress-meta"><span>Progresso neste nível</span><strong>{completedInLevel} <small>/ {currentLessons.length} lições</small></strong></div><div className="progress-track"><span style={{ width: `${progressPercent}%` }} /></div><div className="progress-caption"><span>{progressPercent}% concluído</span><span>Nível {levelIndex + 1} de 6</span></div></div></div><div className="banner-art"><div className="art-circle"><span>✦</span></div><span className="art-spark spark-one">✳</span><span className="art-spark spark-two">✧</span><span className="art-spark spark-three">·</span><div className="art-word">hello<span>.</span></div><div className="art-label">uma palavra<br />de cada vez</div></div></article>
           <section className="section-block"><div className="section-title-row"><div><span className="section-kicker">SUA TRILHA</span><h2>Continue aprendendo</h2></div><button className="text-link" onClick={() => onPage("lessons")}>Ver todas <span>↗</span></button></div>
-            <div className="lesson-feature">{nextLesson ? <><div className="lesson-feature-icon">{nextLesson.category === "Conversação" ? "◉" : nextLesson.category === "Gramática" ? "⌘" : "✦"}</div><div className="lesson-feature-info"><span className="lesson-category">{nextLesson.category} <i /> {nextLesson.duration} min</span><h3>{nextLesson.title}</h3><p>{nextLesson.description}</p><div className="lesson-feature-bottom"><span><span className="lesson-dot" /> PRÓXIMA NA SUA TRILHA</span><button className="button button-dark" onClick={onStudy}>Começar lição <span>→</span></button></div></div></> : <div className="level-finished"><span>🎉</span><h3>Você concluiu este nível!</h3><p>Seu próximo nível já está liberado. Explore a nova trilha.</p><button className="button button-primary" onClick={() => onPage("lessons")}>Ver próxima trilha <span>→</span></button></div>}</div>
+            <div className="lesson-feature">{nextLesson ? <><div className="lesson-feature-icon">{nextLesson.category === "Conversação" ? "◉" : nextLesson.category === "Gramática" ? "⌘" : "✦"}</div><div className="lesson-feature-info"><span className="lesson-category">{nextLesson.category} <i /> {nextLesson.duration} min · {nextLesson.questions.length} questões</span><h3>{nextLesson.title}</h3><p>{nextLesson.description}</p><div className="lesson-feature-bottom"><span><span className="lesson-dot" /> PRÓXIMA NA SUA TRILHA</span><button className="button button-dark" onClick={onStudy}>Começar lição <span>→</span></button></div></div></> : currentLessons.length ? <div className="level-finished"><span>🎉</span><h3>Você concluiu este nível!</h3><p>Seu próximo nível já está liberado. Explore a nova trilha.</p><button className="button button-primary" onClick={() => onPage("lessons")}>Ver próxima trilha <span>→</span></button></div> : <div className="level-finished"><span>📚</span><h3>Estamos preparando sua trilha</h3><p>Ainda não há lições publicadas para este nível.</p></div>}</div>
           </section>
-          <section className="section-block"><div className="section-title-row"><div><span className="section-kicker">PARA VOCÊ</span><h2>Na sua trilha de hoje</h2></div><span className="tiny-count">{profile.level} · {recommendations.length} lições</span></div><div className="lesson-list">{recommendations.map((lesson, index) => { const done = profile.completedLessons.includes(lesson.id); return <button key={lesson.id} className={`lesson-row ${done ? "lesson-done" : ""}`} onClick={() => onSelectLesson(lesson)}><span className={`lesson-index ${done ? "index-done" : ""}`}>{done ? "✓" : `0${index + 1}`}</span><span className="lesson-row-title"><strong>{lesson.title}</strong><small>{lesson.category} <i /> {lesson.duration} min</small></span><span className="lesson-row-status">{done ? "Concluída" : "→"}</span></button>; })}</div></section>
+          <section className="section-block"><div className="section-title-row"><div><span className="section-kicker">PARA VOCÊ</span><h2>Na sua trilha de hoje</h2></div><span className="tiny-count">{profile.level} · {recommendations.length} lições</span></div><div className="lesson-list">{recommendations.length ? recommendations.map((lesson, index) => { const done = profile.completedLessons.includes(lesson.id); return <button key={lesson.id} className={`lesson-row ${done ? "lesson-done" : ""}`} onClick={() => onSelectLesson(lesson)}><span className={`lesson-index ${done ? "index-done" : ""}`}>{done ? "✓" : `0${index + 1}`}</span><span className="lesson-row-title"><strong>{lesson.title}</strong><small>{lesson.category} <i /> {lesson.duration} min · {lesson.questions.length} questões</small></span><span className="lesson-row-status">{done ? "Concluída" : "→"}</span></button>; }) : <div className="empty-state">As lições publicadas aparecerão aqui.</div>}</div></section>
         </div>
         <aside className="right-column">
           <article className="daily-card"><div className="daily-card-top"><span className="daily-icon">✧</span><span className="daily-label">FOCO DE HOJE</span><span className="daily-menu">···</span></div><h3>Um hábito de cada vez.</h3><p>Seu objetivo é <strong>{profile.goal.toLowerCase()}</strong>. Um pouquinho de prática diária aproxima você dele.</p><div className="daily-goal"><div className="goal-circle"><span>{profile.dailyMinutes}</span></div><div><strong>minutos por dia</strong><small>seu combinado com você</small></div></div><button className="daily-link" onClick={onStudy}>Fazer minha prática <span>↗</span></button></article>
-          <article className="week-card"><div className="week-heading"><div><span className="section-kicker">SEU RITMO</span><h3>Esta semana</h3></div><span className="week-total">3 <small>/ 5 dias</small></span></div><div className="week-days">{["S", "T", "Q", "Q", "S", "S", "D"].map((day, index) => <div key={`${day}-${index}`} className="week-day"><span>{day}</span><i className={index < 3 ? "day-active" : index === 3 ? "day-today" : ""}>{index < 3 ? "✓" : index === 3 ? "·" : ""}</i></div>)}</div><div className="week-caption"><span className="week-caption-dot" /> <span>Você está construindo consistência. Boa!</span></div></article>
+          <article className="week-card"><div className="week-heading"><div><span className="section-kicker">SEU RITMO</span><h3>Questões certas</h3></div><span className="week-total">{profile.completedQuestionIds.length} <small>no total</small></span></div><div className="week-caption"><span className="week-caption-dot" /><span>Seu progresso é salvo na sua conta.</span></div></article>
           <article className="quote-card"><span className="quote-mark">“</span><p>Every expert was once a beginner.</p><span className="quote-source">— COMEÇAR É TUDO</span><span className="quote-decoration">✳</span></article>
           <button className="cards-promo" onClick={() => onPage("cards")}><span className="promo-icon">▧</span><span><strong>Um card por vez</strong><small>Revise palavras do seu nível.</small></span><span className="promo-arrow">↗</span></button>
         </aside>
@@ -335,20 +607,24 @@ function HomePage({ profile, progressPercent, completedInLevel, levelIndex, next
   );
 }
 
-function LessonsPage({ profile, onSelectLesson }: { profile: Profile; onSelectLesson: (lesson: Lesson) => void }) {
+function LessonsPage({ profile, lessons: allLessons, onSelectLesson }: { profile: Profile; lessons: Lesson[]; onSelectLesson: (lesson: Lesson) => void }) {
   const currentIndex = levels.findIndex((level) => level.id === profile.level);
-  return <section className="inner-page"><div className="page-heading"><span className="eyebrow"><span className="live-dot" /> SUA TRILHA DE APRENDIZADO</span><h1>Conteúdo no <span>seu ritmo.</span></h1><p>Explore seu nível atual e veja o caminho que está construindo.</p></div><div className="level-roadmap">{levels.map((level, index) => { const unlocked = index <= currentIndex; const active = index === currentIndex; const levelLessons = lessons.filter((lesson) => lesson.level === level.id); const done = levelLessons.filter((lesson) => profile.completedLessons.includes(lesson.id)).length; return <section className={`roadmap-level ${active ? "roadmap-active" : ""} ${!unlocked ? "roadmap-locked" : ""}`} key={level.id}><div className="roadmap-heading"><span className="roadmap-level-number">{unlocked ? level.id : "⌑"}</span><div><span className="section-kicker">{active ? "SEU NÍVEL ATUAL" : `NÍVEL ${index + 1}`}</span><h2>{level.name}</h2><p>{level.subtitle}</p></div><span className="roadmap-count">{unlocked ? `${done}/${levelLessons.length} lições` : "🔒 Bloqueado"}</span></div>{unlocked && <div className="roadmap-lessons">{levelLessons.map((lesson, lessonIndex) => { const completed = profile.completedLessons.includes(lesson.id); return <button key={lesson.id} className="roadmap-lesson" onClick={() => onSelectLesson(lesson)}><span className={`roadmap-lesson-number ${completed ? "completed-number" : ""}`}>{completed ? "✓" : `0${lessonIndex + 1}`}</span><span className="roadmap-lesson-copy"><strong>{lesson.title}</strong><small>{lesson.category} <i /> {lesson.duration} min</small></span><span className="roadmap-lesson-arrow">{completed ? "Concluída" : "→"}</span></button>; })}</div>}</section>; })}</div></section>;
+  return <section className="inner-page"><div className="page-heading"><span className="eyebrow"><span className="live-dot" /> SUA TRILHA DE APRENDIZADO</span><h1>Conteúdo no <span>seu ritmo.</span></h1><p>Explore seu nível atual e veja o caminho que está construindo.</p></div><div className="level-roadmap">{levels.map((level, index) => { const unlocked = index <= currentIndex; const active = index === currentIndex; const levelLessons = allLessons.filter((lesson) => lesson.level === level.id); const done = levelLessons.filter((lesson) => profile.completedLessons.includes(lesson.id)).length; return <section className={`roadmap-level ${active ? "roadmap-active" : ""} ${!unlocked ? "roadmap-locked" : ""}`} key={level.id}><div className="roadmap-heading"><span className="roadmap-level-number">{unlocked ? level.id : "⌑"}</span><div><span className="section-kicker">{active ? "SEU NÍVEL ATUAL" : `NÍVEL ${index + 1}`}</span><h2>{level.name}</h2><p>{level.subtitle}</p></div><span className="roadmap-count">{unlocked ? `${done}/${levelLessons.length} lições` : "🔒 Bloqueado"}</span></div>{unlocked && <div className="roadmap-lessons">{levelLessons.length ? levelLessons.map((lesson, lessonIndex) => { const completed = profile.completedLessons.includes(lesson.id); return <button key={lesson.id} className="roadmap-lesson" onClick={() => onSelectLesson(lesson)}><span className={`roadmap-lesson-number ${completed ? "completed-number" : ""}`}>{completed ? "✓" : `0${lessonIndex + 1}`}</span><span className="roadmap-lesson-copy"><strong>{lesson.title}</strong><small>{lesson.category} <i /> {lesson.duration} min · {lesson.questions.length} questões</small></span><span className="roadmap-lesson-arrow">{completed ? "Concluída" : "→"}</span></button>; }) : <div className="empty-state">Ainda não há lições publicadas neste nível.</div>}</div>}</section>; })}</div></section>;
 }
 
-function CardsPage({ level, card, index, total, flipped, onFlip, onNext }: { level: LevelId; card: Flashcard; index: number; total: number; flipped: boolean; onFlip: () => void; onNext: () => void }) {
-  return <section className="inner-page cards-page"><div className="page-heading"><span className="eyebrow"><span className="live-dot" /> REVISÃO INTELIGENTE · {level}</span><h1>Palavras que <span>ficam.</span></h1><p>Cards selecionados para o seu nível. Tente lembrar antes de virar.</p></div><div className="flashcard-wrap"><div className={`flashcard ${flipped ? "flashcard-flipped" : ""}`} role="button" tabIndex={0} onClick={onFlip} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") onFlip(); }}><div className="flashcard-top"><span>{flipped ? "SIGNIFICADO" : "PALAVRA OU EXPRESSÃO"}</span><span>{String(index + 1).padStart(2, "0")} <i>/ {String(total).padStart(2, "0")}</i></span></div><div className="flashcard-content"><span className="flashcard-spark">✳</span><strong>{flipped ? card.back : card.front}</strong><small>{flipped ? card.front : card.pronunciation}</small></div><div className="flashcard-bottom"><span>✦ {flipped ? "Toque para ver a palavra" : "Toque para revelar o significado"}</span><span>↗</span></div></div><div className="cards-controls"><div className="cards-dots">{Array.from({ length: total }, (_, dot) => <span key={dot} className={dot === index ? "active-card-dot" : ""} />)}</div><button className="button button-primary" onClick={onNext}>Próximo card <span>→</span></button></div></div><div className="cards-tip"><span>✧</span><div><strong>Dica de estudo</strong><p>Fale a palavra em voz alta e tente montar uma frase antes de virar o card.</p></div></div></section>;
+function CardsPage({ level, card, index, total, flipped, onFlip, onNext }: { level: LevelId; card: Flashcard | null; index: number; total: number; flipped: boolean; onFlip: () => void; onNext: () => void }) {
+  return <section className="inner-page cards-page"><div className="page-heading"><span className="eyebrow"><span className="live-dot" /> REVISÃO INTELIGENTE · {level}</span><h1>Palavras que <span>ficam.</span></h1><p>Cards selecionados para o seu nível. Tente lembrar antes de virar.</p></div>{card ? <><div className="flashcard-wrap"><div className={`flashcard ${flipped ? "flashcard-flipped" : ""}`} role="button" tabIndex={0} onClick={onFlip} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") onFlip(); }}><div className="flashcard-top"><span>{flipped ? "SIGNIFICADO" : "PALAVRA OU EXPRESSÃO"}</span><span>{String(index + 1).padStart(2, "0")} <i>/ {String(total).padStart(2, "0")}</i></span></div><div className="flashcard-content"><span className="flashcard-spark">✳</span><strong>{flipped ? card.back : card.front}</strong><small>{flipped ? card.front : card.pronunciation}</small></div><div className="flashcard-bottom"><span>✦ {flipped ? "Toque para ver a palavra" : "Toque para revelar o significado"}</span><span>↗</span></div></div><div className="cards-controls"><div className="cards-dots">{Array.from({ length: total }, (_, dot) => <span key={dot} className={dot === index ? "active-card-dot" : ""} />)}</div><button className="button button-primary" onClick={onNext}>Próximo card <span>→</span></button></div></div><div className="cards-tip"><span>✧</span><div><strong>Dica de estudo</strong><p>Fale a palavra em voz alta e tente montar uma frase antes de virar o card.</p></div></div></> : <div className="empty-state">Ainda não há cards publicados para este nível.</div>}</section>;
 }
 
-function ProgressPage({ profile, levelIndex }: { profile: Profile; levelIndex: number }) {
-  const totalCompleted = profile.completedLessons.length;
-  return <section className="inner-page"><div className="page-heading"><span className="eyebrow"><span className="live-dot" /> SUA EVOLUÇÃO</span><h1>Olha só até onde <span>você chegou.</span></h1><p>Progresso de verdade é feito de pequenas conquistas repetidas.</p></div><div className="progress-summary"><article className="progress-stat"><span className="stat-icon stat-mint">✦</span><strong>{totalCompleted}</strong><small>lições concluídas</small></article><article className="progress-stat"><span className="stat-icon stat-violet">↗</span><strong>{levelIndex + 1}<small> / 6</small></strong><small>nível atual: {profile.level}</small></article><article className="progress-stat"><span className="stat-icon stat-pink">◷</span><strong>{totalCompleted * 10}<small> min</small></strong><small>de prática acumulada</small></article></div><div className="progress-map"><div className="section-title-row"><div><span className="section-kicker">SEU CAMINHO</span><h2>Do primeiro hello ao próximo nível</h2></div><span className="tiny-count">{Math.round((levelIndex / 5) * 100)}% da jornada</span></div><div className="map-levels">{levels.map((level, index) => { const reached = index <= levelIndex; const complete = index < levelIndex; const levelCount = lessons.filter((lesson) => lesson.level === level.id).length; const levelDone = lessons.filter((lesson) => lesson.level === level.id && profile.completedLessons.includes(lesson.id)).length; return <div key={level.id} className={`map-level ${reached ? "map-reached" : ""} ${complete ? "map-complete" : ""}`}><span className="map-marker">{complete ? "✓" : reached ? "✦" : "·"}</span><div className="map-level-content"><div><strong>{level.id} <span>·</span> {level.name}</strong><small>{level.subtitle}</small></div><span className="map-level-status">{complete ? "Concluído" : reached ? `${levelDone} / ${levelCount} lições` : "A desbloquear"}</span></div></div>; })}</div></div><div className="progress-encouragement"><span>🌱</span><div><strong>Consistência acima de velocidade.</strong><p>Seu objetivo — {profile.goal.toLowerCase()} — começa com cada pequena sessão.</p></div></div></section>;
+function ProgressPage({ profile, levelIndex, lessons: allLessons }: { profile: Profile; levelIndex: number; lessons: Lesson[] }) {
+  const totalCompleted = profile.completedQuestionIds.length;
+  return <section className="inner-page"><div className="page-heading"><span className="eyebrow"><span className="live-dot" /> SUA EVOLUÇÃO</span><h1>Olha só até onde <span>você chegou.</span></h1><p>Progresso de verdade é feito de pequenas conquistas repetidas.</p></div><div className="progress-summary"><article className="progress-stat"><span className="stat-icon stat-mint">✦</span><strong>{profile.completedLessons.length}</strong><small>lições concluídas</small></article><article className="progress-stat"><span className="stat-icon stat-violet">↗</span><strong>{levelIndex + 1}<small> / 6</small></strong><small>nível atual: {profile.level}</small></article><article className="progress-stat"><span className="stat-icon stat-pink">◷</span><strong>{totalCompleted}<small> questões</small></strong><small>respondidas corretamente</small></article></div><div className="progress-map"><div className="section-title-row"><div><span className="section-kicker">SEU CAMINHO</span><h2>Do primeiro hello ao próximo nível</h2></div><span className="tiny-count">{Math.round((levelIndex / 5) * 100)}% da jornada</span></div><div className="map-levels">{levels.map((level, index) => { const reached = index <= levelIndex; const complete = index < levelIndex; const levelLessons = allLessons.filter((lesson) => lesson.level === level.id); const done = levelLessons.filter((lesson) => profile.completedLessons.includes(lesson.id)).length; return <div key={level.id} className={`map-level ${reached ? "map-reached" : ""} ${complete ? "map-complete" : ""}`}><span className="map-marker">{complete ? "✓" : reached ? "✦" : "·"}</span><div className="map-level-content"><div><strong>{level.id} <span>·</span> {level.name}</strong><small>{level.subtitle}</small></div><span className="map-level-status">{complete ? "Concluído" : reached ? `${done} / ${levelLessons.length} lições` : "A desbloquear"}</span></div></div>; })}</div></div><div className="progress-encouragement"><span>🌱</span><div><strong>Consistência acima de velocidade.</strong><p>Seu objetivo — {profile.goal.toLowerCase()} — começa com cada pequena sessão.</p></div></div></section>;
 }
 
-function LessonModal({ lesson, selectedAnswer, result, completed, onSelect, onSubmit, onClose }: { lesson: Lesson; selectedAnswer: string; result: "correct" | "incorrect" | null; completed: boolean; onSelect: (answer: string) => void; onSubmit: () => void; onClose: () => void }) {
-  return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><section className="lesson-modal" role="dialog" aria-modal="true" aria-labelledby="lesson-title"><button className="modal-close" onClick={onClose} aria-label="Fechar lição">×</button><span className="eyebrow"><span className="live-dot" /> {lesson.category.toUpperCase()} · {lesson.duration} MIN</span><div className="modal-step"><span>LIÇÃO INTERATIVA</span><span>✦ PRÁTICA</span></div><h2 id="lesson-title">{lesson.title}</h2><p className="modal-description">{lesson.description}</p><div className="exercise-box"><span className="exercise-label">HORA DE PRATICAR</span><h3>{lesson.question}</h3><div className="answer-options">{lesson.options.map((option, index) => <button key={option} className={`answer-option ${selectedAnswer === option ? "answer-selected" : ""} ${result && option === lesson.answer ? "answer-correct" : ""} ${result === "incorrect" && selectedAnswer === option ? "answer-incorrect" : ""}`} onClick={() => { onSelect(option); }} disabled={result === "correct" || completed}><span>{String.fromCharCode(65 + index)}</span>{option}<i>{result && option === lesson.answer ? "✓" : ""}</i></button>)}</div>{result === "incorrect" && <p className="answer-feedback feedback-error">Quase! Tente novamente — a resposta certa fica destacada.</p>}{(result === "correct" || completed) && <p className="answer-feedback feedback-success">Muito bem! Resposta certa. Seu progresso foi atualizado. ✨</p>}</div>{!(result === "correct" || completed) && <button className="button button-primary modal-submit" onClick={onSubmit} disabled={!selectedAnswer}>Conferir resposta <span>→</span></button>}{(result === "correct" || completed) && <button className="button button-primary modal-submit" onClick={onClose}>Continuar aprendendo <span>→</span></button>}<div className="modal-footer-note"><span>◈</span> Errar faz parte. Você pode tentar quantas vezes quiser.</div></section></div>;
+function LessonModal({ lesson, question, questionIndex, selectedAnswer, result, feedback, levelAdvanced, saving, completed, onSelect, onSubmit, onNext, onClose }: {
+  lesson: Lesson; question: LessonQuestion; questionIndex: number; selectedAnswer: string; result: "correct" | "incorrect" | null; feedback: string; levelAdvanced: boolean; saving: boolean; completed: boolean; onSelect: (answer: string) => void; onSubmit: () => void; onNext: () => void; onClose: () => void;
+}) {
+  const isLastQuestion = questionIndex === lesson.questions.length - 1;
+  const answeredCorrectly = result === "correct" || completed;
+  return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><section className="lesson-modal" role="dialog" aria-modal="true" aria-labelledby="lesson-title"><button className="modal-close" onClick={onClose} aria-label="Fechar lição">×</button><span className="eyebrow"><span className="live-dot" /> {lesson.category.toUpperCase()} · {lesson.duration} MIN</span><div className="modal-step"><span>QUESTÃO {String(questionIndex + 1).padStart(2, "0")} DE {String(lesson.questions.length).padStart(2, "0")}</span><span>✦ PRÁTICA</span></div><h2 id="lesson-title">{lesson.title}</h2><p className="modal-description">{lesson.description}</p><div className="exercise-box"><span className="exercise-label">{question.type === "listening" ? "OUÇA E ESCREVA" : question.type === "fill_blank" ? "COMPLETE A FRASE" : "HORA DE PRATICAR"}</span>{question.audioUrl && <audio className="audio-player" controls preload="none" src={question.audioUrl}>Seu navegador não suporta áudio.</audio>}<h3>{question.prompt}</h3><div className="answer-options">{question.type === "multiple_choice" ? question.options.map((option, index) => <button key={option} className={`answer-option ${selectedAnswer === option ? "answer-selected" : ""} ${result === "incorrect" && selectedAnswer === option ? "answer-incorrect" : ""}`} onClick={() => onSelect(option)} disabled={answeredCorrectly}><span>{String.fromCharCode(65 + index)}</span>{option}<i>{result === "correct" && selectedAnswer === option ? "✓" : ""}</i></button>) : <input className="answer-text-input" value={selectedAnswer} onChange={(event) => onSelect(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && selectedAnswer.trim()) onSubmit(); }} placeholder={question.type === "listening" ? "Digite o que você ouviu" : "Digite sua resposta"} disabled={answeredCorrectly} />}</div>{result === "incorrect" && <p className="answer-feedback feedback-error">{feedback || "Quase! Tente outra vez."}</p>}{answeredCorrectly && <p className="answer-feedback feedback-success">{feedback || "Muito bem! Resposta certa."} {levelAdvanced ? "Você avançou para o próximo nível! ✨" : "Seu progresso foi atualizado. ✨"}</p>}</div>{!answeredCorrectly ? <button className="button button-primary modal-submit" onClick={onSubmit} disabled={!selectedAnswer.trim() || saving}>{saving ? "Conferindo..." : "Conferir resposta"} <span>→</span></button> : <button className="button button-primary modal-submit" onClick={isLastQuestion ? onClose : onNext}>{isLastQuestion ? "Concluir lição" : "Próxima questão"} <span>→</span></button>}<div className="modal-footer-note"><span>◈</span> Errar faz parte. Você pode tentar quantas vezes quiser.</div></section></div>;
 }
