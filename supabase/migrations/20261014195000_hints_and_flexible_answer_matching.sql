@@ -126,10 +126,10 @@ begin
   if not v_is_correct then
     select pg_catalog.count(*)::integer
     into v_wrong_attempts
-    from public.question_attempts
-    where user_id = v_user_id
-      and question_id = p_question_id
-      and not is_correct;
+    from public.question_attempts as attempts
+    where attempts.user_id = v_user_id
+      and attempts.question_id = p_question_id
+      and not attempts.is_correct;
   end if;
 
   if v_is_correct then
