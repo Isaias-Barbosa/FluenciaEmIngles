@@ -6,6 +6,7 @@ import type { Database } from "./database.types";
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+export const adminSessionCookieName = "fluencia_admin_session";
 const adminEmails = new Set(
   (process.env.ADMIN_EMAILS ?? "")
     .split(",")

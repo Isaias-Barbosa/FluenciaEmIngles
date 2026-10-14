@@ -95,6 +95,16 @@ function choicesFromJson(value: Json): string[] {
   return value;
 }
 
+async function syncAdminSession(accessToken: string | null) {
+  const response = await fetch("/api/admin/session", {
+    method: accessToken ? "POST" : "DELETE",
+    ...(accessToken ? { headers: { Authorization: `Bearer ${accessToken}` } } : {}),
+  });
+  if (!response.ok) {
+    throw new Error(`Não foi possível sincronizar a sessão administrativa: ${response.status}`);
+  }
+}
+
 async function fetchProficiencyExam(type: ProficiencyExam["type"]): Promise<ProficiencyExam> {
   if (!supabase) throw new Error("Supabase não está configurado.");
   const { data, error } = await supabase.rpc("get_proficiency_exam", {
@@ -330,6 +340,9 @@ export default function Dashboard() {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, nextSession) => {
       if (!mounted) return;
+      void syncAdminSession(nextSession?.access_token ?? null).catch((error: unknown) => {
+        console.error("Falha ao sincronizar a sessão administrativa.", error);
+      });
       setSession(nextSession);
       setAuthMessage("");
       setAuthError("");
@@ -447,14 +460,16 @@ export default function Dashboard() {
         if (!data.session) {
           setAuthMessage("Conta criada. Confira seu e-mail para confirmar o cadastro e depois entre na plataforma.");
         } else {
+          await syncAdminSession(data.session.access_token);
           setAuthMessage("Conta criada. Vamos preparar seu espaço de aprendizagem.");
         }
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await supabase.auth.signInWithPassword({
           email: emailInput.trim(),
           password: passwordInput,
         });
         if (error) throw error;
+        await syncAdminSession(data.session.access_token);
       }
     } catch (error) {
       setAuthError(error instanceof Error ? error.message : "Não foi possível concluir a autenticação.");
@@ -600,6 +615,7 @@ export default function Dashboard() {
     if (!supabase) return;
     const { error } = await supabase.auth.signOut();
     if (error) setAppError(`Não foi possível sair da conta: ${error.message}`);
+    await syncAdminSession(null);
   }
 
   function nextQuestion() {
