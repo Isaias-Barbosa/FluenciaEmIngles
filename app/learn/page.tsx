@@ -143,8 +143,6 @@ export default function Dashboard() {
   const [authMessage, setAuthMessage] = useState("");
   const [authError, setAuthError] = useState("");
   const [appError, setAppError] = useState("");
-  const [cardIndex, setCardIndex] = useState(0);
-  const [cardFlipped, setCardFlipped] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const configured = supabase !== null;
@@ -380,7 +378,6 @@ export default function Dashboard() {
   const nextLesson = currentLessons.find(
     (lesson) => !profile?.completedLessons.includes(lesson.id),
   );
-  const activeCard = cards.length ? cards[cardIndex % cards.length] : null;
   const activeQuestion = activeLesson?.questions[questionIndex] ?? null;
   const currentLevelIndex = levels.findIndex((level) => level.id === profile?.level);
 
@@ -685,7 +682,7 @@ export default function Dashboard() {
           {appError && <div className="app-error" role="alert">{appError}<button onClick={() => setAppError("")} aria-label="Fechar aviso">×</button></div>}
           {page === "home" && <HomePage profile={profile} lessons={currentLessons} progressPercent={progressPercent} completedInLevel={completedInLevel} levelIndex={currentLevelIndex} nextLesson={nextLesson} onStudy={() => nextLesson && openLesson(nextLesson)} onPage={setPage} onSelectLesson={openLesson} />}
           {page === "lessons" && <LessonsPage profile={profile} lessons={lessons} onSelectLesson={openLesson} />}
-          {page === "cards" && <CardsPage level={profile.level} card={activeCard} index={cardIndex} total={cards.length} flipped={cardFlipped} onFlip={() => setCardFlipped((value) => !value)} onNext={() => { setCardIndex((value) => (cards.length ? (value + 1) % cards.length : 0)); setCardFlipped(false); }} />}
+          {page === "cards" && <CardsPage key={profile.level} level={profile.level} cards={cards} />}
           {page === "progress" && <ProgressPage profile={profile} levelIndex={currentLevelIndex} lessons={lessons} />}
           {page === "profile" && <ProfilePage profile={profile} levelIndex={currentLevelIndex} levelProgress={progressPercent} completedInLevel={completedInLevel} totalQuestions={profile.completedQuestionIds.length} onSave={saveProfileDetails} onApplyLevel={applyPlacementLevel} />}
           <footer className="app-footer"><span>Pequenos passos também levam longe. <span className="footer-heart">♥</span></span><span>Seu progresso fica sincronizado com sua conta.</span></footer>
@@ -728,8 +725,94 @@ function LessonsPage({ profile, lessons: allLessons, onSelectLesson }: { profile
   return <section className="inner-page"><div className="page-heading"><span className="eyebrow"><span className="live-dot" /> SUA TRILHA DE APRENDIZADO</span><h1>Conteúdo no <span>seu ritmo.</span></h1><p>Explore seu nível atual e veja o caminho que está construindo.</p></div><div className="level-roadmap">{levels.map((level, index) => { const unlocked = index <= currentIndex; const active = index === currentIndex; const levelLessons = allLessons.filter((lesson) => lesson.level === level.id); const done = levelLessons.filter((lesson) => profile.completedLessons.includes(lesson.id)).length; return <section className={`roadmap-level ${active ? "roadmap-active" : ""} ${!unlocked ? "roadmap-locked" : ""}`} key={level.id}><div className="roadmap-heading"><span className="roadmap-level-number">{unlocked ? level.id : "⌑"}</span><div><span className="section-kicker">{active ? "SEU NÍVEL ATUAL" : `NÍVEL ${index + 1}`}</span><h2>{level.name}</h2><p>{level.subtitle}</p></div><span className="roadmap-count">{unlocked ? `${done}/${levelLessons.length} lições` : "🔒 Bloqueado"}</span></div>{unlocked && <div className="roadmap-lessons">{levelLessons.length ? levelLessons.map((lesson, lessonIndex) => { const completed = profile.completedLessons.includes(lesson.id); return <button key={lesson.id} className="roadmap-lesson" onClick={() => onSelectLesson(lesson)}><span className={`roadmap-lesson-number ${completed ? "completed-number" : ""}`}>{completed ? "✓" : `0${lessonIndex + 1}`}</span><span className="roadmap-lesson-copy"><strong>{lesson.title}</strong><small>{lesson.category} <i /> {lesson.duration} min · {lesson.questions.length} questões</small></span><span className="roadmap-lesson-arrow">{completed ? "Concluída" : "→"}</span></button>; }) : <div className="empty-state">Ainda não há lições publicadas neste nível.</div>}</div>}</section>; })}</div></section>;
 }
 
-function CardsPage({ level, card, index, total, flipped, onFlip, onNext }: { level: LevelId; card: Flashcard | null; index: number; total: number; flipped: boolean; onFlip: () => void; onNext: () => void }) {
-  return <section className="inner-page cards-page"><div className="page-heading"><span className="eyebrow"><span className="live-dot" /> REVISÃO INTELIGENTE · {level}</span><h1>Palavras que <span>ficam.</span></h1><p>Cards selecionados para o seu nível. Tente lembrar antes de virar.</p></div>{card ? <><div className="flashcard-wrap"><div className={`flashcard ${flipped ? "flashcard-flipped" : ""}`} role="button" tabIndex={0} onClick={onFlip} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") onFlip(); }}><div className="flashcard-top"><span>{flipped ? "SIGNIFICADO" : "PALAVRA OU EXPRESSÃO"}</span><span>{String(index + 1).padStart(2, "0")} <i>/ {String(total).padStart(2, "0")}</i></span></div><div className="flashcard-content"><span className="flashcard-spark">✳</span><strong>{flipped ? card.back : card.front}</strong><small>{flipped ? card.front : card.pronunciation}</small></div><div className="flashcard-bottom"><span>✦ {flipped ? "Toque para ver a palavra" : "Toque para revelar o significado"}</span><span>↗</span></div></div><div className="cards-controls"><div className="cards-dots">{Array.from({ length: total }, (_, dot) => <span key={dot} className={dot === index ? "active-card-dot" : ""} />)}</div><button className="button button-primary" onClick={onNext}>Próximo card <span>→</span></button></div></div><div className="cards-tip"><span>✧</span><div><strong>Dica de estudo</strong><p>Fale a palavra em voz alta e tente montar uma frase antes de virar o card.</p></div></div></> : <div className="empty-state">Ainda não há cards publicados para este nível.</div>}</section>;
+function CardsPage({ level, cards }: { level: LevelId; cards: Flashcard[] }) {
+  const [deck, setDeck] = useState(cards);
+  const [index, setIndex] = useState(0);
+  const [flipped, setFlipped] = useState(false);
+
+  useEffect(() => {
+    setDeck(cards);
+    setIndex(0);
+    setFlipped(false);
+  }, [cards]);
+
+  const card = deck[index] ?? null;
+
+  function moveTo(nextIndex: number) {
+    setIndex(nextIndex);
+    setFlipped(false);
+  }
+
+  function shuffleCards() {
+    const shuffled = [...deck];
+    for (let current = shuffled.length - 1; current > 0; current -= 1) {
+      const randomIndex = Math.floor(Math.random() * (current + 1));
+      [shuffled[current], shuffled[randomIndex]] = [shuffled[randomIndex], shuffled[current]];
+    }
+    setDeck(shuffled);
+    moveTo(0);
+  }
+
+  function restartCards() {
+    setDeck(cards);
+    moveTo(0);
+  }
+
+  return (
+    <section className="inner-page cards-page">
+      <div className="page-heading">
+        <span className="eyebrow"><span className="live-dot" /> REVISÃO INTELIGENTE · {level}</span>
+        <h1>Palavras que <span>ficam.</span></h1>
+        <p>Cards selecionados para o seu nível. Tente lembrar antes de virar.</p>
+      </div>
+      {card ? (
+        <div className="flashcard-wrap">
+          <div className="cards-toolbar">
+            <button className="button button-dark" type="button" onClick={shuffleCards}>Embaralhar <span>⤨</span></button>
+            <button className="button button-dark" type="button" onClick={restartCards}>Reiniciar <span>↺</span></button>
+          </div>
+          <div
+            className={`flashcard ${flipped ? "flashcard-flipped" : ""}`}
+            role="button"
+            tabIndex={0}
+            aria-label={flipped ? "Card virado. Ative para ver a palavra em inglês." : "Ative para virar o card e ver o significado."}
+            onClick={() => setFlipped((current) => !current)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                setFlipped((current) => !current);
+              }
+            }}
+          >
+            <div className="flashcard-top">
+              <span>{flipped ? "SIGNIFICADO" : "PALAVRA OU EXPRESSÃO"}</span>
+              <span>{String(index + 1).padStart(2, "0")} <i>/ {String(deck.length).padStart(2, "0")}</i></span>
+            </div>
+            <div className="flashcard-content">
+              <span className="flashcard-spark">✳</span>
+              <strong>{flipped ? card.back : card.front}</strong>
+              <small>{flipped ? card.front : card.pronunciation}</small>
+            </div>
+            <div className="flashcard-bottom"><span>✦ {flipped ? "Toque para ver a palavra" : "Toque para revelar o significado"}</span><span>↗</span></div>
+          </div>
+          <div className="cards-flip-control">
+            <button className="button button-dark" type="button" aria-pressed={flipped} onClick={() => setFlipped((current) => !current)}>
+              {flipped ? "Ver a palavra" : "Virar o card"} <span>↻</span>
+            </button>
+          </div>
+          <div className="cards-controls">
+            <button className="button button-dark" type="button" disabled={index === 0} onClick={() => moveTo(index - 1)}><span>←</span> Anterior</button>
+            <span className="cards-progress">{index + 1} de {deck.length}</span>
+            <button className="button button-primary" type="button" disabled={index === deck.length - 1} onClick={() => moveTo(index + 1)}>Próximo <span>→</span></button>
+          </div>
+        </div>
+      ) : <div className="empty-state">Ainda não há cards publicados para este nível.</div>}
+      <div className="cards-tip">
+        <span>✧</span>
+        <div><strong>Como estudar:</strong><p>escolha um nível, tente lembrar o significado antes de virar o card e marque mentalmente as palavras que precisa rever. A classificação CEFR é aproximada e serve como guia de estudo.</p></div>
+      </div>
+    </section>
+  );
 }
 
 function ProfilePage({

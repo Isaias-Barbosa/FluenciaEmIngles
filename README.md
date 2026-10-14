@@ -26,6 +26,7 @@ npm install
    - `20261014200000_import_b2_english_workbook_questions.sql`
    - `20261014201000_import_listening_practice_all_levels.sql`
    - `20261014202000_admin_user_management.sql`
+   - `20261014203000_import_flashcards_1200.sql`
 2. Em **Authentication → Providers**, habilite o cadastro por e-mail e senha.
 3. Em **Authentication → URL Configuration**, adicione `http://localhost:3000` como endereço permitido. Adicione também o endereço de produção quando publicar o app.
 4. Copie `.env.example` para `.env.local` e preencha os valores do projeto:
@@ -55,7 +56,7 @@ Abra [http://localhost:3000](http://localhost:3000) para acessar a página inici
 - **Trilha de inglês:** conteúdo organizado nos níveis CEFR A1 a C2.
 - **Exercícios:** múltipla escolha, respostas digitadas e questões de compreensão oral.
 - **Listening:** áudios WAV no diretório `public/audio/`.
-- **Cards:** vocabulário carregado de acordo com o nível atual.
+- **Cards:** 1.200 flashcards separados igualmente entre A1 e C2; cada estudante vê apenas os cards do seu nível e pode navegar, virar, embaralhar ou reiniciar a sequência.
 - **Progresso:** tentativas e lições concluídas associadas à conta do estudante.
 - **Perfil:** consulte e atualize seu nome, objetivo e tempo diário de estudo; veja também seu nível e progresso.
 - **Teste de nível:** novos estudantes respondem a uma avaliação de 18 questões corrigida pelo Supabase; o nível recomendado é aplicado antes de liberar a trilha. Estudantes já cadastrados podem refazer a avaliação pelo perfil e escolher se querem aplicar o resultado.
@@ -83,6 +84,7 @@ As migrations criam e preenchem o banco. Elas devem ser executadas **uma única 
 | `20261014200000_import_b2_english_workbook_questions.sql` | Importa 120 questões do caderno B2 Upper-Intermediate como rascunhos, incluindo 90 de múltipla escolha e 30 de completar frases |
 | `20261014201000_import_listening_practice_all_levels.sql` | Importa 120 questões de compreensão oral como rascunhos: 20 em cada nível A1–C2, com arquivos WAV correspondentes em `public/audio/listening/` |
 | `20261014202000_admin_user_management.sql` | Adiciona funções seguras para editar o perfil e reiniciar o progresso pelo painel administrativo |
+| `20261014203000_import_flashcards_1200.sql` | Substitui os cards anteriores por 1.200 flashcards do CSV, com 200 cards publicados para cada nível A1–C2 |
 
 O PDF fornecido não contém os enunciados 19, 20 e 98–100. As questões abertas 86, 96 e 97 também ficam como rascunhos, pois o próprio gabarito as identifica como exemplos/respostas pessoais.
 O caderno avançado contém as 150 questões e seus gabaritos. A migration divide o conteúdo igualmente entre C1 e C2; revise as lições em rascunho no painel administrativo antes de publicá-las.
