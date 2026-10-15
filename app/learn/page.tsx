@@ -4,6 +4,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase/client";
 import type { Database, Json } from "@/lib/supabase/database.types";
+import { learningVideos } from "@/lib/learning-videos";
 
 type LevelId = "A1" | "A2" | "B1" | "B2" | "C1" | "C2";
 type PageId = "home" | "lessons" | "cards" | "progress" | "profile" | "exam";
@@ -810,7 +811,112 @@ function HomePage({ profile, lessons: currentLessons, progressPercent, completed
 
 function LessonsPage({ profile, lessons: allLessons, onSelectLesson }: { profile: Profile; lessons: Lesson[]; onSelectLesson: (lesson: Lesson) => void }) {
   const currentIndex = levels.findIndex((level) => level.id === profile.level);
-  return <section className="inner-page lessons-page"><div className="page-heading"><span className="eyebrow"><span className="live-dot" /> SUA TRILHA DE APRENDIZADO</span><h1>Conteúdo no <span>seu ritmo.</span></h1><p>Explore seu nível atual e veja o caminho que está construindo.</p></div><div className="level-roadmap">{levels.map((level, index) => { const unlocked = index <= currentIndex; const active = index === currentIndex; const levelLessons = allLessons.filter((lesson) => lesson.level === level.id); const done = levelLessons.filter((lesson) => profile.completedLessons.includes(lesson.id)).length; return <section className={`roadmap-level ${active ? "roadmap-active" : ""} ${!unlocked ? "roadmap-locked" : ""}`} key={level.id}><div className="roadmap-heading"><span className="roadmap-level-number">{unlocked ? level.id : "⌑"}</span><div><span className="section-kicker">{active ? "SEU NÍVEL ATUAL" : `NÍVEL ${index + 1}`}</span><h2>{level.name}</h2><p>{level.subtitle}</p></div><span className="roadmap-count">{unlocked ? `${done}/${levelLessons.length} lições` : "🔒 Bloqueado"}</span></div>{unlocked && <div className="roadmap-lessons">{levelLessons.length ? levelLessons.map((lesson, lessonIndex) => { const completed = profile.completedLessons.includes(lesson.id); return <button key={lesson.id} className="roadmap-lesson" onClick={() => onSelectLesson(lesson)}><span className={`roadmap-lesson-number ${completed ? "completed-number" : ""}`}>{completed ? "✓" : `0${lessonIndex + 1}`}</span><span className="roadmap-lesson-copy"><strong>{lesson.title}</strong><small>{lesson.category} <i /> {lesson.duration} min · {lesson.questions.length} questões</small></span><span className="roadmap-lesson-arrow">{completed ? "Concluída" : "→"}</span></button>; }) : <div className="empty-state">Ainda não há lições publicadas neste nível.</div>}</div>}</section>; })}</div></section>;
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState<"all" | "pending" | "completed">("all");
+  const [videoLevel, setVideoLevel] = useState<LevelId>(profile.level);
+  useEffect(() => setVideoLevel(profile.level), [profile.level]);
+  const normalizedSearch = search.trim().toLocaleLowerCase();
+  const availableLessons = allLessons.filter((lesson) => {
+    const completed = profile.completedLessons.includes(lesson.id);
+    const matchesStatus = filter === "all" || (filter === "completed" ? completed : !completed);
+    const matchesSearch = !normalizedSearch
+      || `${lesson.title} ${lesson.description} ${lesson.category}`.toLocaleLowerCase().includes(normalizedSearch);
+    return matchesStatus && matchesSearch;
+  });
+  const totalLessons = allLessons.length;
+  const completedLessons = allLessons.filter((lesson) => profile.completedLessons.includes(lesson.id)).length;
+  const unlockedVideoLevels = levels.slice(0, currentIndex + 1);
+  const visibleVideos = learningVideos.filter((video) => video.level === videoLevel);
+  const selectedVideoLevel = levels.find((level) => level.id === videoLevel);
+
+  return (
+    <section className="inner-page lessons-page">
+      <div className="page-heading">
+        <span className="eyebrow"><span className="live-dot" /> SUA TRILHA DE APRENDIZADO</span>
+        <h1>Conteúdo no <span>seu ritmo.</span></h1>
+        <p>Encontre uma lição, acompanhe o que já concluiu e avance passo a passo.</p>
+      </div>
+      <section className="lessons-overview" aria-label="Resumo do conteúdo">
+        <div><span className="lessons-overview-icon">▤</span><div><strong>{completedLessons} de {totalLessons}</strong><span>lições concluídas no seu nível</span></div></div>
+        <div className="lessons-overview-track" role="progressbar" aria-valuenow={totalLessons ? Math.round(completedLessons / totalLessons * 100) : 0} aria-valuemin={0} aria-valuemax={100}>
+          <span style={{ width: `${totalLessons ? completedLessons / totalLessons * 100 : 0}%` }} />
+        </div>
+      </section>
+      <div className="lessons-toolbar">
+        <label className="lessons-search">
+          <span aria-hidden="true">⌕</span>
+          <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar por lição ou assunto" aria-label="Buscar por lição ou assunto" />
+          {search && <button type="button" onClick={() => setSearch("")} aria-label="Limpar busca">×</button>}
+        </label>
+        <div className="lessons-filters" role="group" aria-label="Filtrar lições">
+          {([["all", "Todas"], ["pending", "A fazer"], ["completed", "Concluídas"]] as const).map(([id, label]) => (
+            <button key={id} type="button" className={filter === id ? "active" : ""} aria-pressed={filter === id} onClick={() => setFilter(id)}>{label}</button>
+          ))}
+        </div>
+      </div>
+      <div className="level-roadmap">
+        {levels.map((level, index) => {
+          const unlocked = index <= currentIndex;
+          const active = index === currentIndex;
+          const levelLessons = allLessons.filter((lesson) => lesson.level === level.id);
+          const shownLessons = availableLessons.filter((lesson) => lesson.level === level.id);
+          const done = levelLessons.filter((lesson) => profile.completedLessons.includes(lesson.id)).length;
+          return (
+            <section className={`roadmap-level ${active ? "roadmap-active" : ""} ${!unlocked ? "roadmap-locked" : ""}`} key={level.id}>
+              <div className="roadmap-heading">
+                <span className="roadmap-level-number">{unlocked ? level.id : "⌑"}</span>
+                <div><span className="section-kicker">{active ? "SEU NÍVEL ATUAL" : `NÍVEL ${index + 1}`}</span><h2>{level.name}</h2><p>{level.subtitle}</p></div>
+                <span className="roadmap-count">{unlocked ? `${done}/${levelLessons.length} lições` : "🔒 Bloqueado"}</span>
+              </div>
+              {unlocked && <div className="roadmap-lessons">
+                {shownLessons.length ? shownLessons.map((lesson) => {
+                  const completed = profile.completedLessons.includes(lesson.id);
+                  return <button key={lesson.id} className={`roadmap-lesson ${completed ? "roadmap-lesson-done" : ""}`} onClick={() => onSelectLesson(lesson)}>
+                    <span className={`roadmap-lesson-number ${completed ? "completed-number" : ""}`}>{completed ? "✓" : String(levelLessons.indexOf(lesson) + 1).padStart(2, "0")}</span>
+                    <span className="roadmap-lesson-copy"><strong>{lesson.title}</strong><small>{lesson.category} <i /> {lesson.duration} min <i /> {lesson.questions.length} questões</small></span>
+                    <span className="roadmap-lesson-arrow">{completed ? "Concluída" : "Começar"} <b aria-hidden="true">→</b></span>
+                  </button>;
+                }) : <div className="lessons-empty">{levelLessons.length ? "Nenhuma lição corresponde a essa busca ou filtro." : "As lições deste nível estarão disponíveis em breve."}</div>}
+              </div>}
+            </section>
+          );
+        })}
+      </div>
+      <section className="learning-videos" aria-labelledby="learning-videos-title">
+        <div className="learning-videos-heading">
+          <div>
+            <span className="section-kicker">PRÁTICA EXTRA</span>
+            <h2 id="learning-videos-title">Vídeos curtos em inglês</h2>
+            <p>Treine a compreensão auditiva com vídeos gratuitos de 1 a 3 minutos. O nível é aproximado.</p>
+          </div>
+          <label className="video-level-select">
+            <span>NÍVEL</span>
+            <select value={videoLevel} onChange={(event) => {
+              const selectedLevel = unlockedVideoLevels.find((level) => level.id === event.target.value);
+              if (selectedLevel) setVideoLevel(selectedLevel.id);
+            }} aria-label="Selecionar nível dos vídeos">
+              {unlockedVideoLevels.map((level) => <option key={level.id} value={level.id}>{level.id} · {level.name}</option>)}
+            </select>
+          </label>
+        </div>
+        {visibleVideos.length ? <div className="learning-video-grid">
+          {visibleVideos.map((video) => (
+            <article className="learning-video-card" key={video.id}>
+              <div className="learning-video-icon" aria-hidden="true">▶</div>
+              <div className="learning-video-meta"><span>{video.level} · nível aproximado</span><span>{Math.floor(video.durationSeconds / 60)}:{String(video.durationSeconds % 60).padStart(2, "0")}</span></div>
+              <h3>{video.title}</h3>
+              <a href={video.url} target="_blank" rel="noreferrer">
+                Assistir vídeo gratuito <span aria-hidden="true">↗</span>
+              </a>
+            </article>
+          ))}
+        </div> : <div className="learning-videos-empty">
+          <span aria-hidden="true">◷</span>
+          <p>{selectedVideoLevel ? `Ainda não encontramos vídeos curtos verificados para ${selectedVideoLevel.id}.` : "Ainda não há vídeos curtos para este nível."}</p>
+        </div>}
+      </section>
+    </section>
+  );
 }
 
 function CardsPage({ level, cards }: { level: LevelId; cards: Flashcard[] }) {
