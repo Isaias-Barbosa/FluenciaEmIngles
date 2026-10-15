@@ -114,7 +114,7 @@ export type Database = {
         {
           id: string;
           lesson_id: string;
-          question_type: "multiple_choice" | "fill_blank" | "listening";
+          question_type: "multiple_choice" | "fill_blank" | "listening" | "word_order";
           prompt: string;
           choices: Json;
           audio_path: string | null;
@@ -126,7 +126,7 @@ export type Database = {
         {
           id?: string;
           lesson_id: string;
-          question_type: "multiple_choice" | "fill_blank" | "listening";
+          question_type: "multiple_choice" | "fill_blank" | "listening" | "word_order";
           prompt: string;
           choices?: Json;
           audio_path?: string | null;
@@ -136,7 +136,7 @@ export type Database = {
         },
         {
           lesson_id?: string;
-          question_type?: "multiple_choice" | "fill_blank" | "listening";
+          question_type?: "multiple_choice" | "fill_blank" | "listening" | "word_order";
           prompt?: string;
           choices?: Json;
           audio_path?: string | null;
@@ -276,12 +276,13 @@ export type Database = {
           level_code: string;
           level_title: string;
           question_id: string;
-          question_type: "multiple_choice" | "fill_blank" | "listening";
+          question_type: "multiple_choice" | "fill_blank" | "listening" | "word_order";
           prompt: string;
           choices: Json;
           audio_path: string | null;
           question_sort_order: number;
           difficulty: "easy" | "intermediate" | "hard";
+          hint: string | null;
         };
         Relationships: [];
       };
