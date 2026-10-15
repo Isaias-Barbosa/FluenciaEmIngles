@@ -106,6 +106,10 @@ As questões importadas das migrations de materiais didáticos começam como ras
 
 ## Comandos úteis
 
+A migration [20261015010000_promotion_half_questions.sql](supabase/migrations/20261015010000_promotion_half_questions.sql) deve ser aplicada no Supabase para liberar a prova após concluir corretamente metade das questões publicadas do nível (arredondando para cima). Novas questões publicadas recalculam esse limite; tentativas repetidas não aumentam a contagem. A prova continua exigindo 7 acertos em 10 para avançar. C2 permanece como último nível, sem prova de avanço.
+
+Execute `node scripts/test-promotion.cjs` para verificar os limites de desbloqueio usados pela interface.
+
 ```bash
 npm run dev        # Inicia o servidor de desenvolvimento
 npm run typecheck  # Verifica os tipos TypeScript

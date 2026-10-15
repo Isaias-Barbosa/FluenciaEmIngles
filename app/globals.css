@@ -423,3 +423,53 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .theme-light .profile-form input, .theme-light .profile-form select { background: #ffffff; }
 .theme-light .learning-video-card h3, .theme-light .video-player-header h2 { color: #203d36; }
 .theme-light .app-footer, .theme-light .modal-footer-note { color: #6b817b; }
+
+/* Theme colors must be inherited from the shell, not the dark body. */
+.theme-light { color: var(--white); color-scheme: light; --muted: #60736e; --mint: #11745b; }
+.theme-light .level-banner { background: linear-gradient(112deg, #e3f5ed, #f4f1fb); }
+.theme-light .lesson-list, .theme-light .cards-promo, .theme-light .placement-option,
+.theme-light .answer-text-input, .theme-light .video-player-modal { background: var(--surface); color: var(--white); }
+.theme-light .quote-card { background: #f2eef9; }
+.theme-light .lesson-row-title strong, .theme-light .daily-card > p strong,
+.theme-light .progress-meta strong, .theme-light .art-word, .theme-light .placement-scores strong,
+.theme-light .video-level-select select, .theme-light .nav-item:hover { color: var(--white); }
+.theme-light .lesson-category, .theme-light .quote-source, .theme-light .stat-violet { color: #6c4e9c; }
+.theme-light .button-review, .theme-light .answer-hint, .theme-light .answer-hint strong,
+.theme-light .result-review { color: #795516; }
+.theme-light .feedback-error, .theme-light .form-error, .theme-light .app-error,
+.theme-light .promotion-result:not(.promotion-passed) > strong { color: #ad3434; }
+.theme-light .button-dark:hover:not(:disabled) { background: #edf5f1; }
+.theme-light .lessons-page .roadmap-lesson-done .roadmap-lesson-copy strong { color: #46665b; }
+
+.sidebar-close { position: absolute; top: 70px; right: 17px; width: 30px; height: 30px; border: 1px solid var(--line); border-radius: 6px; color: var(--copy); background: var(--surface); font-size: 22px; cursor: pointer; }
+.sidebar-hidden .sidebar { display: none; }
+.sidebar-hidden .app-main { margin-left: 0; }
+.sidebar-hidden .mobile-menu-button { display: grid; place-items: center; width: 32px; height: 32px; margin-right: 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); cursor: pointer; }
+.roadmap-toggle { width: 100%; padding: 0; border: 0; background: transparent; color: inherit; text-align: left; font: inherit; cursor: pointer; }
+.roadmap-toggle:focus-visible, .sidebar-close:focus-visible { outline: 2px solid var(--mint); outline-offset: 5px; }
+.roadmap-chevron { flex-shrink: 0; font-size: 24px; color: var(--mint); }
+.promotion-lesson { margin-top: 12px; border-top: 1px solid var(--line); }
+.promotion-lesson:disabled { cursor: not-allowed; opacity: .7; }
+.promotion-lesson .roadmap-lesson-copy { min-width: 0; }
+.promotion-lesson .roadmap-lesson-copy small { white-space: normal; }
+.promotion-ready { margin-top: 24px; padding: 18px; border: 1px solid var(--mint); border-radius: 10px; background: var(--surface); }
+.promotion-ready p { margin: 0 0 12px; }
+.cards-page { max-width: 1120px; }
+.cards-layout { grid-template-columns: minmax(0, 1fr) minmax(260px, 300px); gap: 24px; margin-top: 28px; }
+.cards-layout .flashcard-wrap { max-width: none; min-width: 0; margin: 0; }
+.cards-layout .session-card { max-width: none; width: 100%; min-width: 0; margin: 0; }
+.cards-page .cards-toolbar { margin-top: 0; }
+.cards-page .flashcard { min-height: 360px; padding: 24px; gap: 24px; }
+.cards-page .flashcard-content { padding: 16px 0; overflow-wrap: anywhere; }
+.cards-page .flashcard-top, .cards-page .flashcard-bottom { gap: 14px; flex-wrap: wrap; }
+.cards-page .cards-tip { max-width: none; margin-top: 24px; }
+.session-card h2 { overflow-wrap: anywhere; }
+@media (max-width: 1000px) {
+  .cards-layout { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 680px) {
+  .cards-page .flashcard { min-height: 310px; padding: 18px; }
+  .cards-page .cards-controls { gap: 8px; flex-wrap: wrap; }
+  .lessons-page .roadmap-lessons { margin-left: 0; }
+  .promotion-lesson { flex-wrap: wrap; }
+}

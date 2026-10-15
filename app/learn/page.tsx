@@ -96,6 +96,13 @@ const goals = [
   "Aprender por prazer",
 ];
 
+function promotionProgress(lessons: Lesson[], completedIds: string[]) {
+  const questions = new Set(lessons.flatMap((lesson) => lesson.questions.map((question) => question.id)));
+  const completed = new Set(completedIds.filter((id) => questions.has(id))).size;
+  const required = Math.ceil(questions.size / 2);
+  return { completed, required, eligible: required > 0 && completed >= required };
+}
+
 function choicesFromJson(value: Json): string[] {
   if (!Array.isArray(value) || !value.every((item) => typeof item === "string")) {
     throw new Error("Uma questão publicada contém alternativas inválidas.");
@@ -186,6 +193,7 @@ export default function Dashboard() {
   const [authError, setAuthError] = useState("");
   const [appError, setAppError] = useState("");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [sidebarHidden, setSidebarHidden] = useState(false);
   const [lightMode, setLightMode] = useState(false);
 
   const configured = supabase !== null;
@@ -493,6 +501,7 @@ export default function Dashboard() {
   const nextLesson = currentLessons.find(
     (lesson) => !profile?.completedLessons.includes(lesson.id),
   );
+  const canTakePromotionExam = profile?.level !== "C2" && promotionProgress(currentLessons, profile?.completedQuestionIds ?? []).eligible;
   const activeQuestion = activeLesson?.questions[questionIndex] ?? null;
   const currentLevelIndex = levels.findIndex((level) => level.id === profile?.level);
 
@@ -807,9 +816,10 @@ export default function Dashboard() {
   ];
 
   return (
-    <main className={`app-shell ${lightMode ? "theme-light" : ""}`}>
-      <aside className={`sidebar ${mobileMenuOpen ? "sidebar-open" : ""}`}>
+    <main className={`app-shell ${lightMode ? "theme-light" : ""} ${sidebarHidden ? "sidebar-hidden" : ""}`}>
+      <aside id="learning-sidebar" className={`sidebar ${mobileMenuOpen ? "sidebar-open" : ""}`}>
         <a className="brand sidebar-brand" href="#" onClick={() => setPage("home")}><span className="brand-mark">f.</span> fluência<span className="brand-dot">.</span></a>
+        <button type="button" className="sidebar-close" aria-label="Fechar menu lateral" onClick={() => { setSidebarHidden(true); setMobileMenuOpen(false); }}>×</button>
         <div className="sidebar-label">SEU ESPAÇO</div>
         <nav className="side-nav" aria-label="Menu principal">
           {navItems.map((item) => <button key={item.id} className={`nav-item ${page === item.id ? "active" : ""}`} onClick={() => { setPage(item.id); setMobileMenuOpen(false); }}><span className="nav-icon">{item.icon}</span>{item.label}{page === item.id && <span className="nav-active-dot" />}</button>)}
@@ -820,20 +830,20 @@ export default function Dashboard() {
       </aside>
       {mobileMenuOpen && <button aria-label="Fechar menu" className="menu-backdrop" onClick={() => setMobileMenuOpen(false)} />}
       <div className="app-main">
-        <header className="topbar"><button className="mobile-menu-button" onClick={() => setMobileMenuOpen(true)} aria-label="Abrir menu">☰</button><div className="breadcrumb">Meu espaço <span>/</span> <strong>{page === "exam" ? "Prova de avanço" : navItems.find((item) => item.id === page)?.label}</strong></div><div className="topbar-right"><span className="streak"><span>✦</span> {profile.completedLessons.length} lições</span><span className="topbar-divider" /><span className="topbar-date">{new Intl.DateTimeFormat("pt-BR", { weekday: "short", day: "numeric", month: "short" }).format(new Date())}</span></div></header>
+        <header className="topbar"><button className="mobile-menu-button" onClick={() => { setSidebarHidden(false); setMobileMenuOpen(true); }} aria-controls="learning-sidebar" aria-label="Abrir menu">☰</button><div className="breadcrumb">Meu espaço <span>/</span> <strong>{page === "exam" ? "Prova de avanço" : navItems.find((item) => item.id === page)?.label}</strong></div><div className="topbar-right"><span className="streak"><span>✦</span> {profile.completedLessons.length} lições</span><span className="topbar-divider" /><span className="topbar-date">{new Intl.DateTimeFormat("pt-BR", { weekday: "short", day: "numeric", month: "short" }).format(new Date())}</span></div></header>
         <button className="theme-toggle theme-toggle-floating" type="button" onClick={() => setLightMode((current) => !current)} aria-label={lightMode ? "Ativar modo escuro" : "Ativar modo claro"}><span>{lightMode ? "◐" : "☼"}</span>{lightMode ? "Modo escuro" : "Modo claro"}</button>
         <div className="page-content">
           {appError && <div className="app-error" role="alert">{appError}<button onClick={() => setAppError("")} aria-label="Fechar aviso">×</button></div>}
-          {page === "home" && <div className="home-page"><HomePage profile={profile} lessons={currentLessons} progressPercent={progressPercent} completedInLevel={completedInLevel} levelIndex={currentLevelIndex} nextLesson={nextLesson} canTakePromotionExam={currentLessons.length > 0 && currentLessons.every((lesson) => profile.completedLessons.includes(lesson.id)) && profile.level !== "C2"} onPromotionExam={() => setPage("exam")} onStudy={() => nextLesson && openLesson(nextLesson)} onPage={setPage} onSelectLesson={openLesson} /></div>}
-          {page === "lessons" && <LessonsPage profile={profile} lessons={lessons} videos={videos} onSelectLesson={openLesson} onSelectVideo={setActiveVideo} />}
+          {page === "home" && <div className="home-page"><HomePage profile={profile} lessons={currentLessons} progressPercent={progressPercent} completedInLevel={completedInLevel} levelIndex={currentLevelIndex} nextLesson={nextLesson} canTakePromotionExam={canTakePromotionExam} onPromotionExam={() => setPage("exam")} onStudy={() => nextLesson && openLesson(nextLesson)} onPage={setPage} onSelectLesson={openLesson} /></div>}
+          {page === "lessons" && <LessonsPage onPromotionExam={() => setPage("exam")} profile={profile} lessons={lessons} videos={videos} onSelectLesson={openLesson} onSelectVideo={setActiveVideo} />}
           {page === "cards" && <CardsPage key={profile.level} level={profile.level} cards={cards} studentName={profile.name} />}
           {page === "progress" && <ProgressPage profile={profile} levelIndex={currentLevelIndex} lessons={lessons} />}
           {page === "profile" && <ProfilePage profile={profile} levelIndex={currentLevelIndex} levelProgress={progressPercent} completedInLevel={completedInLevel} totalQuestions={profile.completedQuestionIds.length} onSave={saveProfileDetails} onApplyLevel={applyPlacementLevel} />}
-          {page === "exam" && <PromotionExamPage level={profile.level} onExit={() => setPage("home")} onPassed={refreshProfileAfterPromotion} />}
+          {page === "exam" && canTakePromotionExam && <PromotionExamPage level={profile.level} onExit={() => setPage("home")} onPassed={refreshProfileAfterPromotion} />}
           <footer className="app-footer"><span>Pequenos passos também levam longe. <span className="footer-heart">♥</span></span><span>Seu progresso fica sincronizado com sua conta.</span></footer>
         </div>
       </div>
-      {activeLesson && activeQuestion && <LessonModal lesson={activeLesson} question={activeQuestion} questionIndex={questionIndex} selectedAnswer={selectedAnswer} result={answerResult} feedback={answerFeedback} hint={answerHint} wrongAttempts={wrongAttempts} levelCompleted={levelCompleted && profile.level !== "C2"} saving={answerSaving} completed={profile.completedQuestionIds.includes(activeQuestion.id)} onSelect={(answer) => { setSelectedAnswer(answer); setAnswerResult(null); setAnswerFeedback(""); }} onSubmit={submitAnswer} onNext={nextQuestion} onClose={() => setActiveLesson(null)} onStartPromotionExam={() => { setActiveLesson(null); setPage("exam"); }} />}
+      {activeLesson && activeQuestion && <LessonModal lesson={activeLesson} question={activeQuestion} questionIndex={questionIndex} selectedAnswer={selectedAnswer} result={answerResult} feedback={answerFeedback} hint={answerHint} wrongAttempts={wrongAttempts} levelCompleted={canTakePromotionExam} saving={answerSaving} completed={profile.completedQuestionIds.includes(activeQuestion.id)} onSelect={(answer) => { setSelectedAnswer(answer); setAnswerResult(null); setAnswerFeedback(""); }} onSubmit={submitAnswer} onNext={nextQuestion} onClose={() => setActiveLesson(null)} onStartPromotionExam={() => { setActiveLesson(null); setPage("exam"); }} />}
       {activeVideo && <VideoPlayerModal video={activeVideo} onClose={() => setActiveVideo(null)} />}
     </main>
   );
@@ -853,6 +863,7 @@ function HomePage({ profile, lessons: currentLessons, progressPercent, completed
           <section className="section-block"><div className="section-title-row"><div><span className="section-kicker">SUA TRILHA</span><h2>Continue aprendendo</h2></div><button className="text-link" onClick={() => onPage("lessons")}>Ver todas <span>↗</span></button></div>
             <div className="lesson-feature">{nextLesson ? <><div className="lesson-feature-icon">{nextLesson.category === "Conversação" ? "◉" : nextLesson.category === "Gramática" ? "⌘" : "✦"}</div><div className="lesson-feature-info"><span className="lesson-category">{nextLesson.category} <i /> {nextLesson.duration} min · {nextLesson.questions.length} questões</span><h3>{nextLesson.title}</h3><p>{nextLesson.description}</p><div className="lesson-feature-bottom"><span><span className="lesson-dot" /> PRÓXIMA NA SUA TRILHA</span><button className="button button-dark" onClick={onStudy}>Começar lição <span>→</span></button></div></div></> : currentLessons.length ? <div className="level-finished"><span>🎉</span><h3>{profile.level === "C2" ? "Você concluiu toda a trilha!" : "Você concluiu este nível!"}</h3><p>{canTakePromotionExam ? `Faça a prova de 10 questões para avançar do ${profile.level} ao próximo nível. É preciso acertar pelo menos 7.` : "Explore suas lições concluídas e acompanhe seu progresso."}</p>{canTakePromotionExam ? <button className="button button-primary" onClick={onPromotionExam}>Fazer prova de avanço <span>→</span></button> : <button className="button button-primary" onClick={() => onPage("progress")}>Ver meu progresso <span>→</span></button>}</div> : <div className="level-finished"><span>📚</span><h3>Estamos preparando sua trilha</h3><p>Ainda não há lições publicadas para este nível.</p></div>}</div>
           </section>
+          {canTakePromotionExam && <div className="promotion-ready"><p>Você concluiu pelo menos 50% das questões. Sua prova de avanço está liberada!</p><button className="button button-primary" onClick={onPromotionExam}>Fazer prova de avanço →</button></div>}
           <section className="section-block"><div className="section-title-row"><div><span className="section-kicker">PARA VOCÊ</span><h2>Na sua trilha de hoje</h2></div><span className="tiny-count">{profile.level} · {recommendations.length} lições</span></div><div className="lesson-list">{recommendations.length ? recommendations.map((lesson, index) => { const done = profile.completedLessons.includes(lesson.id); return <button key={lesson.id} className={`lesson-row ${done ? "lesson-done" : ""}`} onClick={() => onSelectLesson(lesson)}><span className={`lesson-index ${done ? "index-done" : ""}`}>{done ? "✓" : `0${index + 1}`}</span><span className="lesson-row-title"><strong>{lesson.title}</strong><small>{lesson.category} <i /> {lesson.duration} min · {lesson.questions.length} questões</small></span><span className="lesson-row-status">{done ? "Concluída" : "→"}</span></button>; }) : <div className="empty-state">As lições publicadas aparecerão aqui.</div>}</div></section>
         </div>
         <aside className="right-column">
@@ -866,14 +877,16 @@ function HomePage({ profile, lessons: currentLessons, progressPercent, completed
   );
 }
 
-function LessonsPage({ profile, lessons: allLessons, videos, onSelectLesson, onSelectVideo }: {
+function LessonsPage({ profile, lessons: allLessons, videos, onSelectLesson, onSelectVideo, onPromotionExam }: {
   profile: Profile;
   lessons: Lesson[];
   videos: LearningVideo[];
   onSelectLesson: (lesson: Lesson) => void;
   onSelectVideo: (video: LearningVideo) => void;
+  onPromotionExam: () => void;
 }) {
   const currentIndex = levels.findIndex((level) => level.id === profile.level);
+  const [expandedLevel, setExpandedLevel] = useState<LevelId | null>(null);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"all" | "pending" | "completed">("all");
   const [videoLevel, setVideoLevel] = useState<LevelId>(profile.level);
@@ -923,15 +936,19 @@ function LessonsPage({ profile, lessons: allLessons, videos, onSelectLesson, onS
           const active = index === currentIndex;
           const levelLessons = allLessons.filter((lesson) => lesson.level === level.id);
           const shownLessons = availableLessons.filter((lesson) => lesson.level === level.id);
+          const examProgress = promotionProgress(levelLessons, profile.completedQuestionIds);
+          const expanded = expandedLevel === level.id;
           const done = levelLessons.filter((lesson) => profile.completedLessons.includes(lesson.id)).length;
           return (
             <section className={`roadmap-level ${active ? "roadmap-active" : ""} ${!unlocked ? "roadmap-locked" : ""}`} key={level.id}>
-              <div className="roadmap-heading">
+              <button type="button" className="roadmap-heading roadmap-toggle" aria-expanded={expanded} aria-controls={`level-lessons-${level.id}`} onClick={() => setExpandedLevel(expanded ? null : level.id)}>
                 <span className="roadmap-level-number">{unlocked ? level.id : "⌑"}</span>
                 <div><span className="section-kicker">{active ? "SEU NÍVEL ATUAL" : `NÍVEL ${index + 1}`}</span><h2>{level.name}</h2><p>{level.subtitle}</p></div>
                 <span className="roadmap-count">{unlocked ? `${done}/${levelLessons.length} lições` : "🔒 Bloqueado"}</span>
-              </div>
-              {unlocked && <div className="roadmap-lessons">
+                <span className="roadmap-chevron" aria-hidden="true">{expanded ? "⌃" : "⌄"}</span>
+              </button>
+              <div id={`level-lessons-${level.id}`} hidden={!expanded}>
+              {unlocked ? <div className="roadmap-lessons">
                 {shownLessons.length ? shownLessons.map((lesson) => {
                   const completed = profile.completedLessons.includes(lesson.id);
                   return <button key={lesson.id} className={`roadmap-lesson ${completed ? "roadmap-lesson-done" : ""}`} onClick={() => onSelectLesson(lesson)}>
@@ -940,7 +957,14 @@ function LessonsPage({ profile, lessons: allLessons, videos, onSelectLesson, onS
                     <span className="roadmap-lesson-arrow">{completed ? "Concluída" : "Começar"} <b aria-hidden="true">→</b></span>
                   </button>;
                 }) : <div className="lessons-empty">{levelLessons.length ? "Nenhuma lição corresponde a essa busca ou filtro." : "As lições deste nível estarão disponíveis em breve."}</div>}
-              </div>}
+                {index < levels.length - 1 && <button type="button" className="roadmap-lesson promotion-lesson" disabled={!active || !examProgress.eligible} onClick={onPromotionExam}>
+                  <span className="roadmap-lesson-number">{active && examProgress.eligible ? "✦" : "🔒"}</span>
+                  <span className="roadmap-lesson-copy"><strong>Prova de proficiência · {level.id}</strong><small>{index < currentIndex ? "Próximo nível já liberado" : examProgress.completed + "/" + examProgress.required + " questões concluídas para liberar a prova (50%)"}</small></span>
+                  <span className="roadmap-lesson-arrow">{active && examProgress.eligible ? "Fazer prova →" : "Bloqueada"}</span>
+                </button>}
+                {index === levels.length - 1 && <p className="lessons-empty">Último nível da trilha.</p>}
+              </div> : <p className="lessons-empty">Passe na prova do nível anterior para liberar estas questões.</p>}
+              </div>
             </section>
           );
         })}
@@ -1539,7 +1563,7 @@ function LessonModal({ lesson, question, questionIndex, selectedAnswer, result, 
     }
   }
 
-  return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><section className="lesson-modal" role="dialog" aria-modal="true" aria-labelledby="lesson-title"><button className="modal-close" onClick={onClose} aria-label="Fechar lição">×</button><span className="eyebrow"><span className="live-dot" /> {lesson.category.toUpperCase()} · {lesson.duration} MIN</span><div className="modal-step"><span>QUESTÃO {String(questionIndex + 1).padStart(2, "0")} DE {String(lesson.questions.length).padStart(2, "0")}</span><span>✦ PRÁTICA</span></div><h2 id="lesson-title">{lesson.title}</h2><p className="modal-description">{lesson.description}</p><div className="exercise-box"><span className="exercise-label">{question.type === "listening" ? "OUÇA E ESCREVA" : question.type === "fill_blank" ? "COMPLETE A FRASE" : "HORA DE PRATICAR"}</span>{question.audioUrl && <audio className="audio-player" controls preload="none" src={question.audioUrl} onEnded={() => setCompletedAudioPlays((plays) => plays + 1)}>Seu navegador não suporta áudio.</audio>}{question.type === "listening" && completedAudioPlays >= 5 && !listeningTranscript && <button className="listening-transcript-button" type="button" onClick={() => void loadListeningTranscript()} disabled={transcriptLoading}>{transcriptLoading ? "Carregando texto..." : "Mudar para texto"}</button>}{transcriptError && <p className="form-message form-error" role="alert">{transcriptError}</p>}{listeningTranscript && <p className="listening-transcript"><strong>Texto em inglês:</strong> {listeningTranscript}</p>}<h3>{question.prompt}</h3><div className="answer-options">{question.type === "multiple_choice" ? question.options.map((option, index) => <button key={option} className={`answer-option ${selectedAnswer === option ? "answer-selected" : ""} ${result === "incorrect" && selectedAnswer === option ? "answer-incorrect" : ""}`} onClick={() => onSelect(option)} disabled={answeredCorrectly}><span>{String.fromCharCode(65 + index)}</span>{option}<i>{result === "correct" && selectedAnswer === option ? "✓" : ""}</i></button>) : <input className="answer-text-input" value={selectedAnswer} onChange={(event) => onSelect(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && selectedAnswer.trim()) onSubmit(); }} placeholder={question.type === "listening" ? "Digite o que você ouviu" : "Digite sua resposta"} disabled={answeredCorrectly} />}</div>{result === "incorrect" && <p className="answer-feedback feedback-error">{feedback || "Quase! Tente outra vez."} {wrongAttempts > 0 && !hint && `(${wrongAttempts} de 5 tentativas)`}</p>}{result === "incorrect" && hint && <p className="answer-hint"><strong>Dica após {wrongAttempts} tentativas:</strong> {hint}</p>}{answeredCorrectly && <p className="answer-feedback feedback-success">{feedback || "Muito bem! Resposta certa."} {levelCompleted ? "Você concluiu todas as questões do nível. Faça a prova de avanço para continuar." : "Seu progresso foi atualizado. ✨"}</p>}</div>{!answeredCorrectly ? <button className="button button-primary modal-submit" onClick={onSubmit} disabled={!selectedAnswer.trim() || saving}>{saving ? "Conferindo..." : "Conferir resposta"} <span>→</span></button> : levelCompleted ? <button className="button button-primary modal-submit" onClick={onStartPromotionExam}>Fazer prova de avanço <span>→</span></button> : <button className="button button-primary modal-submit" onClick={isLastQuestion ? onClose : onNext}>{isLastQuestion ? "Concluir lição" : "Próxima questão"} <span>→</span></button>}<div className="modal-footer-note"><span>◈</span> Errar faz parte. Você pode tentar quantas vezes quiser.</div></section></div>;
+  return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><section className="lesson-modal" role="dialog" aria-modal="true" aria-labelledby="lesson-title"><button className="modal-close" onClick={onClose} aria-label="Fechar lição">×</button><span className="eyebrow"><span className="live-dot" /> {lesson.category.toUpperCase()} · {lesson.duration} MIN</span><div className="modal-step"><span>QUESTÃO {String(questionIndex + 1).padStart(2, "0")} DE {String(lesson.questions.length).padStart(2, "0")}</span><span>✦ PRÁTICA</span></div><h2 id="lesson-title">{lesson.title}</h2><p className="modal-description">{lesson.description}</p><div className="exercise-box"><span className="exercise-label">{question.type === "listening" ? "OUÇA E ESCREVA" : question.type === "fill_blank" ? "COMPLETE A FRASE" : "HORA DE PRATICAR"}</span>{question.audioUrl && <audio className="audio-player" controls preload="none" src={question.audioUrl} onEnded={() => setCompletedAudioPlays((plays) => plays + 1)}>Seu navegador não suporta áudio.</audio>}{question.type === "listening" && completedAudioPlays >= 5 && !listeningTranscript && <button className="listening-transcript-button" type="button" onClick={() => void loadListeningTranscript()} disabled={transcriptLoading}>{transcriptLoading ? "Carregando texto..." : "Mudar para texto"}</button>}{transcriptError && <p className="form-message form-error" role="alert">{transcriptError}</p>}{listeningTranscript && <p className="listening-transcript"><strong>Texto em inglês:</strong> {listeningTranscript}</p>}<h3>{question.prompt}</h3><div className="answer-options">{question.type === "multiple_choice" ? question.options.map((option, index) => <button key={option} className={`answer-option ${selectedAnswer === option ? "answer-selected" : ""} ${result === "incorrect" && selectedAnswer === option ? "answer-incorrect" : ""}`} onClick={() => onSelect(option)} disabled={answeredCorrectly}><span>{String.fromCharCode(65 + index)}</span>{option}<i>{result === "correct" && selectedAnswer === option ? "✓" : ""}</i></button>) : <input className="answer-text-input" value={selectedAnswer} onChange={(event) => onSelect(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && selectedAnswer.trim()) onSubmit(); }} placeholder={question.type === "listening" ? "Digite o que você ouviu" : "Digite sua resposta"} disabled={answeredCorrectly} />}</div>{result === "incorrect" && <p className="answer-feedback feedback-error">{feedback || "Quase! Tente outra vez."} {wrongAttempts > 0 && !hint && `(${wrongAttempts} de 5 tentativas)`}</p>}{result === "incorrect" && hint && <p className="answer-hint"><strong>Dica após {wrongAttempts} tentativas:</strong> {hint}</p>}{answeredCorrectly && <p className="answer-feedback feedback-success">{feedback || "Muito bem! Resposta certa."} {levelCompleted ? "Você já concluiu pelo menos metade das questões do nível. A prova de avanço está liberada." : "Seu progresso foi atualizado. ✨"}</p>}</div>{!answeredCorrectly ? <button className="button button-primary modal-submit" onClick={onSubmit} disabled={!selectedAnswer.trim() || saving}>{saving ? "Conferindo..." : "Conferir resposta"} <span>→</span></button> : levelCompleted ? <button className="button button-primary modal-submit" onClick={onStartPromotionExam}>Fazer prova de avanço <span>→</span></button> : <button className="button button-primary modal-submit" onClick={isLastQuestion ? onClose : onNext}>{isLastQuestion ? "Concluir lição" : "Próxima questão"} <span>→</span></button>}<div className="modal-footer-note"><span>◈</span> Errar faz parte. Você pode tentar quantas vezes quiser.</div></section></div>;
 }
 
 function WordOrderModal({ lesson, question, questionIndex, selectedAnswer, result, feedback, hint, levelCompleted, saving, completed, onSelect, onSubmit, onNext, onClose, onStartPromotionExam }: {
