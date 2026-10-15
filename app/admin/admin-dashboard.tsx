@@ -36,6 +36,7 @@ type AdminQuestion = {
   type: "multiple_choice" | "fill_blank" | "listening";
   difficulty: "easy" | "intermediate" | "hard";
   prompt: string;
+  readingPassage?: string | null;
   choices: Json;
   audioPath: string | null;
   acceptedAnswers: string[];
@@ -407,7 +408,7 @@ export default function AdminDashboard() {
                   {levelLessons.length > 0 && <div className="admin-lesson-publish-list">{levelLessons.map((lesson) => <div className="admin-lesson-row" key={lesson.id}><div><strong>{lesson.title}</strong><small>{lesson.category} · {data.questions.filter((question) => question.lessonId === lesson.id).length} questões</small></div><button className={`admin-status-button ${lesson.published ? "published" : ""}`} disabled={saving} onClick={() => void setPublished("setLessonPublished", lesson.id, !lesson.published)}>{lesson.published ? "Publicada" : "Rascunho"}</button></div>)}</div>}
                   <div className="admin-question-rows">{levelQuestions.map((question) => {
                     const lesson = data.lessons.find((item) => item.id === question.lessonId);
-                    return <article className="admin-question-row" key={question.id}><div className="admin-question-row-top"><div className="admin-question-badges"><span className="admin-type-badge">{typeLabels[question.type]}</span><span className={`admin-difficulty-badge difficulty-${question.difficulty}`}>{difficultyLabels[question.difficulty]}</span></div><button className={`admin-status-button ${question.published ? "published" : ""}`} disabled={saving || !lesson?.published} title={!lesson?.published ? "Publique a lição primeiro" : ""} onClick={() => void setPublished("setQuestionPublished", question.id, !question.published)}>{question.published ? "Publicada" : "Rascunho"}</button></div><p>{question.prompt}</p><small>{lesson?.title ?? "Lição"} · {new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(question.createdAt))}</small></article>;
+                    return <article className="admin-question-row" key={question.id}><div className="admin-question-row-top"><div className="admin-question-badges"><span className="admin-type-badge">{typeLabels[question.type]}</span><span className={`admin-difficulty-badge difficulty-${question.difficulty}`}>{difficultyLabels[question.difficulty]}</span></div><button className={`admin-status-button ${question.published ? "published" : ""}`} disabled={saving || !lesson?.published} title={!lesson?.published ? "Publique a lição primeiro" : ""} onClick={() => void setPublished("setQuestionPublished", question.id, !question.published)}>{question.published ? "Publicada" : "Rascunho"}</button></div><p>{question.prompt}</p>{question.readingPassage && <div className="reading-passage"><span className="section-kicker">TEXTO DE APOIO</span><p lang="en">{question.readingPassage}</p></div>}<small>{lesson?.title ?? "Lição"} · {new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(question.createdAt))}</small></article>;
                   })}{!levelQuestions.length && <div className="admin-empty">Ainda não há questões neste nível. Você pode criar a primeira ao lado.</div>}</div>
                 </section>
                 <div className="admin-create-column">

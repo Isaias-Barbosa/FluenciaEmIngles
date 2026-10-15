@@ -53,7 +53,7 @@ type LessonRow = Pick<
 >;
 type QuestionRow = Pick<
   Database["public"]["Tables"]["questions"]["Row"],
-  "id" | "lesson_id" | "question_type" | "prompt" | "choices" | "audio_path" | "sort_order" | "difficulty" | "is_published" | "created_at"
+  "id" | "lesson_id" | "question_type" | "prompt" | "reading_passage" | "choices" | "audio_path" | "sort_order" | "difficulty" | "is_published" | "created_at"
 >;
 type AnswerRow = Pick<
   Database["public"]["Tables"]["question_answers"]["Row"],
@@ -252,7 +252,7 @@ export async function GET(request: NextRequest) {
       readAll<ProfileRow>((from, to) => client.from("profiles").select("user_id, display_name, current_level_id, learning_goal, daily_goal_minutes, onboarding_completed, created_at").order("created_at", { ascending: false }).range(from, to)),
       readAll<LevelRow>((from, to) => client.from("language_levels").select("id, code, title, sort_order, language_id").order("sort_order").range(from, to)),
       readAll<LessonRow>((from, to) => client.from("lessons").select("id, level_id, title, category, is_published").order("sort_order").range(from, to)),
-      readAll<QuestionRow>((from, to) => client.from("questions").select("id, lesson_id, question_type, prompt, choices, audio_path, sort_order, difficulty, is_published, created_at").order("created_at", { ascending: false }).range(from, to)),
+      readAll<QuestionRow>((from, to) => client.from("questions").select("id, lesson_id, question_type, prompt, reading_passage, choices, audio_path, sort_order, difficulty, is_published, created_at").order("created_at", { ascending: false }).range(from, to)),
       readAll<AnswerRow>((from, to) => client.from("question_answers").select("question_id, accepted_answers, explanation").range(from, to)),
       readAll<AttemptRow>((from, to) => client.from("question_attempts").select("user_id, created_at").gte("created_at", new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()).range(from, to)),
       readAuthUsers(client),
@@ -337,6 +337,7 @@ export async function GET(request: NextRequest) {
             levelId: lessonById.get(question.lesson_id)?.level_id,
             type: question.question_type,
             prompt: question.prompt,
+            readingPassage: question.reading_passage,
             choices: question.choices,
             audioPath: question.audio_path,
             difficulty: question.difficulty,

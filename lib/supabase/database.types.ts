@@ -116,6 +116,7 @@ export type Database = {
           lesson_id: string;
           question_type: "multiple_choice" | "fill_blank" | "listening" | "word_order";
           prompt: string;
+          reading_passage?: string | null;
           choices: Json;
           audio_path: string | null;
           sort_order: number;
@@ -128,6 +129,7 @@ export type Database = {
           lesson_id: string;
           question_type: "multiple_choice" | "fill_blank" | "listening" | "word_order";
           prompt: string;
+          reading_passage?: string | null;
           choices?: Json;
           audio_path?: string | null;
           sort_order: number;
@@ -138,6 +140,7 @@ export type Database = {
           lesson_id?: string;
           question_type?: "multiple_choice" | "fill_blank" | "listening" | "word_order";
           prompt?: string;
+          reading_passage?: string | null;
           choices?: Json;
           audio_path?: string | null;
           sort_order?: number;
@@ -278,6 +281,7 @@ export type Database = {
           question_id: string;
           question_type: "multiple_choice" | "fill_blank" | "listening" | "word_order";
           prompt: string;
+          reading_passage?: string | null;
           choices: Json;
           audio_path: string | null;
           question_sort_order: number;

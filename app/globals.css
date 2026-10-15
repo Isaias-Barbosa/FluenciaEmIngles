@@ -351,7 +351,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .theme-toggle:hover { color: var(--mint); border-color: rgba(83,224,186,.35); }
 .theme-toggle span { color: var(--mint); font-size: 14px; }
 .theme-light { --bg: #f4f7f6; --surface: #ffffff; --card: #ffffff; --card-hover: #f2f8f6; --line: rgba(22,49,43,.13); --muted-line: rgba(22,49,43,.08); --white: #17312b; --copy: #58706a; --muted: #78908a; --mint: #1a9b7b; --mint-dark: #11745b; }
-.theme-light .sidebar { background: #ffffff; }
+.theme-light .sidebar { background: #f7f8f5; }
 .theme-light .topbar { background: rgba(255,255,255,.82); }
 .theme-light .flashcard { background: radial-gradient(ellipse at 50% 48%, rgba(26,155,123,.12), transparent 50%), linear-gradient(140deg, #f8fffc, #ffffff 72%); }
 .theme-light .flashcard-flipped { background: radial-gradient(ellipse at 50% 48%, rgba(141,116,232,.12), transparent 50%), linear-gradient(140deg, #fbf9ff, #ffffff 72%); }
@@ -423,6 +423,22 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 .theme-light .profile-form input, .theme-light .profile-form select { background: #ffffff; }
 .theme-light .learning-video-card h3, .theme-light .video-player-header h2 { color: #203d36; }
 .theme-light .app-footer, .theme-light .modal-footer-note { color: #6b817b; }
+.sidebar { --menu-text: #e8f1f2; --menu-muted: #b5c9ce; --menu-hover: #243f48; --menu-active-bg: #244b4b; --menu-active-text: #a2f3d9; --menu-border: #42696a; background: #162b32; color: var(--menu-text); }
+.theme-light .sidebar { --menu-text: #223a40; --menu-muted: #536b70; --menu-hover: #e9efeb; --menu-active-bg: #dceee5; --menu-active-text: #155e49; --menu-border: #8cb6a3; }
+.sidebar .nav-item, .sidebar .sidebar-brand, .sidebar .profile-details strong, .sidebar .sidebar-language strong { color: var(--menu-text); }
+.sidebar .sidebar-label, .sidebar .sidebar-language small, .sidebar .sidebar-language strong span, .sidebar .profile-details small, .sidebar .profile-menu { color: var(--menu-muted); }
+.sidebar .nav-item:hover, .sidebar .profile-button:hover, .sidebar .sidebar-close:hover { color: var(--menu-text); background: var(--menu-hover); }
+.sidebar .nav-item.active { color: var(--menu-active-text); background: var(--menu-active-bg); border-color: var(--menu-border); }
+.sidebar .nav-active-dot { background: var(--menu-active-text); }
+.sidebar .sidebar-close { color: var(--menu-text); background: var(--menu-hover); border-color: var(--menu-border); }
+.sidebar .language-icon { background: var(--menu-hover); }
+.sidebar .profile-button { border-radius: 7px; }
+.sidebar .sidebar-language { border-color: var(--menu-border); }
+.sidebar .nav-item:focus-visible, .sidebar .profile-button:focus-visible, .sidebar .sidebar-close:focus-visible { outline: 2px solid var(--menu-active-text); outline-offset: 2px; }
+.reading-passage { margin: 18px 0; padding: 20px; border: 1px solid var(--line); border-left: 4px solid var(--mint); border-radius: 10px; background: #20332d; color: var(--white); }
+.reading-passage p { margin: 10px 0 0; white-space: pre-line; font-size: 16px; line-height: 1.85; overflow-wrap: anywhere; }
+.theme-light .reading-passage { background: #e8f4ef; color: #17312b; }
+.modal-step { flex-wrap: wrap; gap: 8px 16px; }
 
 /* Theme colors must be inherited from the shell, not the dark body. */
 .theme-light { color: var(--white); color-scheme: light; --muted: #60736e; --mint: #11745b; }

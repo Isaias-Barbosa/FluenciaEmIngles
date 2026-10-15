@@ -110,6 +110,10 @@ A migration [20261015010000_promotion_half_questions.sql](supabase/migrations/20
 
 Execute `node scripts/test-promotion.cjs` para verificar os limites de desbloqueio usados pela interface.
 
+As migrations [20261015020000_placement_only_onboarding.sql](supabase/migrations/20261015020000_placement_only_onboarding.sql) e [20261015021000_reading_comprehension.sql](supabase/migrations/20261015021000_reading_comprehension.sql) restringem a prova inicial ao cadastro e publicam 100 questões de interpretação (20 em cada nível de A1 a C1). Aplique ambas antes de publicar esta versão. Cada texto tem cinco questões e aparece em um bloco destacado; o perfil não oferece mais a avaliação inicial. O progresso de cada exercício conta questões distintas respondidas corretamente.
+
+O conteúdo original fica em [reading-content.cjs](scripts/reading-content.cjs). `node scripts/generate-reading-migration.cjs` valida sua distribuição e gera a migration. `node scripts/test-study-pagination.cjs` verifica o carregamento completo de listas acima de mil registros.
+
 ```bash
 npm run dev        # Inicia o servidor de desenvolvimento
 npm run typecheck  # Verifica os tipos TypeScript
