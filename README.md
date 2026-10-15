@@ -1,46 +1,59 @@
-# Fluência
+# Fluência em Inglês
 
-Uma plataforma para aprender inglês no seu ritmo. Faça seu cadastro, descubra seu nível com uma avaliação de proficiência e pratique com lições, exercícios interativos, áudios e cards de vocabulário.
+Aprenda inglês com uma trilha feita para o seu nível — um passo de cada vez. Faça uma avaliação inicial, pratique com lições e áudios, acompanhe seu progresso e avance de A1 a C2.
 
-## Começar em 3 passos
+## O que você encontra
 
-### 1. Instale as dependências
+- **Trilha por nível:** conteúdo organizado do iniciante (A1) ao proficiente (C2).
+- **Lições interativas:** exercícios de múltipla escolha, respostas digitadas e compreensão oral.
+- **Áudios e transcrições:** pratique listening; depois de cinco reproduções, você pode trocar o áudio pelo texto.
+- **Vídeos curtos:** assista a vídeos do VoiceTube em um player integrado, conforme os níveis liberados na sua trilha.
+- **Avaliações de proficiência:** uma prova inicial define seu ponto de partida; ao concluir um nível, faça uma prova de 10 questões e acerte pelo menos 7 para avançar.
+- **Cards de vocabulário:** revise, embaralhe e acompanhe os cards do seu nível.
+- **Seu progresso salvo:** lições concluídas e tentativas ficam associadas à sua conta.
+- **Painel administrativo:** gerencie estudantes, lições, questões e vídeos sem expor operações administrativas no navegador.
 
-Você precisa do **Node.js 20.9 ou superior** e de um projeto no [Supabase](https://supabase.com/).
+## Comece a usar
+
+### Pré-requisitos
+
+- Node.js **20.9 ou superior**
+- npm
+- Um projeto no [Supabase](https://supabase.com/)
+
+### 1. Baixe o projeto e instale as dependências
 
 ```bash
+git clone https://github.com/Isaias-Barbosa/FluenciaEmIngles.git
+cd FluenciaEmIngles
 npm install
 ```
 
 ### 2. Configure o Supabase
 
-1. No painel do Supabase, abra **SQL Editor** e execute os arquivos em `supabase/migrations/`, na ordem do nome:
-   - `20261014180000_initial_learning_schema.sql`
-   - `20261014185500_publish_learning_content_and_progress.sql`
-   - `20261014192000_expand_beginner_elementary_questions.sql`
-   - `20261014195000_hints_and_flexible_answer_matching.sql`
-   - `20261014196000_fix_answer_attempt_column_ambiguity.sql`
-   - `20261014197000_allow_placement_level_updates.sql`
-   - `20261014198000_import_english_workbook_questions.sql`
-   - `20261014199000_import_advanced_english_workbook_questions.sql`
-   - `20261014200000_import_b2_english_workbook_questions.sql`
-   - `20261014201000_import_listening_practice_all_levels.sql`
-   - `20261014202000_admin_user_management.sql`
-   - `20261014203000_import_flashcards_1200.sql`
-2. Em **Authentication → Providers**, habilite o cadastro por e-mail e senha.
-3. Em **Authentication → URL Configuration**, adicione `http://localhost:3000` como endereço permitido. Adicione também o endereço de produção quando publicar o app.
-4. Copie `.env.example` para `.env.local` e preencha os valores do projeto:
+No painel do Supabase:
+
+1. Abra **Authentication → Providers** e habilite o cadastro por e-mail e senha.
+2. Em **Authentication → URL Configuration**, adicione `http://localhost:3000` à lista de URLs permitidas. Inclua também a URL de produção ao publicar o site.
+3. Abra o **SQL Editor** e execute, em ordem, as migrations que ainda não foram aplicadas. A lista e o objetivo de cada arquivo estão em [Migrations do banco](#migrations-do-banco).
+
+Crie o arquivo `.env.local` a partir de `.env.example` e preencha as chaves do seu projeto:
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://SEU_PROJECT_REF.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=SUA_SUPABASE_PUBLISHABLE_KEY
 ```
 
-Use a **publishable key** (ou a chave `anon` legada). **Nunca coloque a `service_role` key em variáveis `NEXT_PUBLIC_*` nem no código do navegador.** O arquivo `.env.local` é ignorado pelo Git.
+Para habilitar o painel em `/admin`, acrescente também:
 
-> Se as migrations já foram aplicadas, execute somente as que ainda não estão no projeto. Por exemplo, se você já aplicou até `20261014196000_fix_answer_attempt_column_ambiguity.sql`, execute `20261014197000_allow_placement_level_updates.sql`.
+```env
+SUPABASE_SERVICE_ROLE_KEY=SUA_SERVICE_ROLE_KEY
+ADMIN_EMAILS=seu-email@exemplo.com,outro-admin@exemplo.com
+```
 
-Para habilitar o painel administrativo em `/admin`, configure `SUPABASE_SERVICE_ROLE_KEY` e `ADMIN_EMAILS` no `.env.local`. Informe os e-mails autorizados separados por vírgula em `ADMIN_EMAILS`. A service-role key é usada somente no servidor: nunca a coloque em uma variável `NEXT_PUBLIC_*`, no código do navegador ou no Git.
+`ADMIN_EMAILS` aceita uma lista de e-mails separados por vírgula. A chave `SUPABASE_SERVICE_ROLE_KEY` é usada exclusivamente no servidor: **nunca** a coloque em uma variável `NEXT_PUBLIC_*`, no código do navegador ou no Git. O arquivo `.env.local` é ignorado pelo Git.
+
+> Não execute novamente uma migration que já foi aplicada. Se o projeto já está configurado, rode apenas os arquivos que ainda faltam, na ordem indicada abaixo.
 
 ### 3. Inicie a aplicação
 
@@ -48,50 +61,48 @@ Para habilitar o painel administrativo em `/admin`, configure `SUPABASE_SERVICE_
 npm run dev
 ```
 
-Abra [http://localhost:3000](http://localhost:3000) para acessar a página inicial. Clique em **Começar Agora** para criar sua conta ou em **Entrar** para fazer login. Depois do cadastro, novos estudantes respondem a uma avaliação de 18 questões que define automaticamente o nível inicial antes de liberar as lições.
+Abra [http://localhost:3000](http://localhost:3000), crie sua conta e faça a avaliação inicial.
 
-## O que você encontra na plataforma
+| Página | Para que serve |
+| --- | --- |
+| `/` | Página inicial |
+| `/learn` | Lições, vídeos, cards, avaliações e perfil do estudante |
+| `/admin` | Gerenciamento administrativo; requer um e-mail autorizado em `ADMIN_EMAILS` |
 
-- **Conta e perfil:** cadastro e login com Supabase Auth, avaliação obrigatória de proficiência para novos estudantes e configuração de objetivo e tempo de estudo.
-- **Trilha de inglês:** conteúdo organizado nos níveis CEFR A1 a C2.
-- **Exercícios:** múltipla escolha, respostas digitadas e questões de compreensão oral.
-- **Listening:** áudios WAV no diretório `public/audio/`.
-- **Cards:** 1.200 flashcards separados igualmente entre A1 e C2; cada estudante vê apenas os cards do seu nível e pode navegar, virar, embaralhar ou reiniciar a sequência.
-- **Progresso:** tentativas e lições concluídas associadas à conta do estudante.
-- **Perfil:** consulte e atualize seu nome, objetivo e tempo diário de estudo; veja também seu nível e progresso.
-- **Teste de nível:** novos estudantes respondem a uma avaliação de 18 questões corrigida pelo Supabase; o nível recomendado é aplicado antes de liberar a trilha. Estudantes já cadastrados podem refazer a avaliação pelo perfil e escolher se querem aplicar o resultado.
-- **Administração:** dashboard com usuários ativos (atividade nos últimos 30 dias), questões por nível, lista de estudantes e criação/publicação de lições e questões em `/admin`. Administradores também podem editar nome, e-mail, nível e metas de estudo, bloquear/reativar o login sem apagar dados e reiniciar tentativas e nivelamento. O acesso é restrito aos e-mails configurados em `ADMIN_EMAILS`.
-- **Banco de questões:** migrations opcionais importam 95 questões do caderno geral, 120 do caderno B2 Upper-Intermediate, 150 do caderno avançado e 120 exercícios originais de compreensão oral (20 para cada nível A1–C2). Os exercícios de áudio estão classificados por dificuldade fácil, intermediária ou difícil. As lições importadas começam como rascunho para revisão antes da publicação.
-- **Dicas:** após cinco respostas incorretas na mesma questão, o estudante recebe uma pista.
-- **Correção flexível:** diferenças de maiúsculas, pontuação e espaços não invalidam uma resposta equivalente.
+## Gerencie vídeos no painel
 
-O banco inclui **50 questões no Beginner (A1)** e **75 no Elementary (A2)**, além de questões iniciais para os níveis B1 a C2. A estrutura permite adicionar conteúdo e idiomas.
+1. Entre com uma conta cujo e-mail esteja em `ADMIN_EMAILS` e abra `/admin`.
+2. Selecione **Vídeos** no menu e escolha o nível.
+3. Cole a URL pública de um vídeo do VoiceTube, como `https://www.voicetube.com/videos/198652`.
+4. O painel verifica a página e preenche o título e a duração. Para ser aceito, o vídeo precisa ter entre **1 e 3 minutos**.
+5. Revise o rascunho e publique-o quando estiver pronto.
 
-## Como funcionam as migrations
+Vídeos publicados aparecem aos estudantes quando o respectivo nível está liberado. Ao selecionar **Assistir vídeo**, o player abre em um modal; se o VoiceTube impedir a reprodução incorporada ou o player não carregar, o modal oferece um link para abrir o vídeo no próprio VoiceTube.
 
-As migrations criam e preenchem o banco. Elas devem ser executadas **uma única vez, em ordem**, no SQL Editor do Supabase. Se uma execução falhar, confira a mensagem no painel antes de tentar novamente.
+## Migrations do banco
+
+Execute os arquivos SQL abaixo pelo **SQL Editor do Supabase**, do mais antigo para o mais recente. Cada migration deve ser aplicada uma única vez.
 
 | Arquivo | O que prepara |
 | --- | --- |
-| `20261014180000_initial_learning_schema.sql` | Idiomas, níveis, perfis, lições, questões, tentativas e acesso seguro ao conteúdo |
-| `20261014185500_publish_learning_content_and_progress.sql` | Funções de onboarding e correção, além das primeiras lições e cards |
-| `20261014192000_expand_beginner_elementary_questions.sql` | Questões A1/A2 e questões com áudio |
-| `20261014195000_hints_and_flexible_answer_matching.sql` | Dicas após cinco erros e correção tolerante a pontuação e espaços |
-| `20261014196000_fix_answer_attempt_column_ambiguity.sql` | Correção da função de resposta para evitar ambiguidade entre nomes de colunas |
-| `20261014197000_allow_placement_level_updates.sql` | Corrige o teste de nivelamento com segurança e permite aplicar o nível recomendado ao perfil |
-| `20261014198000_import_english_workbook_questions.sql` | Adiciona dificuldade às questões e importa 95 enunciados do caderno como rascunhos A1–B1 |
-| `20261014199000_import_advanced_english_workbook_questions.sql` | Importa 150 questões avançadas como rascunhos: 75 para C1 e 75 para C2, incluindo respostas abertas e níveis de dificuldade |
-| `20261014200000_import_b2_english_workbook_questions.sql` | Importa 120 questões do caderno B2 Upper-Intermediate como rascunhos, incluindo 90 de múltipla escolha e 30 de completar frases |
-| `20261014201000_import_listening_practice_all_levels.sql` | Importa 120 questões de compreensão oral como rascunhos: 20 em cada nível A1–C2, com arquivos WAV correspondentes em `public/audio/listening/` |
-| `20261014202000_admin_user_management.sql` | Adiciona funções seguras para editar o perfil e reiniciar o progresso pelo painel administrativo |
-| `20261014203000_import_flashcards_1200.sql` | Substitui os cards anteriores por 1.200 flashcards do CSV, com 200 cards publicados para cada nível A1–C2 |
+| `20261014180000_initial_learning_schema.sql` | Estrutura inicial: idiomas, níveis, perfis, lições, questões, respostas e tentativas; também configura permissões e dados-base. |
+| `20261014185500_publish_learning_content_and_progress.sql` | Publicação de conteúdo, progresso, onboarding e funções de correção. |
+| `20261014192000_expand_beginner_elementary_questions.sql` | Expande as questões dos níveis A1 e A2. |
+| `20261014195000_hints_and_flexible_answer_matching.sql` | Adiciona dicas após tentativas incorretas e correção flexível de respostas. |
+| `20261014196000_fix_answer_attempt_column_ambiguity.sql` | Corrige a função de resposta para evitar ambiguidade de nomes de colunas. |
+| `20261014197000_allow_placement_level_updates.sql` | Protege as atualizações de nível recomendadas pela avaliação de proficiência. |
+| `20261014198000_import_english_workbook_questions.sql` | Importa questões do material de inglês para revisão antes da publicação. |
+| `20261014199000_import_advanced_english_workbook_questions.sql` | Importa questões avançadas para C1 e C2 como rascunhos. |
+| `20261014200000_import_b2_english_workbook_questions.sql` | Importa questões de nível B2 como rascunhos. |
+| `20261014201000_import_listening_practice_all_levels.sql` | Importa 120 exercícios de compreensão oral, 20 por nível, com áudios em `public/audio/listening/`. |
+| `20261014202000_admin_user_management.sql` | Adiciona funções administrativas seguras para gerenciar contas e progresso. |
+| `20261014203000_import_flashcards_1200.sql` | Importa 1.200 cards de vocabulário, 200 para cada nível A1–C2. |
+| `20261014210000_proficiency_exams.sql` | Cria o banco de questões e as sessões das avaliações inicial e de avanço. |
+| `20261014213000_allow_placement_review.sql` | Permite refazer a avaliação de proficiência pelo perfil. |
+| `20261014215000_learning_videos.sql` | Cria a biblioteca de vídeos por nível e cadastra os vídeos iniciais. |
+| `20261014220000_get_listening_transcript.sql` | Adiciona o acesso autenticado à transcrição de uma questão de áudio. |
 
-O PDF fornecido não contém os enunciados 19, 20 e 98–100. As questões abertas 86, 96 e 97 também ficam como rascunhos, pois o próprio gabarito as identifica como exemplos/respostas pessoais.
-O caderno avançado contém as 150 questões e seus gabaritos. A migration divide o conteúdo igualmente entre C1 e C2; revise as lições em rascunho no painel administrativo antes de publicá-las.
-O caderno B2 contém 120 questões com gabarito. A migration as organiza em quatro lições de nível B2, todas como rascunho para revisão antes da publicação.
-Os exercícios de compreensão oral usam 120 arquivos WAV locais, organizados por nível em `public/audio/listening/`. Inclua esses arquivos no deploy junto com a migration para que os áudios estejam disponíveis aos estudantes.
-
-As respostas corretas não são disponibilizadas diretamente ao navegador. O Supabase corrige as respostas e registra as tentativas; políticas RLS protegem os perfis e o progresso de cada estudante.
+As questões importadas das migrations de materiais didáticos começam como rascunhos. Revise-as no painel e publique apenas o conteúdo que deseja disponibilizar. Os 120 áudios de listening ficam em `public/audio/listening/`; inclua os arquivos locais no deploy.
 
 ## Comandos úteis
 
@@ -104,9 +115,9 @@ npm run start      # Inicia a versão de produção
 
 ## Tecnologias
 
-- Next.js com App Router
+- [Next.js](https://nextjs.org/) com App Router
 - React e TypeScript
 - Supabase Auth, PostgreSQL e Storage
 - CSS responsivo
 
-O conteúdo e o visual da página inicial em `aprender-ingles.html` são exibidos na rota `/`; a plataforma de estudos e autenticação fica em `/learn`.
+O conteúdo da página inicial também está em `aprender-ingles.html`; a aplicação Next.js usa esse conteúdo na rota `/`.
