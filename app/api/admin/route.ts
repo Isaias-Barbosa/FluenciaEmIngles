@@ -29,6 +29,10 @@ type LessonPayload = {
   category: string;
   duration: number;
 };
+type VideoPayload = {
+  levelId: string;
+  url: string;
+};
 type ProfileRow = Pick<
   Database["public"]["Tables"]["profiles"]["Row"],
   | "user_id"
@@ -58,6 +62,10 @@ type AnswerRow = Pick<
 type AttemptRow = Pick<
   Database["public"]["Tables"]["question_attempts"]["Row"],
   "user_id" | "created_at"
+>;
+type LearningVideoRow = Pick<
+  Database["public"]["Tables"]["learning_videos"]["Row"],
+  "id" | "level_id" | "title" | "duration_seconds" | "video_url" | "is_published" | "created_at"
 >;
 
 function errorResponse(message: string, status: number) {
@@ -163,13 +171,83 @@ function parseLesson(value: unknown): LessonPayload | null {
   };
 }
 
+function parseVideo(value: unknown): VideoPayload | null {
+  if (!isRecord(value) || typeof value.levelId !== "string" || typeof value.url !== "string") {
+    return null;
+  }
+  try {
+    const url = new URL(value.url.trim());
+    if (
+      url.protocol !== "https:" ||
+      !["voicetube.com", "www.voicetube.com"].includes(url.hostname.toLowerCase()) ||
+      !/^\/videos\/\d+\/?$/.test(url.pathname) ||
+      url.port ||
+      url.username ||
+      url.password ||
+      url.search ||
+      url.hash
+    ) return null;
+    return {
+      levelId: value.levelId,
+      url: `https://www.voicetube.com${url.pathname.replace(/\/$/, "")}`,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function decodeHtmlCodePoint(code: string, radix = 10) {
+  const codePoint = parseInt(code, radix);
+  return Number.isInteger(codePoint) && codePoint >= 0 && codePoint <= 0x10ffff
+    ? String.fromCodePoint(codePoint)
+    : "";
+}
+
+function decodeHtml(value: string) {
+  return value
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, "\"")
+    .replace(/&#39;|&apos;/g, "'")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&#(\d+);/g, (_, code: string) => decodeHtmlCodePoint(code))
+    .replace(/&#x([0-9a-f]+);/gi, (_, code: string) => decodeHtmlCodePoint(code, 16));
+}
+
+async function readVoiceTubeMetadata(url: string) {
+  const response = await fetch(url, {
+    headers: { Accept: "text/html" },
+    redirect: "error",
+    signal: AbortSignal.timeout(8000),
+  });
+  if (!response.ok) throw new Error("Não foi possível abrir essa página do VoiceTube.");
+  const contentType = response.headers.get("content-type") ?? "";
+  const contentLength = Number(response.headers.get("content-length") ?? 0);
+  if (!contentType.includes("text/html") || contentLength > 2_000_000) {
+    throw new Error("A página do VoiceTube retornou um formato inválido.");
+  }
+  const html = await response.text();
+  if (html.length > 2_000_000) throw new Error("A página do VoiceTube é maior do que o esperado.");
+
+  const titleTag = html.match(/<meta\b[^>]*\bproperty=["']og:title["'][^>]*>/i)?.[0];
+  const title = titleTag?.match(/\bcontent=["']([^"']+)["']/i)?.[1];
+  const duration = html.match(/duration\\?["']?\s*:\\?\s*(\d+)/i)?.[1];
+  const titleText = title ? decodeHtml(title).trim() : "";
+  const durationSeconds = duration ? Number(duration) : NaN;
+
+  if (!titleText || titleText.length > 160 || !Number.isInteger(durationSeconds) || durationSeconds < 60 || durationSeconds > 180) {
+    throw new Error("O vídeo precisa ter título e duração detectáveis entre 1 e 3 minutos.");
+  }
+  return { title: titleText, durationSeconds };
+}
+
 export async function GET(request: NextRequest) {
   const auth = await authorize(request);
   if ("response" in auth) return auth.response;
   const client = auth.client;
 
   try {
-    const [languages, profiles, levels, lessons, questions, answers, attempts, authUsers] = await Promise.all([
+    const [languages, profiles, levels, lessons, questions, answers, attempts, authUsers, videos] = await Promise.all([
       client.from("languages").select("id, code").eq("code", "en").limit(1),
       readAll<ProfileRow>((from, to) => client.from("profiles").select("user_id, display_name, current_level_id, learning_goal, daily_goal_minutes, onboarding_completed, created_at").order("created_at", { ascending: false }).range(from, to)),
       readAll<LevelRow>((from, to) => client.from("language_levels").select("id, code, title, sort_order, language_id").order("sort_order").range(from, to)),
@@ -178,6 +256,7 @@ export async function GET(request: NextRequest) {
       readAll<AnswerRow>((from, to) => client.from("question_answers").select("question_id, accepted_answers, explanation").range(from, to)),
       readAll<AttemptRow>((from, to) => client.from("question_attempts").select("user_id, created_at").gte("created_at", new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()).range(from, to)),
       readAuthUsers(client),
+      readAll<LearningVideoRow>((from, to) => client.from("learning_videos").select("id, level_id, title, duration_seconds, video_url, is_published, created_at").order("created_at", { ascending: false }).range(from, to)),
     ]);
     if (languages.error) throw new Error(languages.error.message);
     const englishId = languages.data[0]?.id;
@@ -185,6 +264,7 @@ export async function GET(request: NextRequest) {
     const englishLevels = levels.filter((level) => level.language_id === englishId);
     const levelById = new Map(englishLevels.map((level) => [level.id, level]));
     const englishLessons = lessons.filter((lesson) => levelById.has(lesson.level_id));
+    const englishVideos = videos.filter((video) => levelById.has(video.level_id));
     const lessonById = new Map(englishLessons.map((lesson) => [lesson.id, lesson]));
     const answerByQuestionId = new Map(answers.map((answer) => [answer.question_id, answer]));
     const authUserById = new Map(authUsers.map((user) => [user.id, user]));
@@ -203,6 +283,8 @@ export async function GET(request: NextRequest) {
         activeUsers: activeUserIds.size,
         totalQuestions: questions.filter((question) => lessonById.has(question.lesson_id)).length,
         publishedQuestions: questions.filter((question) => question.is_published && lessonById.has(question.lesson_id)).length,
+        totalVideos: englishVideos.length,
+        publishedVideos: englishVideos.filter((video) => video.is_published).length,
       },
       levels: englishLevels.map(({ id, code, title }) => ({
         id,
@@ -210,6 +292,8 @@ export async function GET(request: NextRequest) {
         title,
         questionCount: questions.filter((question) => lessonById.get(question.lesson_id)?.level_id === id).length,
         publishedQuestionCount: questions.filter((question) => question.is_published && lessonById.get(question.lesson_id)?.level_id === id).length,
+        videoCount: englishVideos.filter((video) => video.level_id === id).length,
+        publishedVideoCount: englishVideos.filter((video) => video.level_id === id && video.is_published).length,
       })),
       users: profiles.map((profile) => ({
         id: profile.user_id,
@@ -233,6 +317,15 @@ export async function GET(request: NextRequest) {
         title: lesson.title,
         category: lesson.category,
         published: lesson.is_published,
+      })),
+      videos: englishVideos.map((video) => ({
+        id: video.id,
+        levelId: video.level_id,
+        title: video.title,
+        durationSeconds: video.duration_seconds,
+        url: video.video_url,
+        published: video.is_published,
+        createdAt: video.created_at,
       })),
       questions: questions
         .filter((question) => lessonById.has(question.lesson_id))
@@ -275,6 +368,76 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    if (body.action === "createVideo") {
+      const video = parseVideo(body.video);
+      if (!video) return errorResponse("Informe uma URL pública válida de vídeo do VoiceTube.", 400);
+      const { data: level, error: levelError } = await client
+        .from("language_levels")
+        .select("id, language_id")
+        .eq("id", video.levelId)
+        .single();
+      if (levelError || !level) return errorResponse("O nível selecionado não existe.", 400);
+      const { data: language, error: languageError } = await client
+        .from("languages")
+        .select("code")
+        .eq("id", level.language_id)
+        .single();
+      if (languageError || language?.code !== "en") return errorResponse("Apenas vídeos de níveis de inglês podem ser cadastrados.", 400);
+
+      const metadata = await readVoiceTubeMetadata(video.url);
+      const { error } = await client.from("learning_videos").insert({
+        level_id: video.levelId,
+        title: metadata.title,
+        duration_seconds: metadata.durationSeconds,
+        video_url: video.url,
+        is_published: false,
+      });
+      if (error?.code === "23505") return errorResponse("Este vídeo já está cadastrado.", 409);
+      if (error) throw new Error(error.message);
+      return NextResponse.json({
+        message: `“${metadata.title}” foi cadastrado como rascunho (${Math.floor(metadata.durationSeconds / 60)}:${String(metadata.durationSeconds % 60).padStart(2, "0")}).`,
+      }, { status: 201 });
+    }
+
+    if (body.action === "setVideoPublished" || body.action === "deleteVideo") {
+      if (!isRecord(body.video) || typeof body.video.id !== "string") {
+        return errorResponse("O vídeo selecionado é inválido.", 400);
+      }
+      const { data: video, error: videoError } = await client
+        .from("learning_videos")
+        .select("id, level_id")
+        .eq("id", body.video.id)
+        .single();
+      if (videoError || !video) return errorResponse("O vídeo selecionado não existe.", 404);
+      const { data: level, error: levelError } = await client
+        .from("language_levels")
+        .select("id, language_id")
+        .eq("id", video.level_id)
+        .single();
+      if (levelError || !level) return errorResponse("O nível do vídeo não foi encontrado.", 400);
+      const { data: language, error: languageError } = await client
+        .from("languages")
+        .select("code")
+        .eq("id", level.language_id)
+        .single();
+      if (languageError || language?.code !== "en") return errorResponse("Apenas vídeos de níveis de inglês podem ser alterados por este painel.", 400);
+
+      if (body.action === "deleteVideo") {
+        const { error } = await client.from("learning_videos").delete().eq("id", video.id);
+        if (error) throw new Error(error.message);
+        return NextResponse.json({ message: "Vídeo removido." });
+      }
+      if (typeof body.video.published !== "boolean") {
+        return errorResponse("O status de publicação do vídeo é inválido.", 400);
+      }
+      const { error } = await client
+        .from("learning_videos")
+        .update({ is_published: body.video.published })
+        .eq("id", video.id);
+      if (error) throw new Error(error.message);
+      return NextResponse.json({ message: body.video.published ? "Vídeo publicado." : "Vídeo retirado do conteúdo publicado." });
+    }
+
     if (body.action === "createLesson") {
       const lesson = parseLesson(body.lesson);
       if (!lesson || !lesson.title || lesson.title.length > 100 || !lesson.description || lesson.description.length > 300 || !lesson.category || lesson.category.length > 40) {

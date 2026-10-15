@@ -10,6 +10,17 @@ type AdminLevel = {
   title: string;
   questionCount: number;
   publishedQuestionCount: number;
+  videoCount: number;
+  publishedVideoCount: number;
+};
+type AdminVideo = {
+  id: string;
+  levelId: string;
+  title: string;
+  durationSeconds: number;
+  url: string;
+  published: boolean;
+  createdAt: string;
 };
 type AdminLesson = {
   id: string;
@@ -51,13 +62,16 @@ type AdminData = {
     activeUsers: number;
     totalQuestions: number;
     publishedQuestions: number;
+    totalVideos: number;
+    publishedVideos: number;
   };
   levels: AdminLevel[];
   users: AdminUser[];
   lessons: AdminLesson[];
   questions: AdminQuestion[];
+  videos: AdminVideo[];
 };
-type AdminView = "overview" | "questions" | "users";
+type AdminView = "overview" | "questions" | "videos" | "users";
 type QuestionType = AdminQuestion["type"];
 
 const typeLabels: Record<QuestionType, string> = {
@@ -79,11 +93,12 @@ const learningGoals = [
 ];
 
 const emptyData: AdminData = {
-  stats: { totalUsers: 0, activeUsers: 0, totalQuestions: 0, publishedQuestions: 0 },
+  stats: { totalUsers: 0, activeUsers: 0, totalQuestions: 0, publishedQuestions: 0, totalVideos: 0, publishedVideos: 0 },
   levels: [],
   users: [],
   lessons: [],
   questions: [],
+  videos: [],
 };
 
 export default function AdminDashboard() {
@@ -108,6 +123,7 @@ export default function AdminDashboard() {
   const [lessonDescription, setLessonDescription] = useState("");
   const [lessonCategory, setLessonCategory] = useState("Vocabulário");
   const [lessonDuration, setLessonDuration] = useState(15);
+  const [videoUrl, setVideoUrl] = useState("");
   const [questionLessonId, setQuestionLessonId] = useState("");
   const [questionPrompt, setQuestionPrompt] = useState("");
   const [questionChoices, setQuestionChoices] = useState("");
@@ -123,6 +139,10 @@ export default function AdminDashboard() {
   const levelQuestions = useMemo(
     () => data.questions.filter((question) => question.levelId === selectedLevel?.id),
     [data.questions, selectedLevel?.id],
+  );
+  const levelVideos = useMemo(
+    () => data.videos.filter((video) => video.levelId === selectedLevel?.id),
+    [data.videos, selectedLevel?.id],
   );
 
   const adminRequest = useCallback(async (method: "GET" | "POST", body?: unknown) => {
@@ -236,19 +256,42 @@ export default function AdminDashboard() {
     }
   }
 
-  async function setPublished(action: "setLessonPublished" | "setQuestionPublished", id: string, published: boolean) {
+  async function createVideo(event: FormEvent<HTMLFormElement>) {
+    const success = await submitAdminAction(event, "createVideo", {
+      video: { levelId: selectedLevel?.id, url: videoUrl },
+    });
+    if (success) setVideoUrl("");
+  }
+
+  async function setPublished(action: "setLessonPublished" | "setQuestionPublished" | "setVideoPublished", id: string, published: boolean) {
     setSaving(true);
     setError("");
     setNotice("");
     try {
       const result = (await adminRequest("POST", {
         action,
-        [action === "setLessonPublished" ? "lesson" : "question"]: { id, published },
+        [action === "setLessonPublished" ? "lesson" : action === "setQuestionPublished" ? "question" : "video"]: { id, published },
       })) as { message?: string };
       setNotice(result.message ?? "Status de publicação atualizado.");
       await loadAdminData();
     } catch (publishError) {
       setError(publishError instanceof Error ? publishError.message : "Não foi possível atualizar a publicação.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function deleteVideo(video: AdminVideo) {
+    if (!window.confirm(`Remover “${video.title}” permanentemente?`)) return;
+    setSaving(true);
+    setError("");
+    setNotice("");
+    try {
+      const result = (await adminRequest("POST", { action: "deleteVideo", video: { id: video.id } })) as { message?: string };
+      setNotice(result.message ?? "Vídeo removido.");
+      await loadAdminData();
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : "Não foi possível remover o vídeo.");
     } finally {
       setSaving(false);
     }
@@ -311,6 +354,7 @@ export default function AdminDashboard() {
           {([
             ["overview", "▦", "Dashboard"],
             ["questions", "✎", "Questões"],
+            ["videos", "▶", "Vídeos"],
             ["users", "♙", "Usuários"],
           ] as [AdminView, string, string][]).map(([id, icon, label]) => (
             <button key={id} className={`admin-nav-item ${view === id ? "active" : ""}`} onClick={() => setView(id)}>
@@ -325,7 +369,7 @@ export default function AdminDashboard() {
 
       <section className="admin-main">
         <header className="admin-topbar">
-          <div><span className="section-kicker">FLUÊNCIA · ADMIN</span><h1>{view === "overview" ? "Dashboard" : view === "questions" ? "Questões" : "Usuários"}</h1></div>
+          <div><span className="section-kicker">FLUÊNCIA · ADMIN</span><h1>{view === "overview" ? "Dashboard" : view === "questions" ? "Questões" : view === "videos" ? "Vídeos" : "Usuários"}</h1></div>
           <button className="admin-refresh" onClick={() => void loadAdminData()} disabled={loading}>↻ <span>Atualizar dados</span></button>
         </header>
         <div className="admin-content">
@@ -339,10 +383,15 @@ export default function AdminDashboard() {
                 <article className="admin-stat-card"><span className="admin-stat-icon violet">◉</span><span className="admin-stat-label">USUÁRIOS ATIVOS</span><strong>{data.stats.activeUsers}</strong><small>com atividade nos últimos 30 dias</small></article>
                 <article className="admin-stat-card"><span className="admin-stat-icon pink">✎</span><span className="admin-stat-label">QUESTÕES CRIADAS</span><strong>{data.stats.totalQuestions}</strong><small>em todos os níveis de inglês</small></article>
                 <article className="admin-stat-card"><span className="admin-stat-icon gold">✓</span><span className="admin-stat-label">QUESTÕES PUBLICADAS</span><strong>{data.stats.publishedQuestions}</strong><small>disponíveis para estudantes</small></article>
+                <article className="admin-stat-card"><span className="admin-stat-icon violet">▶</span><span className="admin-stat-label">VÍDEOS CADASTRADOS</span><strong>{data.stats.totalVideos}</strong><small>{data.stats.publishedVideos} disponíveis para estudantes</small></article>
               </div>
               <section className="admin-panel">
                 <div className="admin-panel-heading"><div><span className="section-kicker">CONTEÚDO</span><h2>Questões por nível</h2></div><button className="admin-text-button" onClick={() => setView("questions")}>Gerenciar questões ↗</button></div>
                 <div className="admin-level-grid">{data.levels.map((level) => <article key={level.id} className="admin-level-card"><div><span className="admin-level-code">{level.code}</span><span className="admin-level-title">{level.title}</span></div><strong>{level.questionCount}</strong><small>{level.publishedQuestionCount} publicadas</small><div className="admin-mini-track"><span style={{ width: `${level.questionCount ? (level.publishedQuestionCount / level.questionCount) * 100 : 0}%` }} /></div></article>)}</div>
+              </section>
+              <section className="admin-panel">
+                <div className="admin-panel-heading"><div><span className="section-kicker">BIBLIOTECA DE VÍDEOS</span><h2>Vídeos por nível</h2></div><button className="admin-text-button" onClick={() => setView("videos")}>Gerenciar vídeos ↗</button></div>
+                <div className="admin-level-grid">{data.levels.map((level) => <article key={level.id} className="admin-level-card"><div><span className="admin-level-code">{level.code}</span><span className="admin-level-title">{level.title}</span></div><strong>{level.videoCount}</strong><small>{level.publishedVideoCount} publicados</small><div className="admin-mini-track"><span style={{ width: `${level.videoCount ? (level.publishedVideoCount / level.videoCount) * 100 : 0}%` }} /></div></article>)}</div>
               </section>
               <section className="admin-panel">
                 <div className="admin-panel-heading"><div><span className="section-kicker">ESTUDANTES</span><h2>Cadastros recentes</h2></div><button className="admin-text-button" onClick={() => setView("users")}>Ver usuários ↗</button></div>
@@ -388,6 +437,39 @@ export default function AdminDashboard() {
                     </form>}
                   </section>
                 </div>
+              </div>
+            </section>}
+
+            {view === "videos" && <section className="admin-view">
+              <div className="admin-page-intro">
+                <div><span className="section-kicker">BIBLIOTECA DE VÍDEOS</span><h2>Vídeos curtos por nível.</h2><p>Cole um link público do VoiceTube. O título e a duração de 1 a 3 minutos são verificados automaticamente; novos vídeos entram como rascunho.</p></div>
+                <label className="admin-level-select-label">NÍVEL<select value={selectedLevel?.id ?? ""} onChange={(event) => setSelectedLevelId(event.target.value)}>{data.levels.map((level) => <option key={level.id} value={level.id}>{level.code} · {level.title}</option>)}</select></label>
+              </div>
+              <div className="admin-video-layout">
+                <section className="admin-panel">
+                  <div className="admin-panel-heading"><div><span className="section-kicker">{selectedLevel?.code ?? "—"} · {selectedLevel?.title ?? ""}</span><h2>Vídeos cadastrados</h2></div><span className="admin-count-badge">{levelVideos.length}</span></div>
+                  {levelVideos.length ? <div className="admin-video-list">{levelVideos.map((video) => (
+                    <article className="admin-video-row" key={video.id}>
+                      <div className="admin-video-details">
+                        <strong>{video.title}</strong>
+                        <small>{Math.floor(video.durationSeconds / 60)}:{String(video.durationSeconds % 60).padStart(2, "0")} · <a href={video.url} target="_blank" rel="noreferrer">Abrir no VoiceTube ↗</a></small>
+                      </div>
+                      <div className="admin-video-actions">
+                        <button className={`admin-status-button ${video.published ? "published" : ""}`} disabled={saving} onClick={() => void setPublished("setVideoPublished", video.id, !video.published)}>{video.published ? "Publicado" : "Rascunho"}</button>
+                        <button className="admin-action-button reset" disabled={saving} onClick={() => void deleteVideo(video)} aria-label={`Remover ${video.title}`}>Remover</button>
+                      </div>
+                    </article>
+                  ))}</div> : <div className="admin-empty">Ainda não há vídeos para este nível. Adicione um link para começar.</div>}
+                </section>
+                <section className="admin-panel admin-create-panel">
+                  <div className="admin-panel-heading"><div><span className="section-kicker">NOVO VÍDEO</span><h2>Adicionar por URL</h2></div></div>
+                  {selectedLevel ? <form onSubmit={createVideo} className="admin-form">
+                    <label htmlFor="video-url">Link público do VoiceTube</label>
+                    <input id="video-url" type="url" value={videoUrl} onChange={(event) => setVideoUrl(event.target.value)} required placeholder="https://www.voicetube.com/videos/198652" />
+                    <p className="admin-form-note">O título e o tempo são preenchidos a partir da página original. Só aceitamos vídeos de 1 a 3 minutos; você poderá revisar e publicar depois.</p>
+                    <button className="button button-primary" type="submit" disabled={saving || !videoUrl.trim()}>{saving ? "Verificando e salvando..." : "Adicionar vídeo"} <span>↗</span></button>
+                  </form> : <p className="admin-empty">Os níveis de inglês não foram carregados.</p>}
+                </section>
               </div>
             </section>}
 

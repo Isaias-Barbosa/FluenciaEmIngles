@@ -200,6 +200,31 @@ export type Database = {
         },
         never
       >;
+      learning_videos: Table<
+        {
+          id: string;
+          level_id: string;
+          title: string;
+          duration_seconds: number;
+          video_url: string;
+          is_published: boolean;
+          created_at: string;
+        },
+        {
+          id?: string;
+          level_id: string;
+          title: string;
+          duration_seconds: number;
+          video_url: string;
+          is_published?: boolean;
+        },
+        {
+          title?: string;
+          duration_seconds?: number;
+          video_url?: string;
+          is_published?: boolean;
+        }
+      >;
       proficiency_questions: Table<
         {
           id: string;

@@ -4,7 +4,6 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase/client";
 import type { Database, Json } from "@/lib/supabase/database.types";
-import { learningVideos } from "@/lib/learning-videos";
 
 type LevelId = "A1" | "A2" | "B1" | "B2" | "C1" | "C2";
 type PageId = "home" | "lessons" | "cards" | "progress" | "profile" | "exam";
@@ -55,6 +54,13 @@ type Flashcard = {
   front: string;
   back: string;
   pronunciation: string;
+};
+type LearningVideo = {
+  id: string;
+  level: LevelId;
+  title: string;
+  durationSeconds: number;
+  url: string;
 };
 type Profile = {
   userId: string;
@@ -148,6 +154,7 @@ export default function Dashboard() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [cards, setCards] = useState<Flashcard[]>([]);
+  const [videos, setVideos] = useState<LearningVideo[]>([]);
   const [page, setPage] = useState<PageId>("home");
   const [ready, setReady] = useState(false);
   const [profileLoading, setProfileLoading] = useState(false);
@@ -164,6 +171,7 @@ export default function Dashboard() {
   const [placementResult, setPlacementResult] = useState<ProficiencyExamResult | null>(null);
   const [placementBusy, setPlacementBusy] = useState(false);
   const [activeLesson, setActiveLesson] = useState<Lesson | null>(null);
+  const [activeVideo, setActiveVideo] = useState<LearningVideo | null>(null);
   const [questionIndex, setQuestionIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState("");
   const [answerResult, setAnswerResult] = useState<"correct" | "incorrect" | null>(null);
@@ -240,7 +248,7 @@ export default function Dashboard() {
   const loadStudyData = useCallback(async (activeProfile: Profile) => {
     if (!supabase) throw new Error("Supabase não está configurado.");
 
-    const [questionsResult, cardsResult, attemptsResult] = await Promise.all([
+    const [questionsResult, cardsResult, attemptsResult, videosResult, levelsResult, languageResult] = await Promise.all([
       supabase
         .from("published_lesson_questions")
         .select("*")
@@ -256,6 +264,13 @@ export default function Dashboard() {
         .from("question_attempts")
         .select("question_id, is_correct")
         .eq("user_id", activeProfile.userId),
+      supabase
+        .from("learning_videos")
+        .select("id, level_id, title, duration_seconds, video_url")
+        .eq("is_published", true)
+        .order("created_at", { ascending: false }),
+      supabase.from("language_levels").select("id, code, language_id"),
+      supabase.from("languages").select("id").eq("code", "en").maybeSingle(),
     ]);
 
     if (questionsResult.error) {
@@ -267,6 +282,35 @@ export default function Dashboard() {
     if (attemptsResult.error) {
       throw new Error(`Não foi possível carregar seu progresso: ${attemptsResult.error.message}`);
     }
+    if (videosResult.error) {
+      throw new Error(`Não foi possível carregar os vídeos: ${videosResult.error.message}`);
+    }
+    if (levelsResult.error) {
+      throw new Error(`Não foi possível carregar os níveis dos vídeos: ${levelsResult.error.message}`);
+    }
+    const englishLanguageId = languageResult.data?.id;
+    if (languageResult.error || !englishLanguageId) {
+      throw new Error(languageResult.error?.message ?? "O idioma inglês não foi encontrado.");
+    }
+
+    const videoLevelsById = new Map(
+      levelsResult.data
+        .filter((level) => level.language_id === englishLanguageId)
+        .map((level) => [level.id, level.code]),
+    );
+    const nextVideos: LearningVideo[] = videosResult.data.flatMap((video) => {
+      const levelCode = videoLevelsById.get(video.level_id);
+      const matchingLevel = levels.find((level) => level.id === levelCode);
+      return matchingLevel
+        ? [{
+            id: video.id,
+            level: matchingLevel.id,
+            title: video.title,
+            durationSeconds: video.duration_seconds,
+            url: video.video_url,
+          }]
+        : [];
+    });
 
     const groupedLessons = new Map<string, Lesson>();
     for (const row of questionsResult.data) {
@@ -319,6 +363,7 @@ export default function Dashboard() {
 
     setLessons(nextLessons);
     setCards(nextCards);
+    setVideos(nextVideos);
     setProfile((current) =>
       current?.userId === activeProfile.userId
         ? {
@@ -358,6 +403,8 @@ export default function Dashboard() {
         setProfile(null);
         setLessons([]);
         setCards([]);
+        setVideos([]);
+        setActiveVideo(null);
         setReady(true);
       }
     });
@@ -769,7 +816,7 @@ export default function Dashboard() {
         <div className="page-content">
           {appError && <div className="app-error" role="alert">{appError}<button onClick={() => setAppError("")} aria-label="Fechar aviso">×</button></div>}
           {page === "home" && <div className="home-page"><HomePage profile={profile} lessons={currentLessons} progressPercent={progressPercent} completedInLevel={completedInLevel} levelIndex={currentLevelIndex} nextLesson={nextLesson} canTakePromotionExam={currentLessons.length > 0 && currentLessons.every((lesson) => profile.completedLessons.includes(lesson.id)) && profile.level !== "C2"} onPromotionExam={() => setPage("exam")} onStudy={() => nextLesson && openLesson(nextLesson)} onPage={setPage} onSelectLesson={openLesson} /></div>}
-          {page === "lessons" && <LessonsPage profile={profile} lessons={lessons} onSelectLesson={openLesson} />}
+          {page === "lessons" && <LessonsPage profile={profile} lessons={lessons} videos={videos} onSelectLesson={openLesson} onSelectVideo={setActiveVideo} />}
           {page === "cards" && <CardsPage key={profile.level} level={profile.level} cards={cards} />}
           {page === "progress" && <ProgressPage profile={profile} levelIndex={currentLevelIndex} lessons={lessons} />}
           {page === "profile" && <ProfilePage profile={profile} levelIndex={currentLevelIndex} levelProgress={progressPercent} completedInLevel={completedInLevel} totalQuestions={profile.completedQuestionIds.length} onSave={saveProfileDetails} onApplyLevel={applyPlacementLevel} />}
@@ -778,6 +825,7 @@ export default function Dashboard() {
         </div>
       </div>
       {activeLesson && activeQuestion && <LessonModal lesson={activeLesson} question={activeQuestion} questionIndex={questionIndex} selectedAnswer={selectedAnswer} result={answerResult} feedback={answerFeedback} hint={answerHint} wrongAttempts={wrongAttempts} levelCompleted={levelCompleted && profile.level !== "C2"} saving={answerSaving} completed={profile.completedQuestionIds.includes(activeQuestion.id)} onSelect={(answer) => { setSelectedAnswer(answer); setAnswerResult(null); setAnswerFeedback(""); }} onSubmit={submitAnswer} onNext={nextQuestion} onClose={() => setActiveLesson(null)} onStartPromotionExam={() => { setActiveLesson(null); setPage("exam"); }} />}
+      {activeVideo && <VideoPlayerModal video={activeVideo} onClose={() => setActiveVideo(null)} />}
     </main>
   );
 }
@@ -809,7 +857,13 @@ function HomePage({ profile, lessons: currentLessons, progressPercent, completed
   );
 }
 
-function LessonsPage({ profile, lessons: allLessons, onSelectLesson }: { profile: Profile; lessons: Lesson[]; onSelectLesson: (lesson: Lesson) => void }) {
+function LessonsPage({ profile, lessons: allLessons, videos, onSelectLesson, onSelectVideo }: {
+  profile: Profile;
+  lessons: Lesson[];
+  videos: LearningVideo[];
+  onSelectLesson: (lesson: Lesson) => void;
+  onSelectVideo: (video: LearningVideo) => void;
+}) {
   const currentIndex = levels.findIndex((level) => level.id === profile.level);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"all" | "pending" | "completed">("all");
@@ -826,7 +880,7 @@ function LessonsPage({ profile, lessons: allLessons, onSelectLesson }: { profile
   const totalLessons = allLessons.length;
   const completedLessons = allLessons.filter((lesson) => profile.completedLessons.includes(lesson.id)).length;
   const unlockedVideoLevels = levels.slice(0, currentIndex + 1);
-  const visibleVideos = learningVideos.filter((video) => video.level === videoLevel);
+  const visibleVideos = videos.filter((video) => video.level === videoLevel);
   const selectedVideoLevel = levels.find((level) => level.id === videoLevel);
 
   return (
@@ -905,9 +959,7 @@ function LessonsPage({ profile, lessons: allLessons, onSelectLesson }: { profile
               <div className="learning-video-icon" aria-hidden="true">▶</div>
               <div className="learning-video-meta"><span>{video.level} · nível aproximado</span><span>{Math.floor(video.durationSeconds / 60)}:{String(video.durationSeconds % 60).padStart(2, "0")}</span></div>
               <h3>{video.title}</h3>
-              <a href={video.url} target="_blank" rel="noreferrer">
-                Assistir vídeo gratuito <span aria-hidden="true">↗</span>
-              </a>
+              <button type="button" onClick={() => onSelectVideo(video)}>Assistir vídeo <span aria-hidden="true">▶</span></button>
             </article>
           ))}
         </div> : <div className="learning-videos-empty">
@@ -916,6 +968,39 @@ function LessonsPage({ profile, lessons: allLessons, onSelectLesson }: { profile
         </div>}
       </section>
     </section>
+  );
+}
+
+function VideoPlayerModal({ video, onClose }: { video: LearningVideo; onClose: () => void }) {
+  useEffect(() => {
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") onClose();
+    }
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [onClose]);
+
+  return (
+    <div className="modal-backdrop video-player-backdrop" role="presentation" onMouseDown={(event) => {
+      if (event.target === event.currentTarget) onClose();
+    }}>
+      <section className="video-player-modal" role="dialog" aria-modal="true" aria-labelledby="video-player-title">
+        <header className="video-player-header">
+          <div><span className="eyebrow"><span className="live-dot" /> {video.level} · VÍDEO DE ESTUDO</span><h2 id="video-player-title">{video.title}</h2></div>
+          <button type="button" onClick={onClose} aria-label="Fechar vídeo">×</button>
+        </header>
+        <div className="video-player-frame">
+          <iframe
+            src={video.url}
+            title={`Player do VoiceTube: ${video.title}`}
+            allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+            allowFullScreen
+            referrerPolicy="strict-origin-when-cross-origin"
+          />
+        </div>
+        <a className="video-player-fallback" href={video.url} target="_blank" rel="noreferrer">Se o player não carregar, assistir no VoiceTube ↗</a>
+      </section>
+    </div>
   );
 }
 
