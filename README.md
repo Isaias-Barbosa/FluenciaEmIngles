@@ -34,8 +34,10 @@ npm install
 No painel do Supabase:
 
 1. Abra **Authentication → Providers** e habilite o cadastro por e-mail e senha.
-2. Em **Authentication → URL Configuration**, adicione `http://localhost:3000` à lista de URLs permitidas. Inclua também a URL de produção ao publicar o site.
+2. Em **Authentication → URL Configuration**, defina **Site URL** como `https://fluencia-em-ingles.vercel.app/learn`. Em **Redirect URLs**, adicione `https://fluencia-em-ingles.vercel.app/learn`. Para desenvolvimento local, adicione separadamente `http://localhost:3000/learn`; não deixe localhost como Site URL de produção. O cadastro envia a origem atual com `/learn` em `emailRedirectTo`, que precisa estar nesta lista.
 3. Abra o **SQL Editor** e execute, em ordem, as migrations que ainda não foram aplicadas. A lista e o objetivo de cada arquivo estão em [Migrations do banco](#migrations-do-banco).
+
+Se a confirmação de e-mail redirecionar para localhost, confira essas configurações e o template **Confirm signup** em **Authentication → Email Templates**: o link de confirmação padrão deve usar `{{ .ConfirmationURL }}`, sem localhost fixo. Após salvar, solicite um novo e-mail de confirmação; mensagens já enviadas podem conter o destino antigo. Se o e-mail já estiver confirmado, basta entrar na plataforma pelo domínio de produção.
 
 Crie o arquivo `.env.local` a partir de `.env.example` e preencha as chaves do seu projeto:
 
