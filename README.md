@@ -76,7 +76,7 @@ Abra [http://localhost:3000](http://localhost:3000), crie sua conta e faça a av
 1. Entre com uma conta cujo e-mail esteja em `ADMIN_EMAILS` e abra `/admin`.
 2. Selecione **Vídeos** no menu e escolha o nível.
 3. Cole a URL pública de um vídeo do VoiceTube, como `https://www.voicetube.com/videos/198652`.
-4. O painel verifica a página e preenche o título e a duração. Para ser aceito, o vídeo precisa ter entre **1 e 10 minutos**.
+4. O painel verifica a página e preenche o título e a duração. Para ser aceito, o vídeo precisa ter entre **1 e 20 minutos**.
 5. Revise o rascunho e publique-o quando estiver pronto.
 
 Vídeos publicados aparecem aos estudantes quando o respectivo nível está liberado. Ao selecionar **Assistir vídeo**, o player abre em um modal; se o VoiceTube impedir a reprodução incorporada ou o player não carregar, o modal oferece um link para abrir o vídeo no próprio VoiceTube.
@@ -108,7 +108,7 @@ As questões importadas das migrations de materiais didáticos começam como ras
 
 ## Comandos úteis
 
-Para aceitar vídeos de até 10 minutos, aplique [20261016000000_learning_videos_ten_minutes.sql](supabase/migrations/20261016000000_learning_videos_ten_minutes.sql). O intervalo permitido é de 60 a 600 segundos, inclusive. O vídeo continua hospedado no VoiceTube; o banco armazena apenas a URL e os metadados.
+Para aceitar vídeos de até 20 minutos, aplique [20261016000000_learning_videos_ten_minutes.sql](supabase/migrations/20261016000000_learning_videos_ten_minutes.sql) e depois [20261016010000_learning_videos_twenty_minutes.sql](supabase/migrations/20261016010000_learning_videos_twenty_minutes.sql). O intervalo permitido é de 60 a 1200 segundos, inclusive. O vídeo continua hospedado no VoiceTube; o banco armazena apenas a URL e os metadados.
 
 A migration [20261015010000_promotion_half_questions.sql](supabase/migrations/20261015010000_promotion_half_questions.sql) deve ser aplicada no Supabase para liberar a prova após concluir corretamente metade das questões publicadas do nível (arredondando para cima). Novas questões publicadas recalculam esse limite; tentativas repetidas não aumentam a contagem. A prova continua exigindo 7 acertos em 10 para avançar. C2 permanece como último nível, sem prova de avanço.
 

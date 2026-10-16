@@ -443,7 +443,7 @@ export default function AdminDashboard() {
 
             {view === "videos" && <section className="admin-view">
               <div className="admin-page-intro">
-                <div><span className="section-kicker">BIBLIOTECA DE VÍDEOS</span><h2>Vídeos curtos por nível.</h2><p>Cole um link público do VoiceTube. O título e a duração de 1 a 10 minutos são verificados automaticamente; novos vídeos entram como rascunho.</p></div>
+                <div><span className="section-kicker">BIBLIOTECA DE VÍDEOS</span><h2>Vídeos curtos por nível.</h2><p>Cole um link público do VoiceTube. O título e a duração de 1 a 20 minutos são verificados automaticamente; novos vídeos entram como rascunho.</p></div>
                 <label className="admin-level-select-label">NÍVEL<select value={selectedLevel?.id ?? ""} onChange={(event) => setSelectedLevelId(event.target.value)}>{data.levels.map((level) => <option key={level.id} value={level.id}>{level.code} · {level.title}</option>)}</select></label>
               </div>
               <div className="admin-video-layout">
@@ -467,7 +467,7 @@ export default function AdminDashboard() {
                   {selectedLevel ? <form onSubmit={createVideo} className="admin-form">
                     <label htmlFor="video-url">Link público do VoiceTube</label>
                     <input id="video-url" type="url" value={videoUrl} onChange={(event) => setVideoUrl(event.target.value)} required placeholder="https://www.voicetube.com/videos/198652" />
-                    <p className="admin-form-note">O título e o tempo são preenchidos a partir da página original. Só aceitamos vídeos de 1 a 10 minutos; você poderá revisar e publicar depois.</p>
+                    <p className="admin-form-note">O título e o tempo são preenchidos a partir da página original. Só aceitamos vídeos de 1 a 20 minutos; você poderá revisar e publicar depois.</p>
                     <button className="button button-primary" type="submit" disabled={saving || !videoUrl.trim()}>{saving ? "Verificando e salvando..." : "Adicionar vídeo"} <span>↗</span></button>
                   </form> : <p className="admin-empty">Os níveis de inglês não foram carregados.</p>}
                 </section>

@@ -992,7 +992,7 @@ function LessonsPage({ profile, lessons: allLessons, videos, onSelectLesson, onS
           <div>
             <span className="section-kicker">PRÁTICA EXTRA</span>
             <h2 id="learning-videos-title">Vídeos curtos em inglês</h2>
-            <p>Treine a compreensão auditiva com vídeos gratuitos de 1 a 10 minutos. O nível é aproximado.</p>
+            <p>Treine a compreensão auditiva com vídeos gratuitos de 1 a 20 minutos. O nível é aproximado.</p>
           </div>
           <label className="video-level-select">
             <span>NÍVEL</span>
