@@ -1023,6 +1023,8 @@ function LessonsPage({ profile, lessons: allLessons, videos, onSelectLesson, onS
 }
 
 function VideoPlayerModal({ video, onClose }: { video: LearningVideo; onClose: () => void }) {
+  const embedUrl = getVoiceTubeEmbedUrl(video.url);
+
   useEffect(() => {
     function closeOnEscape(event: KeyboardEvent) {
       if (event.key === "Escape") onClose();
@@ -1042,7 +1044,7 @@ function VideoPlayerModal({ video, onClose }: { video: LearningVideo; onClose: (
         </header>
         <div className="video-player-frame">
           <iframe
-            src={video.url}
+            src={embedUrl}
             title={`Player do VoiceTube: ${video.title}`}
             allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
             allowFullScreen
@@ -1053,6 +1055,20 @@ function VideoPlayerModal({ video, onClose }: { video: LearningVideo; onClose: (
       </section>
     </div>
   );
+}
+
+function getVoiceTubeEmbedUrl(url: string) {
+  try {
+    const parsedUrl = new URL(url);
+    const videoMatch = parsedUrl.pathname.match(/^\/videos\/(\d+)\/?$/);
+
+    const isVoiceTubeHost = parsedUrl.hostname === "voicetube.com" || parsedUrl.hostname.endsWith(".voicetube.com");
+    if (!videoMatch || !isVoiceTubeHost) return url;
+
+    return `${parsedUrl.origin}/embed/${videoMatch[1]}`;
+  } catch {
+    return url;
+  }
 }
 
 function CardsPage({ level, cards, studentName }: { level: LevelId; cards: Flashcard[]; studentName: string }) {
