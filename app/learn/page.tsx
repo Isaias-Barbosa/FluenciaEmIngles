@@ -837,6 +837,12 @@ export default function Dashboard() {
           {navItems.map((item) => <button key={item.id} className={`nav-item ${page === item.id ? "active" : ""}`} onClick={() => { setPage(item.id); setMobileMenuOpen(false); }}><span className="nav-icon">{item.icon}</span>{item.label}{page === item.id && <span className="nav-active-dot" />}</button>)}
         </nav>
         <div className="sidebar-spacer" />
+        <section className="sidebar-encouragement" aria-label="Incentivo para estudar">
+          <span className="sidebar-encouragement-label">UM POUCO TODO DIA</span>
+          <h2>Seu ritmo.<br />Seu progresso.</h2>
+          <p>20 cards hoje já são um bom começo.</p>
+          <div className="sidebar-encouragement-art" aria-hidden="true"><span>Hello!</span><span>Olá!</span><i>✦</i></div>
+        </section>
         <div className="sidebar-language"><div className="language-icon">🇬🇧</div><div><small>APRENDENDO</small><strong>Inglês <span>⌄</span></strong></div></div>
         <button className="profile-button" onClick={signOut} title="Sair da conta"><span className="profile-avatar">{profile.name.charAt(0).toUpperCase()}</span><span className="profile-details"><strong>{profile.name}</strong><small>{profile.levelTitle} · {profile.level}</small></span><span className="profile-menu">↗</span></button>
       </aside>
