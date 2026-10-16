@@ -235,8 +235,8 @@ async function readVoiceTubeMetadata(url: string) {
   const titleText = title ? decodeHtml(title).trim() : "";
   const durationSeconds = duration ? Number(duration) : NaN;
 
-  if (!titleText || titleText.length > 160 || !Number.isInteger(durationSeconds) || durationSeconds < 60 || durationSeconds > 180) {
-    throw new Error("O vídeo precisa ter título e duração detectáveis entre 1 e 3 minutos.");
+  if (!titleText || titleText.length > 160 || !Number.isInteger(durationSeconds) || durationSeconds < 60 || durationSeconds > 600) {
+    throw new Error("O vídeo precisa ter título e duração detectáveis entre 1 e 10 minutos.");
   }
   return { title: titleText, durationSeconds };
 }
