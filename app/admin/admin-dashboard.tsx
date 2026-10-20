@@ -2,6 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
+import QuestionReserve from "./question-reserve";
 import QuestionReview from "./question-review";
 import type { CefrLevel, ReviewQuestion } from "@/lib/cefr/types";
 import type { Json } from "@/lib/supabase/database.types";
@@ -74,7 +75,7 @@ type AdminData = {
   questions: AdminQuestion[];
   videos: AdminVideo[];
 };
-type AdminView = "overview" | "questions" | "review" | "videos" | "users";
+type AdminView = "overview" | "questions" | "review" | "reserve" | "videos" | "users";
 type QuestionType = AdminQuestion["type"];
 
 const typeLabels: Record<QuestionType, string> = {
@@ -148,7 +149,7 @@ export default function AdminDashboard() {
     [data.videos, selectedLevel?.id],
   );
 
-  const adminRequest = useCallback(async (method: "GET" | "POST", body?: unknown, endpoint: "/api/admin" | "/api/admin/question-review" = "/api/admin") => {
+  const adminRequest = useCallback(async (method: "GET" | "POST", body?: unknown, endpoint: string = "/api/admin") => {
     if (!supabase) throw new Error("O Supabase não está configurado.");
     const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
     if (sessionError) throw new Error(sessionError.message);
@@ -201,6 +202,13 @@ export default function AdminDashboard() {
   }, [levelLessons, questionLessonId]);
 
   const reviewRequest = useCallback((body: unknown) => adminRequest("POST", body, "/api/admin/question-review"), [adminRequest]);
+
+  const reserveRequest = useCallback((method: "GET" | "POST", body?: unknown, query = "") => adminRequest(method, body, `/api/admin/question-reserve${query ? `?${query}` : ""}`), [adminRequest]);
+  const saveReviewedReserve = useCallback(async (question: ReviewQuestion, level: CefrLevel | "") => {
+    const result = await reserveRequest("POST", { action: "save", ...(question.reserveId ? { id: question.reserveId, updatedAt: question.reserveUpdatedAt, status: "pending", preserveTeachingNotes: true } : {}),
+      question: { ...question, level, explanation: "", hint: "" } }) as { question: { id: string; updated_at: string } };
+    return { reserveId: result.question.id, reserveUpdatedAt: result.question.updated_at };
+  }, [reserveRequest]);
 
   function useReviewedQuestion(question: ReviewQuestion, level: CefrLevel) {
     const target = data.levels.find((item) => item.code === level);
@@ -377,6 +385,7 @@ export default function AdminDashboard() {
             ["overview", "▦", "Dashboard"],
             ["questions", "✎", "Questões"],
             ["review", "◎", "Verifique a Questão"],
+            ["reserve", "▣", "Banco de reservas"],
             ["videos", "▶", "Vídeos"],
             ["users", "♙", "Usuários"],
           ] as [AdminView, string, string][]).map(([id, icon, label]) => (
@@ -392,7 +401,7 @@ export default function AdminDashboard() {
 
       <section className="admin-main">
         <header className="admin-topbar">
-          <div><span className="section-kicker">FLUÊNCIA · ADMIN</span><h1>{view === "overview" ? "Dashboard" : view === "questions" ? "Questões" : view === "review" ? "Verifique a Questão" : view === "videos" ? "Vídeos" : "Usuários"}</h1></div>
+          <div><span className="section-kicker">FLUÊNCIA · ADMIN</span><h1>{view === "overview" ? "Dashboard" : view === "questions" ? "Questões" : view === "review" ? "Verifique a Questão" : view === "reserve" ? "Banco de reservas" : view === "videos" ? "Vídeos" : "Usuários"}</h1></div>
           <button className="admin-refresh" onClick={() => void loadAdminData()} disabled={loading}>↻ <span>Atualizar dados</span></button>
         </header>
         <div className="admin-content">
@@ -422,7 +431,9 @@ export default function AdminDashboard() {
               </section>
             </section>}
 
-            <div hidden={view !== "review"}><QuestionReview request={reviewRequest} availableLevels={data.levels.map((level) => level.code)} onUseQuestion={useReviewedQuestion} /></div>
+            <div hidden={view !== "review"}><QuestionReview request={reviewRequest} availableLevels={data.levels.map((level) => level.code)} onUseQuestion={useReviewedQuestion} onSaveReserve={saveReviewedReserve} /></div>
+
+            <div hidden={view !== "reserve"}><QuestionReserve active={view === "reserve"} request={reserveRequest} onImport={() => setView("review")} /></div>
 
             {view === "questions" && <section className="admin-view">
               <div className="admin-page-intro"><div><span className="section-kicker">BIBLIOTECA DE CONTEÚDO</span><h2>Crie questões para cada nível.</h2><p>Novas lições e questões começam como rascunho. Revise e publique quando estiverem prontas.</p></div><label className="admin-level-select-label">NÍVEL<select value={selectedLevel?.id ?? ""} onChange={(event) => setSelectedLevelId(event.target.value)}>{data.levels.map((level) => <option key={level.id} value={level.id}>{level.code} · {level.title}</option>)}</select></label></div>

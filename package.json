@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test:question-review": "node scripts/test-question-review.cjs"
+    "test:question-review": "node scripts/test-question-review.cjs",
+    "test:reserve": "node scripts/test-reserve-db.cjs && node scripts/test-reserve-admin-api.cjs && node scripts/test-question-replacement-api.cjs",
+    "test:quiz": "node scripts/test-vocabulary-quiz.cjs && node scripts/test-sound-preference.cjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.3",

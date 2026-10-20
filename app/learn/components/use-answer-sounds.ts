@@ -11,10 +11,20 @@ export function useAnswerSounds(lessonId: string | null) {
   const audio = useRef<FeedbackAudio | null>(null);
 
   useEffect(() => {
-    try {
-      enabledRef.current = localStorage.getItem(preferenceKey) !== "off";
-      setEnabled(enabledRef.current);
-    } catch { /* Private browsing can block storage. */ }
+    function syncPreference() {
+      try {
+        enabledRef.current = localStorage.getItem(preferenceKey) !== "off";
+        setEnabled(enabledRef.current);
+        if (!enabledRef.current) audio.current?.stop();
+      } catch { /* Private browsing can block storage. */ }
+    }
+    syncPreference();
+    window.addEventListener("storage", syncPreference);
+    window.addEventListener("fluencia-answer-sounds-change", syncPreference);
+    return () => {
+      window.removeEventListener("storage", syncPreference);
+      window.removeEventListener("fluencia-answer-sounds-change", syncPreference);
+    };
   }, []);
 
   useEffect(() => () => {
@@ -26,7 +36,7 @@ export function useAnswerSounds(lessonId: string | null) {
     enabledRef.current = value;
     setEnabled(value);
     if (!value) audio.current?.stop();
-    try { localStorage.setItem(preferenceKey, value ? "on" : "off"); } catch { /* Keep the session preference. */ }
+    try { localStorage.setItem(preferenceKey, value ? "on" : "off"); window.dispatchEvent(new Event("fluencia-answer-sounds-change")); } catch { /* Keep the session preference. */ }
   }
 
   function prepare() {
