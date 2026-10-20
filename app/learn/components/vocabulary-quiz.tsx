@@ -2,6 +2,7 @@
 import { useEffect, useReducer, useRef, useState } from "react";
 import { cefrLevels, type CefrLevel } from "@/lib/cefr/types";
 import { initialQuizState, makeVocabularyRound, quizReducer, readQuizStats, vocabulary, type QuizStats } from "@/lib/quiz/vocabulary";
+import { quizHistoryEvent, quizHistoryKey } from "@/lib/quiz/progress";
 import { useAnswerSounds } from "./use-answer-sounds";
 
 export default function VocabularyQuiz({ userId, initialLevel }: { userId: string; initialLevel: CefrLevel }) {
@@ -10,7 +11,7 @@ export default function VocabularyQuiz({ userId, initialLevel }: { userId: strin
   const [stats, setStats] = useState<QuizStats>({}); const [storageWarning, setStorageWarning] = useState(false);
   const completed = useRef(false); const focusTarget = useRef<HTMLHeadingElement | null>(null);
   const sounds = useAnswerSounds("vocabulary-quiz");
-  const storageKey = `fluencia-vocabulary-quiz-v1:${userId}`;
+  const storageKey = quizHistoryKey(userId);
   const score = state.answers.filter((answer) => answer.correct).length;
   const question = state.round[state.index]; const currentStats = stats[level];
   useEffect(() => {
@@ -19,9 +20,11 @@ export default function VocabularyQuiz({ userId, initialLevel }: { userId: strin
   useEffect(() => {
     if (state.phase !== "finished" || completed.current) return;
     completed.current = true;
-    const next: QuizStats = { ...stats, [level]: { rounds: (stats[level]?.rounds ?? 0) + 1, best: Math.max(stats[level]?.best ?? 0, score), last: score } };
+    let previous = stats;
+    try { previous = readQuizStats(localStorage.getItem(storageKey)); } catch { setStorageWarning(true); }
+    const next: QuizStats = { ...previous, [level]: { rounds: (previous[level]?.rounds ?? 0) + 1, best: Math.max(previous[level]?.best ?? 0, score), last: score } };
     setStats(next);
-    try { localStorage.setItem(storageKey, JSON.stringify(next)); } catch { setStorageWarning(true); }
+    try { localStorage.setItem(storageKey, JSON.stringify(next)); window.dispatchEvent(new Event(quizHistoryEvent)); } catch { setStorageWarning(true); }
   }, [state.phase, level, score, stats, storageKey]);
   useEffect(() => { if (state.phase !== "idle") focusTarget.current?.focus(); }, [state.index, state.phase]);
   function start() { completed.current = false; sounds.prepare(); dispatch({ type: "start", round: makeVocabularyRound(level) }); }

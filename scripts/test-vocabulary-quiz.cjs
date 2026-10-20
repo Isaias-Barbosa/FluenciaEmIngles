@@ -30,13 +30,15 @@ console.log('Vocabulary quiz passed: 90 contextual entries, 6 levels, 10 unique 
 
 // Exercise the actual client handlers and effects with a deterministic hook runtime.
 const source=ts.transpileModule(fs.readFileSync('app/learn/components/vocabulary-quiz.tsx','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020,jsx:ts.JsxEmit.ReactJSX}}).outputText;
+const progressContext=vm.createContext({exports:{},require:name=>{if(name==='@/lib/cefr/types')return {cefrLevels:['A1','A2','B1','B2','C1','C2']};throw Error(name);}});
+vm.runInContext(ts.transpileModule(fs.readFileSync('lib/quiz/progress.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020}}).outputText,progressContext);
 const store=new Map();
 function client(blockStorage=false){
  const slots=[],dependencies=[];let cursor=0,dirty=false,effects=[],tree;
  const hooks={useState(initial){const index=cursor++;if(!(index in slots))slots[index]=typeof initial==='function'?initial():initial;return [slots[index],value=>{slots[index]=typeof value==='function'?value(slots[index]):value;dirty=true;}];},useReducer(reducer,initial){const [value,set]=hooks.useState(initial);return [value,action=>set(previous=>reducer(previous,action))];},useRef(initial){const index=cursor++;if(!(index in slots))slots[index]={current:initial};return slots[index];},useEffect(callback,deps){const index=cursor++;if(!dependencies[index]||deps.some((value,i)=>value!==dependencies[index][i])){dependencies[index]=deps;effects.push(callback);}}};
  const jsx=(type,props)=>({type,props:props||{}});
- const c=vm.createContext({exports:{},localStorage:{getItem:key=>{if(blockStorage)throw Error('blocked');return store.get(key)||null;},setItem:(key,value)=>{if(blockStorage)throw Error('blocked');store.set(key,value);}},require:name=>{
-  if(name==='react')return hooks;if(name==='react/jsx-runtime')return {jsx,jsxs:jsx};if(name==='@/lib/cefr/types')return {cefrLevels:['A1','A2','B1','B2','C1','C2']};if(name==='@/lib/quiz/vocabulary')return context.exports;if(name==='./use-answer-sounds')return {useAnswerSounds:()=>({enabled:false,prepare(){},play(){},toggle(){}})};throw Error(name);
+ const c=vm.createContext({exports:{},window:new EventTarget(),Event,localStorage:{getItem:key=>{if(blockStorage)throw Error('blocked');return store.get(key)||null;},setItem:(key,value)=>{if(blockStorage)throw Error('blocked');store.set(key,value);}},require:name=>{
+  if(name==='react')return hooks;if(name==='react/jsx-runtime')return {jsx,jsxs:jsx};if(name==='@/lib/cefr/types')return {cefrLevels:['A1','A2','B1','B2','C1','C2']};if(name==='@/lib/quiz/vocabulary')return context.exports;if(name==='@/lib/quiz/progress')return progressContext.exports;if(name==='./use-answer-sounds')return {useAnswerSounds:()=>({enabled:false,prepare(){},play(){},toggle(){}})};throw Error(name);
  }});vm.runInContext(source,c);
  function render(){let loops=0;do{dirty=false;cursor=0;effects=[];tree=c.exports.default({userId:'learner-1',initialLevel:'A1'});const queued=effects;queued.forEach(effect=>effect());if(++loops>10)throw Error('Render loop');}while(dirty);}
  function nodes(node=tree,result=[]){if(Array.isArray(node))node.forEach(item=>nodes(item,result));else if(node&&typeof node==='object'){result.push(node);if(node.props?.children!==undefined)nodes(node.props.children,result);}return result;}

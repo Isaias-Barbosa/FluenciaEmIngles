@@ -190,3 +190,15 @@ A resposta é conferida uma única vez, com feedback, significado e tradução. 
 Melhor resultado e número de rodadas concluídas são salvos **neste navegador, separados por usuário e nível**. Não há sincronização de histórico do quiz entre dispositivos, alteração de missões ou efeito no nivelamento/provas. Navegação entre seções mantém a rodada em andamento; recarregar a página encerra a rodada e mantém apenas os resultados concluídos. Se o navegador bloquear armazenamento, o quiz continua disponível com um aviso.
 
 Teste: `npm run test:quiz`. Verifica os seis níveis, 90 entradas, alternativas/rodadas, prevenção de dupla pontuação, resultados, reinício e leitura segura do histórico local.
+
+### Meu Progresso e Meu Perfil
+
+**Meu Progresso** reúne nível atual, questões acertadas, lições concluídas, quizzes concluídos e perguntas praticadas no Quiz. Os cards A1–C2 do Quiz mostram rodadas, perguntas, melhor nota e última nota. Os totais aproveitam o histórico local já existente (chave v1 por usuário), sem exigir que o estudante refaça quizzes. Uma rodada concluída equivale a dez perguntas praticadas; isso não representa dez palavras inéditas ou o total de acertos. Rodadas incompletas não entram na contagem.
+
+Ao terminar um quiz, os resultados são disponibilizados imediatamente para os cards. A leitura também acompanha alterações de armazenamento em outras abas e o retorno do foco. O histórico do Quiz continua restrito a este navegador e a cada conta, sem sincronização entre dispositivos. Armazenamento bloqueado mostra um aviso/indicador de indisponibilidade em vez de um zero artificial.
+
+O caminho A1–C2 e as barras do nível atual mostram a proporção real de questões publicadas acertadas, com IDs únicos. O nível escolhido no nivelamento não marca automaticamente níveis anteriores como concluídos. A chamada para a prova de avanço segue a regra existente de metade das questões do nível; não há nova regra de aprovação ou contabilização de missões.
+
+**Meu Perfil** organiza identidade, nível, dados pessoais, objetivo e tempo diário em painéis responsivos, com resumo de estudo e quantidade de quizzes. O formulário mantém a gravação Supabase existente, com nome validado após remover espaços, e-mail somente para leitura, prevenção de envios duplicados, feedback de salvamento/erro e opção de desfazer alterações ainda não salvas. A meta em minutos é apresentada como objetivo de estudo, não como tempo medido.
+
+Não há migration ou variável de ambiente nova para estas páginas. Testes: `npm run test:journey`, `npm run test:quiz`, `npm run typecheck` e `npm run build`.
