@@ -16,6 +16,11 @@ type Table<Row, Insert, Update> = {
 export type Database = {
   public: {
     Tables: {
+      question_replacement_searches: Table<
+        { id: string; user_id: string; question_id: string; level_id: string; created_at: string; finished_at: string | null },
+        never,
+        { finished_at: string }
+      >;
       languages: Table<
         {
           id: string;
@@ -292,6 +297,18 @@ export type Database = {
       };
     };
     Functions: {
+      get_my_question_replacements: {
+        Args: Record<string, never>;
+        Returns: { question_id: string; prompt: string; choices: Json; source_url: string; source_title: string }[];
+      };
+      reserve_question_replacement_search: {
+        Args: { p_user_id: string; p_question_id: string };
+        Returns: { request_id: string; level_code: string; lesson_title: string }[];
+      };
+      save_question_replacement: {
+        Args: { p_request_id: string; p_prompt: string; p_choices: Json; p_correct_option: number; p_explanation: string; p_hint: string; p_source_url: string; p_source_title: string };
+        Returns: undefined;
+      };
       admin_update_user_profile: {
         Args: {
           p_user_id: string;

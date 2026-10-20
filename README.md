@@ -140,7 +140,7 @@ Configure `OPENAI_API_KEY` no ambiente do servidor (na Vercel, Settings → Envi
 
 O player prepara a voz no primeiro clique, permite pausar, repetir, navegar e selecionar 0,75×, 1×, 1,25× ou 1,5×. Se a voz de IA estiver indisponível, reproduz o arquivo original e informa o estudante. O cache é limitado à instância do servidor, com deduplicação de pedidos simultâneos; limites de geração também são por instância, não uma cota global de cobrança.
 
-“Não posso ouvir áudio agora” substitui as questões de áudio pendentes na sessão por questões de texto do mesmo nível, priorizando as ainda não concluídas e evitando duplicatas. Preserva quantidade e progresso; questões de áudio removidas continuam pendentes na trilha original. A alteração vale até fechar a sessão. “Pedir à IA” fica bloqueado, identificado como recurso futuro.
+“Não posso ouvir áudio agora” busca na internet uma nova questão de texto do nível atual, substituindo somente o exercício clicado. A alternativa é salva por usuário no mesmo ID e posição do exercício original; seu acerto conta no conjunto, na lição, no progresso e na elegibilidade da prova de avanço. A alternativa reaparece ao reabrir a lição ou atualizar a página. “Pedir à IA” continua bloqueado, identificado como recurso futuro.
 
 ### Feedback dos exercícios
 
@@ -149,3 +149,14 @@ O card mostra a questão atual, o total de acertos da lição (incluindo o progr
 Os sons de acerto e erro são sintetizados localmente com Web Audio, em volume baixo e com duração inferior a meio segundo. O botão “Sons ligados/desligados” salva a preferência neste navegador; escolher “Não posso ouvir áudio agora” também desliga esses sons. Navegadores sem áudio continuam recebendo o feedback visual. Nenhuma chave ou serviço pago é necessário para esses efeitos.
 
 Validação adicional: `node scripts/test-feedback-audio.cjs` e `node scripts/test-lesson-progress.cjs`.
+
+
+### Substituição persistente com busca na internet
+
+Antes do deploy, aplique `supabase/migrations/20261020140000_persistent_web_question_replacements.sql` no Supabase. Configure `OPENAI_API_KEY` e `SUPABASE_SERVICE_ROLE_KEY` somente no servidor/Vercel, junto das variáveis públicas Supabase já existentes. Nunca use prefixo `NEXT_PUBLIC_` nas chaves secretas. A busca usa Responses API com `web_search` obrigatório, modelo padrão `gpt-5.4-mini`; `OPENAI_WEB_QUESTION_MODEL` permite configurar outro modelo compatível com busca e saída estruturada.
+
+O servidor sorteia um tema apropriado ao CEFR do perfil e pesquisa British Council/Cambridge English. A IA cria uma questão original a partir do material pesquisado; não copia exercícios completos. O card identifica a adaptação e mostra o link da fonte. A resposta só é aceita após uma chamada de busca concluída, validação do nível, quatro alternativas distintas e confirmação de que a URL consta nas fontes retornadas pela ferramenta. Isso não substitui revisão pedagógica humana. Busca e geração têm cobrança na API OpenAI.
+
+A migration mantém as alternativas privadas por usuário e o gabarito inacessível ao navegador. A correção grava `question_attempts.question_id` no ID original, preservando os cinco espaços e o total de questões do nível. Há limite persistente de 20 buscas por hora/usuário, bloqueio de buscas simultâneas para o mesmo exercício e gravação idempotente. Reabrir uma alternativa já salva não gera outra cobrança. Se busca, validação ou gravação falharem, o exercício original permanece e o aluno pode tentar novamente; não há substituição silenciosa por outra lição. Trocar uma questão não concede acerto: o aluno precisa responder corretamente.
+
+Testes: `node scripts/test-web-question.cjs`, `node scripts/test-question-replacement-api.cjs` e `node scripts/test-question-replacements-db.cjs` e `node scripts/test-replacement-flow.cjs`. O teste do banco usa PostgreSQL embarcado (PGlite, dependência de desenvolvimento) para verificar persistência, correção, permissões e conclusão do conjunto original.

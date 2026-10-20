@@ -558,3 +558,6 @@ html:has(.app-shell.theme-light), body:has(.app-shell.theme-light) { background:
 .theme-light .practice-question-steps .is-correct { color: #102b23; }
 @media (max-width: 420px) { .lesson-practice-progress { padding: 12px; } .practice-score > span { width: 100%; } }
 @media (prefers-reduced-motion: reduce) { .practice-progress-track > span, .practice-exercise { transition: none; } }
+
+.replacement-source { margin: -4px 0 16px; font-size: 12px; color: var(--copy); line-height: 1.6; overflow-wrap: anywhere; }
+.replacement-source a { color: var(--mint); text-decoration: underline; text-underline-offset: 3px; }
