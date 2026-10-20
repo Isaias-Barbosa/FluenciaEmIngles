@@ -13,9 +13,23 @@ type Table<Row, Insert, Update> = {
   Relationships: [];
 };
 
+export type ReserveRow = {
+  id: string; level_id: string | null; content_key: string; prompt: string; choices: Json; correct_answer: string;
+  explanation: string; hint: string; source: "manual" | "opentdb" | "trivia";
+  source_url: string; source_title: string; source_license: string; category: string;
+  status: "pending" | "available" | "archived"; created_by: string | null; updated_by: string | null;
+  created_at: string; updated_at: string;
+};
+type ReplacementProjection = { question_id: string; prompt: string; choices: Json; source_url: string; source_title: string; source_license: string; origin: string };
+
 export type Database = {
   public: {
     Tables: {
+      question_reserve: Table<
+        ReserveRow,
+        Omit<ReserveRow, "id" | "created_at" | "updated_at" | "content_key"> & { id?: string; updated_at?: string },
+        Partial<Omit<ReserveRow, "id" | "created_at" | "content_key">>
+      >;
       question_replacement_searches: Table<
         { id: string; user_id: string; question_id: string; level_id: string; created_at: string; finished_at: string | null },
         never,
@@ -297,10 +311,9 @@ export type Database = {
       };
     };
     Functions: {
-      get_my_question_replacements: {
-        Args: Record<string, never>;
-        Returns: { question_id: string; prompt: string; choices: Json; source_url: string; source_title: string }[];
-      };
+      assign_reserve_question: { Args: { p_question_id: string }; Returns: ReplacementProjection[] };
+      get_question_reserve_counts: { Args: Record<PropertyKey, never>; Returns: { level_code: string; pending: number; available: number; archived: number }[] };
+      get_my_question_replacements: { Args: Record<PropertyKey, never>; Returns: ReplacementProjection[] };
       reserve_question_replacement_search: {
         Args: { p_user_id: string; p_question_id: string };
         Returns: { request_id: string; level_code: string; lesson_title: string }[];

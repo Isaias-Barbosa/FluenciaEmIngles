@@ -64,7 +64,7 @@ export function parseWebQuestion(response: unknown, expectedLevel: string): WebQ
 }
 
 export type SavedReplacement = {
-  question_id: string; prompt: string; choices: unknown; source_url: string; source_title: string;
+  question_id: string; prompt: string; choices: unknown; source_url: string; source_title: string; source_license?: string; origin?: string;
 };
 
 /** Preserve the original ID: attempts, missions and the five-question group use it. */
@@ -74,5 +74,5 @@ export function applyReplacement<Q extends { id: string; type: string; prompt: s
     throw new Error("Substituição inválida para este exercício.");
   }
   return { ...question, type: "multiple_choice", prompt: replacement.prompt, options: replacement.choices as string[],
-    audioUrl: null, hint: null, passage: null, sourceUrl: replacement.source_url, sourceTitle: replacement.source_title };
+    audioUrl: null, hint: null, passage: null, sourceUrl: replacement.source_url, sourceTitle: replacement.source_title, sourceLicense: replacement.source_license, replacementOrigin: replacement.origin };
 }

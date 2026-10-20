@@ -2,6 +2,8 @@ export const cefrLevels = ["A1", "A2", "B1", "B2", "C1", "C2"] as const;
 export type CefrLevel = typeof cefrLevels[number];
 export type ReviewQuestion = {
   id: string;
+  reserveId?: string;
+  reserveUpdatedAt?: string;
   prompt: string;
   choices: string[];
   correctAnswer: string;

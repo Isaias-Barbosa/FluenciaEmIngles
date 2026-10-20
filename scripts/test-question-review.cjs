@@ -82,6 +82,7 @@ function routeHarness() {
   };
   const { ReviewError } = providerHarness().api;
   const route = load('app/api/admin/question-review/route.ts', {
+    'node:crypto': crypto, '@/lib/learning/reserve': load('lib/learning/reserve.ts', { '@/lib/cefr/types': types }),
     'next/server': { NextResponse }, '@/lib/supabase/admin-server': auth, '@/lib/cefr/analyze': engine,
     '@/lib/cefr/trivia': { ReviewError, importTrivia: async () => { state.imports++; return [triviaItem]; } },
   });
@@ -118,7 +119,7 @@ async function uiTests() {
   const Component = load('app/admin/question-review.tsx', { react: hooks, 'react/jsx-runtime': { jsx, jsxs: jsx }, '@/lib/cefr/types': types }).default;
   let fail = false; const calls = []; let handedOff = null;
   const imported = providerHarness().api.normalizeTrivia([triviaItem], 'trivia')[0];
-  const props = { availableLevels: [...types.cefrLevels], request: async body => { calls.push(body); if (fail) throw new Error('Fonte indisponível'); return body.action === 'import' ? { questions: [imported] } : { analysis: engine.analyzeCefr(body.prompt, body.choices) }; }, onUseQuestion: (question, level) => { handedOff = { question, level }; } };
+  const props = { onSaveReserve: async (question, level) => { calls.push({ action: 'saveReserve', question, level }); return { reserveId: 'saved-manual', reserveUpdatedAt: 'revision-1' }; }, availableLevels: [...types.cefrLevels], request: async body => { calls.push(body); if (fail) throw new Error('Fonte indisponível'); return body.action === 'import' ? { questions: [imported] } : { analysis: engine.analyzeCefr(body.prompt, body.choices) }; }, onUseQuestion: (question, level) => { handedOff = { question, level }; } };
   let tree;
   function render() { cursor = 0; tree = Component(props); }
   function all(node = tree, result = []) { if (Array.isArray(node)) { node.forEach(child => all(child, result)); } else if (node && typeof node === 'object') { result.push(node); if (node.props?.children !== undefined) all(node.props.children, result); } return result; }
@@ -134,6 +135,10 @@ async function uiTests() {
   assert.equal(byId('review-level').props.value, 'A1');
   assert.ok(button('Enviar para cadastro').props.disabled, 'answer needed for registration');
   change('review-answer', 'Anna');
+  button('Salvar na reserva').props.onClick(); await settle();
+  assert.equal(calls.find(call => call.action === 'saveReserve').level, 'A1');
+  button('Salvar na reserva').props.onClick(); await settle();
+  assert.equal(calls.filter(call => call.action === 'saveReserve')[1].question.reserveId, 'saved-manual', 'resaving updates the staged row');
   assert.equal(button('Enviar para cadastro').props.disabled, false);
   change('review-level', 'B1'); button('Enviar para cadastro').props.onClick();
   assert.equal(handedOff.level, 'B1', 'use the administrator override');
