@@ -1,3 +1,4 @@
+import HomeEnhancements from "./components/home-enhancements";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -13,7 +14,8 @@ export default function HomePage() {
   return (
     <>
       <style>{styles}</style>
-      <div dangerouslySetInnerHTML={{ __html: content }} />
+      <div className="home-landing" dangerouslySetInnerHTML={{ __html: content }} />
+      <HomeEnhancements />
     </>
   );
 }
