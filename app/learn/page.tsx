@@ -1,6 +1,9 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { JourneyMetric, QuizHistoryPanel } from "./components/journey-widgets";
+import { useQuizHistory } from "./components/use-quiz-history";
+import { summarizeLearning, summarizeQuizHistory } from "@/lib/quiz/progress";
 import VocabularyQuiz from "./components/vocabulary-quiz";
 import { LessonProgress, type PracticeStatus } from "./components/lesson-progress";
 import { useAnswerSounds } from "./components/use-answer-sounds";
@@ -945,10 +948,10 @@ export default function Dashboard() {
           {page === "lessons" && <LessonsPage onPromotionExam={() => setPage("exam")} profile={profile} lessons={lessons} videos={videos} onSelectLesson={openLesson} onSelectVideo={setActiveVideo} />}
           {page === "cards" && <CardsPage key={profile.level} level={profile.level} cards={cards} studentName={profile.name} />}
           <div hidden={page !== "quiz"}><VocabularyQuiz key={`${profile.userId}-${profile.level}`} userId={profile.userId} initialLevel={profile.level} /></div>
-          {page === "progress" && <ProgressPage profile={profile} levelIndex={currentLevelIndex} lessons={lessons} />}
-          {page === "profile" && <ProfilePage profile={profile} levelIndex={currentLevelIndex} levelProgress={progressPercent} completedInLevel={completedInLevel} totalQuestions={profile.completedQuestionIds.length} onSave={saveProfileDetails} />}
+          {page === "progress" && <ProgressPage key={profile.userId} profile={profile} levelIndex={currentLevelIndex} lessons={lessons} canTakePromotionExam={canTakePromotionExam} onPage={setPage} />}
+          {page === "profile" && <ProfilePage key={profile.userId} profile={profile} levelIndex={currentLevelIndex} lessons={lessons} onSave={saveProfileDetails} onPage={setPage} />}
           {page === "exam" && canTakePromotionExam && <PromotionExamPage level={profile.level} onExit={() => setPage("home")} onPassed={refreshProfileAfterPromotion} />}
-          <footer className="app-footer"><span>Pequenos passos também levam longe. <span className="footer-heart">♥</span></span><span>{page === "quiz" ? "O histórico deste quiz fica neste navegador." : "Seu progresso fica sincronizado com sua conta."}</span></footer>
+          <footer className="app-footer"><span>Pequenos passos também levam longe. <span className="footer-heart">♥</span></span><span>{page === "quiz" ? "O histórico deste quiz fica neste navegador." : page === "progress" || page === "profile" ? "Lições sincronizadas · histórico do Quiz neste navegador." : "Seu progresso fica sincronizado com sua conta."}</span></footer>
         </div>
       </div>
       {activeLesson && activeQuestion && <LessonModal key={`${activeQuestion.id}-${activeQuestion.type}`} replacingAudio={replacingAudio} practiceStatus={practiceStatus} audioSessionNotice={audioSessionNotice} onStudyWithoutAudio={studyWithoutAudio} lesson={activeLesson} question={activeQuestion} questionIndex={questionIndex} selectedAnswer={selectedAnswer} result={answerResult} feedback={answerFeedback} hint={answerHint} wrongAttempts={wrongAttempts} levelCompleted={canTakePromotionExam} saving={answerSaving} completed={profile.completedQuestionIds.includes(activeQuestion.id)} onSelect={(answer) => { setSelectedAnswer(answer); setAnswerResult(null); setAnswerFeedback(""); }} onSubmit={submitAnswer} onNext={nextQuestion} onClose={() => setActiveLesson(null)} onStartPromotionExam={() => { setActiveLesson(null); setPage("exam"); }} />}
@@ -1287,20 +1290,10 @@ function CardsPage({ level, cards, studentName }: { level: LevelId; cards: Flash
   );
 }
 
-function ProfilePage({
-  profile,
-  levelIndex,
-  levelProgress,
-  completedInLevel,
-  totalQuestions,
-  onSave,
-}: {
-  profile: Profile;
-  levelIndex: number;
-  levelProgress: number;
-  completedInLevel: number;
-  totalQuestions: number;
+function ProfilePage({ profile, levelIndex, lessons: allLessons, onSave, onPage }: {
+  profile: Profile; levelIndex: number; lessons: Lesson[];
   onSave: (name: string, goal: string, minutes: number) => Promise<void>;
+  onPage: (page: PageId) => void;
 }) {
   const [name, setName] = useState(profile.name);
   const [goal, setGoal] = useState(profile.goal);
@@ -1308,73 +1301,61 @@ function ProfilePage({
   const [saveBusy, setSaveBusy] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
   const [formError, setFormError] = useState("");
+  const pendingSave = useRef(false);
+  const quiz = useQuizHistory(profile.userId);
+  const quizSummary = summarizeQuizHistory(quiz.stats);
+  const current = summarizeLearning(allLessons, profile.completedQuestionIds).find((level) => level.code === profile.level)!;
+  const changed = name !== profile.name || goal !== profile.goal || minutes !== profile.dailyMinutes;
+  function clearMessage() { setSaveMessage(""); setFormError(""); }
+  function resetForm() { setName(profile.name); setGoal(profile.goal); setMinutes(profile.dailyMinutes); clearMessage(); }
   async function submitProfile(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setSaveBusy(true);
-    setFormError("");
-    setSaveMessage("");
-    try {
-      await onSave(name, goal, minutes);
-      setSaveMessage("Perfil atualizado com sucesso.");
-    } catch (error) {
-      setFormError(error instanceof Error ? error.message : "Não foi possível atualizar seu perfil.");
-    } finally {
-      setSaveBusy(false);
-    }
+    if (pendingSave.current) return;
+    if (name.trim().length < 2 || name.trim().length > 80) { setFormError("Informe um nome com 2 a 80 caracteres."); return; }
+    pendingSave.current = true; setSaveBusy(true); clearMessage();
+    try { await onSave(name.trim(), goal, minutes); setName(name.trim()); setSaveMessage("Tudo certo! Suas alterações foram salvas."); }
+    catch (error) { setFormError(error instanceof Error ? error.message : "Não foi possível atualizar seu perfil."); }
+    finally { pendingSave.current = false; setSaveBusy(false); }
   }
-
-  return (
-    <section className="inner-page profile-page">
-      <div className="page-heading">
-        <span className="eyebrow"><span className="live-dot" /> SEU ESPAÇO PESSOAL</span>
-        <h1>Seu perfil, <span>sua jornada.</span></h1>
-        <p>Cuide dos seus dados e acompanhe como seu inglês está evoluindo.</p>
-      </div>
-
-      <div className="profile-overview">
-        <div className="profile-overview-avatar">{profile.name.charAt(0).toUpperCase()}</div>
-        <div className="profile-overview-copy">
-          <span className="section-kicker">NÍVEL ATUAL</span>
-          <h2>{profile.level} <span>·</span> {profile.levelTitle}</h2>
-          <p>{levels[levelIndex]?.subtitle} · {levelProgress}% do nível concluído</p>
-        </div>
-        <div className="profile-overview-progress"><div className="progress-track"><span style={{ width: `${levelProgress}%` }} /></div><small>{completedInLevel} lições concluídas neste nível</small></div>
-      </div>
-
-      <div className="profile-layout">
-        <form className="profile-panel profile-form" onSubmit={submitProfile}>
-          <div className="section-title-row"><div><span className="section-kicker">INFORMAÇÕES PESSOAIS</span><h2>Seus dados</h2></div></div>
-          <label htmlFor="profile-name">Nome</label>
-          <input id="profile-name" value={name} onChange={(event) => setName(event.target.value)} required minLength={2} maxLength={80} />
-          <label htmlFor="profile-email">E-mail</label>
-          <input id="profile-email" type="email" value={profile.email} readOnly />
-          <small className="profile-field-note">O e-mail da conta é gerenciado pelas configurações de autenticação.</small>
-          <label htmlFor="profile-goal">Seu objetivo</label>
-          <select id="profile-goal" value={goal} onChange={(event) => setGoal(event.target.value)}>{goals.map((option) => <option key={option}>{option}</option>)}</select>
-          <label htmlFor="profile-minutes">Tempo diário de estudo</label>
-          <select id="profile-minutes" value={minutes} onChange={(event) => setMinutes(Number(event.target.value))}><option value={10}>10 minutos</option><option value={20}>20 minutos</option><option value={30}>30 minutos</option><option value={45}>45 minutos</option></select>
-          {formError && <p className="form-message form-error" role="alert">{formError}</p>}
-          {saveMessage && <p className="form-message form-success" role="status">{saveMessage}</p>}
-          <button className="button button-primary" type="submit" disabled={saveBusy}>{saveBusy ? "Salvando..." : "Salvar alterações"} <span>↗</span></button>
-        </form>
-
-        <div className="profile-side-column">
-          <section className="profile-panel profile-stats-panel">
-            <div className="section-title-row"><div><span className="section-kicker">SEU PROGRESSO</span><h2>Conquistas até aqui</h2></div></div>
-            <div className="profile-stat-row"><span className="stat-icon stat-mint">✦</span><div><strong>{profile.completedLessons.length}</strong><small>lições concluídas</small></div></div>
-            <div className="profile-stat-row"><span className="stat-icon stat-violet">✓</span><div><strong>{totalQuestions}</strong><small>questões respondidas corretamente</small></div></div>
-            <div className="profile-stat-row"><span className="stat-icon stat-pink">↗</span><div><strong>{levelIndex + 1} <small>/ 6</small></strong><small>nível atual na jornada</small></div></div>
-          </section>
-
-        </div>
-      </div>
-    </section>
-  );
+  return <section className="inner-page learner-account">
+    <div className="journey-page-heading"><div><span className="eyebrow"><span className="live-dot" /> MEU PERFIL</span><h1>Seu inglês. <span>Do seu jeito.</span></h1><p>Uma rotina que combina com você começa pelas suas escolhas.</p></div><button className="button button-dark" onClick={() => onPage("progress")}>Meu progresso <span>↗</span></button></div>
+    <section className="account-identity"><div className="account-avatar" aria-hidden="true">{profile.name.trim().charAt(0).toUpperCase()}</div><div className="account-identity-copy"><span className="section-kicker">BOM TER VOCÊ POR AQUI</span><h2>{profile.name}</h2><p>{profile.email}</p></div><div className="account-level-badge"><strong>{profile.level}</strong><div><b>{profile.levelTitle}</b><span>Etapa {levelIndex + 1} de 6</span></div></div></section>
+    <div className="account-layout">
+      <form className="journey-panel account-form" onSubmit={submitProfile} aria-label="Editar meu perfil">
+        <div className="journey-section-heading"><div><span className="section-kicker">SUAS INFORMAÇÕES</span><h2>Vamos deixar tudo com a sua cara.</h2></div><span className="account-form-icon" aria-hidden="true">◎</span></div>
+        <fieldset disabled={saveBusy}><legend>Dados da conta</legend><label htmlFor="profile-name">Como podemos chamar você?</label><input id="profile-name" autoComplete="name" value={name} onChange={(event) => { setName(event.target.value); clearMessage(); }} required minLength={2} maxLength={80} /><label htmlFor="profile-email">Seu e-mail</label><input id="profile-email" type="email" autoComplete="email" value={profile.email} readOnly aria-describedby="account-email-note" /><p id="account-email-note" className="account-field-note">Este é o e-mail usado para entrar na sua conta.</p></fieldset>
+        <fieldset disabled={saveBusy}><legend>Sua rotina de aprendizado</legend><label htmlFor="profile-goal">O que motiva você a aprender inglês?</label><select id="profile-goal" value={goal} onChange={(event) => { setGoal(event.target.value); clearMessage(); }}>{!goals.includes(goal) && <option>{goal}</option>}{goals.map((option) => <option key={option}>{option}</option>)}</select><label htmlFor="profile-minutes">Quanto tempo quer reservar por dia?</label><select id="profile-minutes" value={minutes} onChange={(event) => { setMinutes(Number(event.target.value)); clearMessage(); }}>{![10,20,30,45].includes(minutes) && <option value={minutes}>{minutes} minutos</option>}{[10,20,30,45].map((value) => <option key={value} value={value}>{value} minutos</option>)}</select><p className="account-field-note">Escolha uma meta que caiba no seu dia. Você pode ajustá-la quando precisar.</p></fieldset>
+        {formError && <p className="form-message form-error" role="alert">{formError}</p>}{saveMessage && <p className="form-message form-success" role="status">{saveMessage}</p>}
+        <div className="account-save-row"><button className="button button-primary" type="submit" disabled={saveBusy || !changed}>{saveBusy ? "Salvando…" : "Salvar alterações"}<span>✓</span></button><button className="journey-text-button" type="button" disabled={saveBusy || !changed} onClick={resetForm}>Desfazer alterações</button></div><p className="account-save-note">{changed ? "Você tem alterações para salvar." : "Seu perfil está atualizado."}</p>
+      </form>
+      <aside className="account-side-column" aria-label="Resumo do aprendizado">
+        <section className="journey-panel account-routine"><span className="journey-metric-icon" aria-hidden="true">◷</span><span className="section-kicker">UM POUCO TODO DIA</span><h2>{profile.dailyMinutes}<small> min / dia</small></h2><p>Sua meta pessoal de estudo</p><div className="account-goal"><span>SEU OBJETIVO</span><strong>{profile.goal}</strong></div></section>
+        <section className="journey-panel"><div className="journey-section-heading"><div><span className="section-kicker">SEUS PRÓXIMOS PASSOS</span><h2>Em movimento.</h2></div><span className="journey-level-pill">{profile.level}</span></div><div className="journey-progress-meta"><span>Questões do nível</span><strong>{current.completedQuestions} / {current.totalQuestions}</strong></div><div className="journey-track" role="progressbar" aria-label={`Questões concluídas em ${profile.level}`} aria-valuenow={current.percent} aria-valuemin={0} aria-valuemax={100}><span style={{ width: `${current.percent}%` }} /></div><p className="account-field-note">{current.totalQuestions ? `${current.percent}% das questões publicadas deste nível acertadas.` : "As questões deste nível aparecerão aqui quando forem publicadas."}</p><dl className="account-achievements"><div><dt>Lições concluídas</dt><dd>{new Set(profile.completedLessons).size}</dd></div><div><dt>Questões acertadas</dt><dd>{new Set(profile.completedQuestionIds).size}</dd></div><div><dt>Quizzes concluídos</dt><dd>{quiz.ready && !quiz.unavailable ? quizSummary.rounds : "—"}</dd></div></dl><p className="journey-history-note">Quizzes: histórico deste navegador.{quiz.unavailable ? " O armazenamento está indisponível." : ""}</p><button className="journey-text-button" onClick={() => onPage("progress")}>Ver todos os resultados <span>→</span></button></section>
+      </aside>
+    </div>
+  </section>;
 }
 
-function ProgressPage({ profile, levelIndex, lessons: allLessons }: { profile: Profile; levelIndex: number; lessons: Lesson[] }) {
-  const totalCompleted = profile.completedQuestionIds.length;
-  return <section className="inner-page progress-page"><div className="page-heading"><span className="eyebrow"><span className="live-dot" /> SUA EVOLUÇÃO</span><h1>Olha só até onde <span>você chegou.</span></h1><p>Progresso de verdade é feito de pequenas conquistas repetidas.</p></div><div className="progress-summary"><article className="progress-stat"><span className="stat-icon stat-mint">✦</span><strong>{profile.completedLessons.length}</strong><small>lições concluídas</small></article><article className="progress-stat"><span className="stat-icon stat-violet">↗</span><strong>{levelIndex + 1}<small> / 6</small></strong><small>nível atual: {profile.level}</small></article><article className="progress-stat"><span className="stat-icon stat-pink">◷</span><strong>{totalCompleted}<small> questões</small></strong><small>respondidas corretamente</small></article></div><div className="progress-map"><div className="section-title-row"><div><span className="section-kicker">SEU CAMINHO</span><h2>Do primeiro hello ao próximo nível</h2></div><span className="tiny-count">{Math.round((levelIndex / 5) * 100)}% da jornada</span></div><div className="map-levels">{levels.map((level, index) => { const reached = index <= levelIndex; const complete = index < levelIndex; const levelLessons = allLessons.filter((lesson) => lesson.level === level.id); const done = levelLessons.filter((lesson) => profile.completedLessons.includes(lesson.id)).length; return <div key={level.id} className={`map-level ${reached ? "map-reached" : ""} ${complete ? "map-complete" : ""}`}><span className="map-marker">{complete ? "✓" : reached ? "✦" : "·"}</span><div className="map-level-content"><div><strong>{level.id} <span>·</span> {level.name}</strong><small>{level.subtitle}</small></div><span className="map-level-status">{complete ? "Concluído" : reached ? `${done} / ${levelLessons.length} lições` : "A desbloquear"}</span></div></div>; })}</div></div><div className="progress-encouragement"><span>🌱</span><div><strong>Consistência acima de velocidade.</strong><p>Seu objetivo — {profile.goal.toLowerCase()} — começa com cada pequena sessão.</p></div></div></section>;
+function ProgressPage({ profile, levelIndex, lessons: allLessons, canTakePromotionExam, onPage }: {
+  profile: Profile; levelIndex: number; lessons: Lesson[]; canTakePromotionExam: boolean; onPage: (page: PageId) => void;
+}) {
+  const quiz = useQuizHistory(profile.userId);
+  const quizSummary = summarizeQuizHistory(quiz.stats);
+  const learning = summarizeLearning(allLessons, profile.completedQuestionIds);
+  const current = learning.find((level) => level.code === profile.level)!;
+  const quizAvailable = quiz.ready && !quiz.unavailable;
+  const quizNote = quiz.unavailable ? "Histórico indisponível" : quiz.ready ? "Neste navegador" : "Carregando histórico…";
+  const required = Math.ceil(current.totalQuestions / 2);
+  const remaining = Math.max(0, required - current.completedQuestions);
+  return <section className="inner-page learner-progress">
+    <div className="journey-page-heading"><div><span className="eyebrow"><span className="live-dot" /> MEU PROGRESSO</span><h1>Pequenos passos. <span>Grandes conquistas.</span></h1><p>Acompanhe o que você já aprendeu e escolha seu próximo desafio.</p></div><button className="button button-dark" onClick={() => onPage("lessons")}>Continuar estudando <span>↗</span></button></div>
+    <section className="journey-current-level"><div><span className="section-kicker">SUA JORNADA CONTINUA</span><h2>{profile.levelTitle}<span>.</span></h2><p>{levels[levelIndex]?.subtitle}. No seu tempo, uma questão de cada vez.</p><div className="journey-progress-meta"><span>Questões acertadas neste nível</span><strong>{current.completedQuestions} <small>/ {current.totalQuestions}</small></strong></div><div className="journey-track" role="progressbar" aria-label={`Progresso das questões de ${profile.level}`} aria-valuenow={current.percent} aria-valuemin={0} aria-valuemax={100}><span style={{ width: `${current.percent}%` }} /></div><small>{current.totalQuestions ? `${current.percent}% das questões concluídas` : "Conteúdo em preparação"} · {current.completedLessons} de {current.totalLessons} {current.totalLessons === 1 ? "lição concluída" : "lições concluídas"}</small></div><div className="journey-current-art" aria-hidden="true"><span>SEU NÍVEL ATUAL</span><strong>{profile.level}</strong><small>Etapa {levelIndex + 1} de 6</small></div></section>
+    <div className="journey-metric-grid"><JourneyMetric icon="✓" label="Questões acertadas" value={new Set(profile.completedQuestionIds).size} note="Nas lições da sua conta" /><JourneyMetric icon="▤" label="Lições concluídas" value={new Set(profile.completedLessons).size} note="Uma conquista de cada vez" tone="violet" /><JourneyMetric icon="✦" label="Quizzes concluídos" value={quizAvailable ? quizSummary.rounds : "—"} note={quizNote} tone="gold" /><JourneyMetric icon="Aa" label="Perguntas no Quiz" value={quizAvailable ? quizSummary.questions : "—"} note={quizAvailable ? "Em rodadas concluídas" : quizNote} tone="pink" /></div>
+    <QuizHistoryPanel stats={quiz.stats} ready={quiz.ready} unavailable={quiz.unavailable} onPractice={() => onPage("quiz")} />
+    <div className="journey-bottom-layout"><section className="journey-panel"><div className="journey-section-heading"><div><span className="section-kicker">DO A1 AO C2</span><h2>Seu caminho no inglês</h2><p>As barras mostram as questões que você acertou em cada nível.</p></div></div><div className="journey-level-list">{learning.map((row, index) => <article key={row.code} className={row.code === profile.level ? "journey-level-current" : ""}><div className="journey-level-code">{row.code}</div><div className="journey-level-content"><div><h3>{levels[index].name}</h3><span>{row.code === profile.level ? "Seu nível" : index < levelIndex ? "Etapa anterior" : "Próxima etapa"}</span></div><p>{row.totalQuestions ? `${row.completedQuestions} / ${row.totalQuestions} questões · ${row.completedLessons} / ${row.totalLessons} lições` : "Sem questões publicadas"}</p><div className="journey-track" role="progressbar" aria-label={`Questões de ${row.code}`} aria-valuenow={row.percent} aria-valuemin={0} aria-valuemax={100}><span style={{ width: `${row.percent}%` }} /></div></div><strong className="journey-level-percent">{row.totalQuestions ? `${row.percent}%` : "—"}</strong></article>)}</div></section>
+      <aside className="journey-next-column"><section className="journey-panel journey-next-step"><span className="journey-metric-icon" aria-hidden="true">↗</span><span className="section-kicker">SEU PRÓXIMO PASSO</span><h2>{profile.level === "C2" ? "Seu repertório pode ir além." : canTakePromotionExam ? "Pronto para avançar?" : "Continue construindo sua base."}</h2><p>{profile.level === "C2" ? "Explore mais vocabulário e continue praticando o conteúdo do seu nível." : canTakePromotionExam ? "Você já cumpriu o requisito de questões para fazer a prova de avanço." : current.totalQuestions ? `Acerte mais ${remaining} ${remaining === 1 ? "questão" : "questões"} deste nível para liberar a prova de avanço.` : "Explore as lições e acompanhe seu progresso quando novas questões forem publicadas."}</p><button className="button button-primary" onClick={() => onPage(profile.level === "C2" ? "quiz" : canTakePromotionExam ? "exam" : "lessons")}>{profile.level === "C2" ? "Praticar vocabulário" : canTakePromotionExam ? "Fazer prova de avanço" : "Ver minhas lições"}<span>→</span></button></section><section className="journey-panel journey-goal-card"><span className="section-kicker">O QUE MOVE VOCÊ</span><h2>{profile.goal}</h2><p><b>{profile.dailyMinutes} minutos por dia</b> é a meta que você escolheu para sua rotina.</p><button className="journey-text-button" onClick={() => onPage("profile")}>Ajustar meu objetivo <span>→</span></button></section></aside>
+    </div>
+  </section>;
 }
 
 function PromotionExamPage({ level, onExit, onPassed }: {
