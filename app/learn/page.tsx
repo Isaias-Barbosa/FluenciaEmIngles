@@ -1,6 +1,8 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { LessonProgress, type PracticeStatus } from "./components/lesson-progress";
+import { useAnswerSounds } from "./components/use-answer-sounds";
 import { LessonAudioPlayer } from "./components/lesson-audio-player";
 import { AiHelpButton } from "./components/ai-help-button";
 import { textSession } from "@/lib/learning/text-session";
@@ -196,6 +198,9 @@ export default function Dashboard() {
   const [placementResult, setPlacementResult] = useState<ProficiencyExamResult | null>(null);
   const [placementBusy, setPlacementBusy] = useState(false);
   const [activeLesson, setActiveLesson] = useState<Lesson | null>(null);
+  const answerSounds = useAnswerSounds(activeLesson?.id ?? null);
+  const answerPending = useRef(false);
+  const activeQuestionId = useRef<string | null>(null);
   const [activeVideo, setActiveVideo] = useState<LearningVideo | null>(null);
   const [questionIndex, setQuestionIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState("");
@@ -526,6 +531,16 @@ export default function Dashboard() {
   );
   const canTakePromotionExam = profile?.level !== "C2" && promotionProgress(currentLessons, profile?.completedQuestionIds ?? []).eligible;
   const activeQuestion = activeLesson?.questions[questionIndex] ?? null;
+  activeQuestionId.current = activeQuestion?.id ?? null;
+  const activeCompletedIds = [...new Set([
+    ...(profile?.completedQuestionIds ?? []),
+    ...(answerResult === "correct" && activeQuestion ? [activeQuestion.id] : []),
+  ])];
+  const practiceStatus: PracticeStatus = {
+    completedIds: activeCompletedIds,
+    soundsEnabled: answerSounds.enabled,
+    onToggleSounds: answerSounds.toggle,
+  };
   const currentLevelIndex = levels.findIndex((level) => level.id === profile?.level);
 
   async function handleAuth(event: FormEvent<HTMLFormElement>) {
@@ -634,6 +649,7 @@ export default function Dashboard() {
       setAudioSessionNotice("Não há questões de texto suficientes neste nível para substituir todos os áudios agora.");
       return;
     }
+    answerSounds.mute();
     setActiveLesson({ ...activeLesson, questions });
     setSelectedAnswer("");
     setAnswerResult(null);
@@ -659,7 +675,9 @@ export default function Dashboard() {
   }
 
   async function submitAnswer() {
-    if (!supabase || !profile || !session || !activeQuestion || !selectedAnswer.trim()) return;
+    if (!supabase || !profile || !session || !activeQuestion || !selectedAnswer.trim() || answerPending.current || profile.completedQuestionIds.includes(activeQuestion.id) || answerResult === "correct") return;
+    answerPending.current = true;
+    answerSounds.prepare();
     setAnswerSaving(true);
     setAppError("");
     try {
@@ -671,6 +689,8 @@ export default function Dashboard() {
       const result = data[0];
       if (!result) throw new Error("O Supabase não retornou o resultado da correção.");
 
+      if (activeQuestionId.current !== activeQuestion.id) return;
+      answerSounds.play(result.is_correct ? "correct" : "incorrect");
       setAnswerResult(result.is_correct ? "correct" : "incorrect");
       setAnswerFeedback(result.is_correct ? `Muito bem!\nResposta: ${selectedAnswer}\n${result.explanation || "Use esta resposta para continuar praticando."}${activeQuestion.hint ? `\nEm outros contextos: ${activeQuestion.hint}` : ""}` : result.explanation || "");
       setAnswerHint(result.hint || "");
@@ -681,6 +701,7 @@ export default function Dashboard() {
     } catch (error) {
       setAppError(error instanceof Error ? error.message : "Não foi possível enviar sua resposta.");
     } finally {
+      answerPending.current = false;
       setAnswerSaving(false);
     }
   }
@@ -883,7 +904,7 @@ export default function Dashboard() {
           <footer className="app-footer"><span>Pequenos passos também levam longe. <span className="footer-heart">♥</span></span><span>Seu progresso fica sincronizado com sua conta.</span></footer>
         </div>
       </div>
-      {activeLesson && activeQuestion && <LessonModal completedCount={activeLesson.questions.filter((question) => profile.completedQuestionIds.includes(question.id)).length} audioSessionNotice={audioSessionNotice} onStudyWithoutAudio={studyWithoutAudio} lesson={activeLesson} question={activeQuestion} questionIndex={questionIndex} selectedAnswer={selectedAnswer} result={answerResult} feedback={answerFeedback} hint={answerHint} wrongAttempts={wrongAttempts} levelCompleted={canTakePromotionExam} saving={answerSaving} completed={profile.completedQuestionIds.includes(activeQuestion.id)} onSelect={(answer) => { setSelectedAnswer(answer); setAnswerResult(null); setAnswerFeedback(""); }} onSubmit={submitAnswer} onNext={nextQuestion} onClose={() => setActiveLesson(null)} onStartPromotionExam={() => { setActiveLesson(null); setPage("exam"); }} />}
+      {activeLesson && activeQuestion && <LessonModal practiceStatus={practiceStatus} audioSessionNotice={audioSessionNotice} onStudyWithoutAudio={studyWithoutAudio} lesson={activeLesson} question={activeQuestion} questionIndex={questionIndex} selectedAnswer={selectedAnswer} result={answerResult} feedback={answerFeedback} hint={answerHint} wrongAttempts={wrongAttempts} levelCompleted={canTakePromotionExam} saving={answerSaving} completed={profile.completedQuestionIds.includes(activeQuestion.id)} onSelect={(answer) => { setSelectedAnswer(answer); setAnswerResult(null); setAnswerFeedback(""); }} onSubmit={submitAnswer} onNext={nextQuestion} onClose={() => setActiveLesson(null)} onStartPromotionExam={() => { setActiveLesson(null); setPage("exam"); }} />}
       {activeVideo && <VideoPlayerModal video={activeVideo} onClose={() => setActiveVideo(null)} />}
     </main>
   );
@@ -1420,10 +1441,10 @@ function ReadingPassage({ passage }: { passage: string | null }) {
   return <section className="reading-passage" aria-label="Texto para leitura"><span className="section-kicker">LEIA O TEXTO</span><p lang="en">{passage}</p></section>;
 }
 
-function LessonModal({ audioSessionNotice, onStudyWithoutAudio, completedCount, lesson, question, questionIndex, selectedAnswer, result, feedback, hint, wrongAttempts, levelCompleted, saving, completed, onSelect, onSubmit, onNext, onClose, onStartPromotionExam }: {
+function LessonModal({ practiceStatus, audioSessionNotice, onStudyWithoutAudio, lesson, question, questionIndex, selectedAnswer, result, feedback, hint, wrongAttempts, levelCompleted, saving, completed, onSelect, onSubmit, onNext, onClose, onStartPromotionExam }: {
+  practiceStatus: PracticeStatus;
   audioSessionNotice: string;
   onStudyWithoutAudio: () => void;
-  completedCount: number;
   lesson: Lesson;
   question: LessonQuestion;
   questionIndex: number;
@@ -1468,7 +1489,7 @@ function LessonModal({ audioSessionNotice, onStudyWithoutAudio, completedCount, 
   }
 
   if (question.type === "word_order") {
-    return <WordOrderModal audioSessionNotice={audioSessionNotice} onStudyWithoutAudio={onStudyWithoutAudio} completedCount={completedCount} lesson={lesson} question={question} questionIndex={questionIndex} selectedAnswer={selectedAnswer} result={result} feedback={feedback} hint={hint} levelCompleted={levelCompleted} saving={saving} completed={completed} onSelect={onSelect} onSubmit={onSubmit} onNext={onNext} onClose={onClose} onStartPromotionExam={onStartPromotionExam} />;
+    return <WordOrderModal practiceStatus={practiceStatus} audioSessionNotice={audioSessionNotice} onStudyWithoutAudio={onStudyWithoutAudio} lesson={lesson} question={question} questionIndex={questionIndex} selectedAnswer={selectedAnswer} result={result} feedback={feedback} hint={hint} levelCompleted={levelCompleted} saving={saving} completed={completed} onSelect={onSelect} onSubmit={onSubmit} onNext={onNext} onClose={onClose} onStartPromotionExam={onStartPromotionExam} />;
   }
 
   async function loadListeningTranscript() {
@@ -1493,13 +1514,13 @@ function LessonModal({ audioSessionNotice, onStudyWithoutAudio, completedCount, 
     }
   }
 
-  return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><section className="lesson-modal" role="dialog" aria-modal="true" aria-labelledby="lesson-title"><button className="modal-close" onClick={onClose} aria-label="Fechar lição">×</button><span className="eyebrow"><span className="live-dot" /> {lesson.category.toUpperCase()} · {lesson.duration} MIN</span><div className="modal-step"><span>QUESTÃO {String(questionIndex + 1).padStart(2, "0")} DE {String(lesson.questions.length).padStart(2, "0")}</span><span>{completedCount} de {lesson.questions.length} questões feitas</span></div><h2 id="lesson-title">{lesson.title}</h2><p className="modal-description">{lesson.description}</p>{audioSessionNotice && <p className="audio-session-notice" role="status">{audioSessionNotice}</p>}<div className="exercise-box"><span className="exercise-label">{question.type === "listening" ? "OUÇA E ESCREVA" : question.type === "fill_blank" ? "COMPLETE A FRASE" : "HORA DE PRATICAR"}</span>{(question.type === "listening" || question.audioUrl) && <><LessonAudioPlayer key={question.id} questionId={question.id} fallbackUrl={question.audioUrl} onEnded={() => setCompletedAudioPlays((plays) => plays + 1)} /><button className="study-without-audio" type="button" disabled={saving || answeredCorrectly} onClick={onStudyWithoutAudio}>Não posso ouvir áudio agora</button></>}{question.type === "listening" && completedAudioPlays >= 5 && !listeningTranscript && <button className="listening-transcript-button" type="button" onClick={() => void loadListeningTranscript()} disabled={transcriptLoading}>{transcriptLoading ? "Carregando texto..." : "Mudar para texto"}</button>}{transcriptError && <p className="form-message form-error" role="alert">{transcriptError}</p>}{listeningTranscript && <p className="listening-transcript"><strong>Texto em inglês:</strong> {listeningTranscript}</p>}<ReadingPassage passage={question.passage} /><h3>{question.prompt}</h3><div className="answer-options">{question.type === "multiple_choice" ? question.options.map((option, index) => <button key={option} className={`answer-option ${selectedAnswer === option ? "answer-selected" : ""} ${result === "incorrect" && selectedAnswer === option ? "answer-incorrect" : ""}`} onClick={() => onSelect(option)} disabled={answeredCorrectly}><span>{String.fromCharCode(65 + index)}</span>{option}<i>{result === "correct" && selectedAnswer === option ? "✓" : ""}</i></button>) : <input className="answer-text-input" value={selectedAnswer} onChange={(event) => onSelect(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && selectedAnswer.trim()) onSubmit(); }} placeholder={question.type === "listening" ? "Digite o que você ouviu" : "Digite sua resposta"} disabled={answeredCorrectly} />}</div>{result === "incorrect" && <p className="answer-feedback feedback-error">{feedback || "Quase! Tente outra vez."} {wrongAttempts > 0 && !hint && `(${wrongAttempts} de 5 tentativas)`}</p>}{result === "incorrect" && hint && <p className="answer-hint"><strong>Dica após {wrongAttempts} tentativas:</strong> {hint}</p>}{answeredCorrectly && <p className="answer-feedback feedback-success">{feedback || "Muito bem! Resposta certa."} {levelCompleted ? "Você já concluiu pelo menos metade das questões do nível. A prova de avanço está liberada." : "Seu progresso foi atualizado. ✨"}</p>}</div>{!answeredCorrectly && <AiHelpButton />}{!answeredCorrectly ? <button className="button button-primary modal-submit" onClick={onSubmit} disabled={!selectedAnswer.trim() || saving}>{saving ? "Conferindo..." : "Conferir resposta"} <span>→</span></button> : levelCompleted ? <button className="button button-primary modal-submit" onClick={onStartPromotionExam}>Fazer prova de avanço <span>→</span></button> : <button className="button button-primary modal-submit" onClick={isLastQuestion ? onClose : onNext}>{isLastQuestion ? "Concluir lição" : "Próxima questão"} <span>→</span></button>}<div className="modal-footer-note"><span>◈</span> Errar faz parte. Você pode tentar quantas vezes quiser.</div></section></div>;
+  return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><section className="lesson-modal" role="dialog" aria-modal="true" aria-labelledby="lesson-title"><button className="modal-close" onClick={onClose} aria-label="Fechar lição">×</button><span className="eyebrow"><span className="live-dot" /> {lesson.category.toUpperCase()} · {lesson.duration} MIN</span><LessonProgress questions={lesson.questions} questionIndex={questionIndex} status={practiceStatus} /><h2 id="lesson-title">{lesson.title}</h2><p className="modal-description">{lesson.description}</p>{audioSessionNotice && <p className="audio-session-notice" role="status">{audioSessionNotice}</p>}<div className={`exercise-box practice-exercise ${answeredCorrectly ? "practice-exercise-correct" : result === "incorrect" ? "practice-exercise-incorrect" : ""}`}><span className="exercise-label">{question.type === "listening" ? "OUÇA E ESCREVA" : question.type === "fill_blank" ? "COMPLETE A FRASE" : "HORA DE PRATICAR"}</span>{(question.type === "listening" || question.audioUrl) && <><LessonAudioPlayer key={question.id} questionId={question.id} fallbackUrl={question.audioUrl} onEnded={() => setCompletedAudioPlays((plays) => plays + 1)} /><button className="study-without-audio" type="button" disabled={saving || answeredCorrectly} onClick={onStudyWithoutAudio}>Não posso ouvir áudio agora</button></>}{question.type === "listening" && completedAudioPlays >= 5 && !listeningTranscript && <button className="listening-transcript-button" type="button" onClick={() => void loadListeningTranscript()} disabled={transcriptLoading}>{transcriptLoading ? "Carregando texto..." : "Mudar para texto"}</button>}{transcriptError && <p className="form-message form-error" role="alert">{transcriptError}</p>}{listeningTranscript && <p className="listening-transcript"><strong>Texto em inglês:</strong> {listeningTranscript}</p>}<ReadingPassage passage={question.passage} /><h3>{question.prompt}</h3><div className="answer-options">{question.type === "multiple_choice" ? question.options.map((option, index) => <button key={option} className={`answer-option ${selectedAnswer === option ? "answer-selected" : ""} ${result === "incorrect" && selectedAnswer === option ? "answer-incorrect" : ""}`} onClick={() => onSelect(option)} disabled={answeredCorrectly || saving}><span>{String.fromCharCode(65 + index)}</span>{option}<i>{result === "correct" && selectedAnswer === option ? "✓" : ""}</i></button>) : <input className="answer-text-input" value={selectedAnswer} onChange={(event) => onSelect(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && selectedAnswer.trim()) onSubmit(); }} placeholder={question.type === "listening" ? "Digite o que você ouviu" : "Digite sua resposta"} disabled={answeredCorrectly || saving} />}</div>{result === "incorrect" && <p className="answer-feedback feedback-error" role="status"><strong>✕ Ainda não foi desta vez.</strong> {feedback || "Tente outra vez; você consegue."} {wrongAttempts > 0 && !hint && `(${wrongAttempts} de 5 tentativas)`}</p>}{result === "incorrect" && hint && <p className="answer-hint"><strong>Dica após {wrongAttempts} tentativas:</strong> {hint}</p>}{answeredCorrectly && <p className="answer-feedback feedback-success" role="status"><strong>✓ Resposta certa!</strong> {feedback || "Muito bem! Resposta certa."} {levelCompleted ? "Você já concluiu pelo menos metade das questões do nível. A prova de avanço está liberada." : "Seu progresso foi atualizado. ✨"}</p>}</div>{!answeredCorrectly && <AiHelpButton />}{!answeredCorrectly ? <button className="button button-primary modal-submit" onClick={onSubmit} disabled={!selectedAnswer.trim() || saving}>{saving ? "Conferindo..." : "Conferir resposta"} <span>→</span></button> : levelCompleted ? <button className="button button-primary modal-submit" onClick={onStartPromotionExam}>Fazer prova de avanço <span>→</span></button> : <button className="button button-primary modal-submit" onClick={isLastQuestion ? onClose : onNext}>{isLastQuestion ? "Concluir lição" : "Próxima questão"} <span>→</span></button>}<div className="modal-footer-note"><span>◈</span> Errar faz parte. Você pode tentar quantas vezes quiser.</div></section></div>;
 }
 
-function WordOrderModal({ audioSessionNotice, completedCount, lesson, question, questionIndex, selectedAnswer, result, feedback, hint, levelCompleted, saving, completed, onSelect, onSubmit, onNext, onClose, onStartPromotionExam }: {
+function WordOrderModal({ practiceStatus, audioSessionNotice, lesson, question, questionIndex, selectedAnswer, result, feedback, hint, levelCompleted, saving, completed, onSelect, onSubmit, onNext, onClose, onStartPromotionExam }: {
+  practiceStatus: PracticeStatus;
   audioSessionNotice: string;
   onStudyWithoutAudio: () => void;
-  completedCount: number;
   lesson: Lesson;
   question: LessonQuestion;
   questionIndex: number;
@@ -1534,5 +1555,5 @@ function WordOrderModal({ audioSessionNotice, completedCount, lesson, question, 
     onSelect(next.join(" "));
   }
 
-  return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><section className="lesson-modal word-order-modal" role="dialog" aria-modal="true" aria-labelledby="word-order-title"><button className="modal-close" onClick={onClose} aria-label="Fechar lição">×</button><span className="eyebrow"><span className="live-dot" /> {lesson.category.toUpperCase()} · {lesson.duration} MIN</span><div className="modal-step"><span>QUESTÃO {String(questionIndex + 1).padStart(2, "0")} DE {String(lesson.questions.length).padStart(2, "0")}</span><span>{completedCount} de {lesson.questions.length} questões feitas</span></div><h2 id="word-order-title">{lesson.title}</h2><p className="modal-description">{lesson.description}</p>{audioSessionNotice && <p className="audio-session-notice" role="status">{audioSessionNotice}</p>}<div className="exercise-box"><span className="exercise-label">ORGANIZE AS PALAVRAS</span><h3>{question.prompt}</h3><div className="word-order-answer" aria-label="Resposta montada">{words.length ? words.map((word, index) => <button key={`${word}-${index}`} type="button" onClick={() => removeWord(index)} disabled={answeredCorrectly}>{word}</button>) : <span>As palavras escolhidas aparecem aqui</span>}</div><div className="word-bank">{question.options.map((word, index) => <button key={`${word}-${index}`} type="button" onClick={() => addWord(word)} disabled={answeredCorrectly || words.filter((selectedWord) => selectedWord === word).length >= question.options.filter((optionWord) => optionWord === word).length}>{word}</button>)}</div><small className="word-order-note">Clique em uma palavra da frase para removê-la.</small>{result === "incorrect" && <p className="answer-feedback feedback-error">{feedback || "Quase! Tente outra vez."}</p>}{answeredCorrectly && <div className="answer-feedback feedback-success"><strong>Muito bem!</strong><span>Resposta: {selectedAnswer}</span>{feedback && <span>{feedback}</span>}{(question.hint || hint) && <span className="answer-context-tip"><b>Em outros contextos:</b> {question.hint || hint}</span>}</div>}</div>{!answeredCorrectly && <AiHelpButton />}{!answeredCorrectly ? <button className="button button-primary modal-submit" onClick={onSubmit} disabled={!selectedAnswer.trim() || saving}>{saving ? "Conferindo..." : "Verificar resposta"} <span>→</span></button> : levelCompleted ? <button className="button button-primary modal-submit" onClick={onStartPromotionExam}>Fazer prova de avanço <span>→</span></button> : <button className="button button-primary modal-submit" onClick={isLastQuestion ? onClose : onNext}>{isLastQuestion ? "Concluir lição" : "Próxima questão"} <span>→</span></button>}<div className="modal-footer-note"><span>◈</span> Monte a frase e confira quando estiver pronto.</div></section></div>;
+  return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><section className="lesson-modal word-order-modal" role="dialog" aria-modal="true" aria-labelledby="word-order-title"><button className="modal-close" onClick={onClose} aria-label="Fechar lição">×</button><span className="eyebrow"><span className="live-dot" /> {lesson.category.toUpperCase()} · {lesson.duration} MIN</span><LessonProgress questions={lesson.questions} questionIndex={questionIndex} status={practiceStatus} /><h2 id="word-order-title">{lesson.title}</h2><p className="modal-description">{lesson.description}</p>{audioSessionNotice && <p className="audio-session-notice" role="status">{audioSessionNotice}</p>}<div className={`exercise-box practice-exercise ${answeredCorrectly ? "practice-exercise-correct" : result === "incorrect" ? "practice-exercise-incorrect" : ""}`}><span className="exercise-label">ORGANIZE AS PALAVRAS</span><h3>{question.prompt}</h3><div className="word-order-answer" aria-label="Resposta montada">{words.length ? words.map((word, index) => <button key={`${word}-${index}`} type="button" onClick={() => removeWord(index)} disabled={answeredCorrectly || saving}>{word}</button>) : <span>As palavras escolhidas aparecem aqui</span>}</div><div className="word-bank">{question.options.map((word, index) => <button key={`${word}-${index}`} type="button" onClick={() => addWord(word)} disabled={answeredCorrectly || saving || words.filter((selectedWord) => selectedWord === word).length >= question.options.filter((optionWord) => optionWord === word).length}>{word}</button>)}</div><small className="word-order-note">Clique em uma palavra da frase para removê-la.</small>{result === "incorrect" && <p className="answer-feedback feedback-error" role="status"><strong>✕ Ainda não foi desta vez.</strong> {feedback || "Tente outra vez; você consegue."}</p>}{answeredCorrectly && <div className="answer-feedback feedback-success" role="status"><strong>✓ Resposta certa!</strong><span>Resposta: {selectedAnswer}</span>{feedback && <span>{feedback}</span>}{(question.hint || hint) && <span className="answer-context-tip"><b>Em outros contextos:</b> {question.hint || hint}</span>}</div>}</div>{!answeredCorrectly && <AiHelpButton />}{!answeredCorrectly ? <button className="button button-primary modal-submit" onClick={onSubmit} disabled={!selectedAnswer.trim() || saving}>{saving ? "Conferindo..." : "Verificar resposta"} <span>→</span></button> : levelCompleted ? <button className="button button-primary modal-submit" onClick={onStartPromotionExam}>Fazer prova de avanço <span>→</span></button> : <button className="button button-primary modal-submit" onClick={isLastQuestion ? onClose : onNext}>{isLastQuestion ? "Concluir lição" : "Próxima questão"} <span>→</span></button>}<div className="modal-footer-note"><span>◈</span> Monte a frase e confira quando estiver pronto.</div></section></div>;
 }

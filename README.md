@@ -141,3 +141,11 @@ Configure `OPENAI_API_KEY` no ambiente do servidor (na Vercel, Settings → Envi
 O player prepara a voz no primeiro clique, permite pausar, repetir, navegar e selecionar 0,75×, 1×, 1,25× ou 1,5×. Se a voz de IA estiver indisponível, reproduz o arquivo original e informa o estudante. O cache é limitado à instância do servidor, com deduplicação de pedidos simultâneos; limites de geração também são por instância, não uma cota global de cobrança.
 
 “Não posso ouvir áudio agora” substitui as questões de áudio pendentes na sessão por questões de texto do mesmo nível, priorizando as ainda não concluídas e evitando duplicatas. Preserva quantidade e progresso; questões de áudio removidas continuam pendentes na trilha original. A alteração vale até fechar a sessão. “Pedir à IA” fica bloqueado, identificado como recurso futuro.
+
+### Feedback dos exercícios
+
+O card mostra a questão atual, o total de acertos da lição (incluindo o progresso salvo), uma barra de conclusão e indicadores das questões acertadas/pendentes. Um acerto conta uma única vez, mesmo após várias tentativas. O resultado aparece assim que a correção é confirmada pelo servidor.
+
+Os sons de acerto e erro são sintetizados localmente com Web Audio, em volume baixo e com duração inferior a meio segundo. O botão “Sons ligados/desligados” salva a preferência neste navegador; escolher “Não posso ouvir áudio agora” também desliga esses sons. Navegadores sem áudio continuam recebendo o feedback visual. Nenhuma chave ou serviço pago é necessário para esses efeitos.
+
+Validação adicional: `node scripts/test-feedback-audio.cjs` e `node scripts/test-lesson-progress.cjs`.
