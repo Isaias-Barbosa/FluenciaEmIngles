@@ -9,8 +9,8 @@ function time(seconds: number) {
   return `${Math.floor(value / 60)}:${String(value % 60).padStart(2, "0")}`;
 }
 
-export function LessonAudioPlayer({ questionId, fallbackUrl, onEnded }: {
-  questionId: string; fallbackUrl: string | null; onEnded: () => void;
+export function LessonAudioPlayer({ questionId, fallbackUrl, onEnded, disabled = false }: {
+  questionId: string; fallbackUrl: string | null; onEnded: () => void; disabled?: boolean;
 }) {
   const audio = useRef<HTMLAudioElement>(null);
   const request = useRef<AbortController | null>(null);
@@ -32,9 +32,17 @@ export function LessonAudioPlayer({ questionId, fallbackUrl, onEnded }: {
     };
   }, []);
 
+  useEffect(() => {
+    if (disabled) {
+      audio.current?.pause();
+      request.current?.abort();
+      setLoading(false);
+    }
+  }, [disabled]);
+
   async function play(restart = false) {
     const player = audio.current;
-    if (!player || loading) return;
+    if (!player || loading || disabled) return;
     setNotice("");
     try {
       if (!source.current) {
@@ -81,13 +89,13 @@ export function LessonAudioPlayer({ questionId, fallbackUrl, onEnded }: {
       onEnded={() => { setPlaying(false); onEnded(); }}
       onError={() => setNotice("Não foi possível carregar o áudio. Tente novamente ou escolha estudar sem áudio.")} />
     <div className="lesson-audio-controls">
-      <button type="button" className="audio-play" disabled={loading} aria-label={playing ? "Pausar áudio" : "Reproduzir áudio"}
+      <button type="button" className="audio-play" disabled={loading || disabled} aria-label={playing ? "Pausar áudio" : "Reproduzir áudio"}
         onClick={() => playing ? audio.current?.pause() : void play()}>{loading ? "Preparando…" : playing ? "Ⅱ Pausar" : "▶ Ouvir"}</button>
-      <button type="button" disabled={loading} onClick={() => void play(true)} aria-label="Repetir áudio desde o início">↺ Repetir</button>
+      <button type="button" disabled={loading || disabled} onClick={() => void play(true)} aria-label="Repetir áudio desde o início">↺ Repetir</button>
       <span className="audio-time" aria-live="off">{time(position)} / {time(duration)}</span>
     </div>
     <input className="audio-seek" type="range" min={0} max={Number.isFinite(duration) ? duration : 0} step={0.1}
-      value={position} disabled={!duration} aria-label="Posição do áudio"
+      value={position} disabled={!duration || disabled} aria-label="Posição do áudio"
       onChange={(event) => { if (audio.current) { audio.current.currentTime = Number(event.target.value); setPosition(Number(event.target.value)); } }} />
     <div className="audio-speeds" role="group" aria-label="Velocidade de reprodução"><span>Velocidade</span>{speeds.map((value) =>
       <button key={value} type="button" aria-pressed={speed === value} onClick={() => { setSpeed(value); if (audio.current) audio.current.playbackRate = value; }}>{String(value).replace(".", ",")}×</button>)}</div>

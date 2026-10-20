@@ -5,7 +5,7 @@ import { LessonProgress, type PracticeStatus } from "./components/lesson-progres
 import { useAnswerSounds } from "./components/use-answer-sounds";
 import { LessonAudioPlayer } from "./components/lesson-audio-player";
 import { AiHelpButton } from "./components/ai-help-button";
-import { textSession } from "@/lib/learning/text-session";
+import { applyReplacement, type SavedReplacement } from "@/lib/learning/web-question";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase/client";
 import type { Database, Json } from "@/lib/supabase/database.types";
@@ -45,6 +45,8 @@ type LessonQuestion = {
   prompt: string;
   options: string[];
   audioUrl: string | null;
+  sourceUrl?: string;
+  sourceTitle?: string;
   hint: string | null;
 };
 type Lesson = {
@@ -200,6 +202,9 @@ export default function Dashboard() {
   const [activeLesson, setActiveLesson] = useState<Lesson | null>(null);
   const answerSounds = useAnswerSounds(activeLesson?.id ?? null);
   const answerPending = useRef(false);
+  const replacementPending = useRef(false);
+  const currentUserId = useRef<string | null>(null);
+  const [replacingAudio, setReplacingAudio] = useState(false);
   const activeQuestionId = useRef<string | null>(null);
   const [activeVideo, setActiveVideo] = useState<LearningVideo | null>(null);
   const [questionIndex, setQuestionIndex] = useState(0);
@@ -285,7 +290,7 @@ export default function Dashboard() {
   const loadStudyData = useCallback(async (activeProfile: Profile) => {
     if (!supabase) throw new Error("Supabase não está configurado.");
 
-    const [questionsResult, cardsResult, attemptsResult, videosResult, levelsResult, languageResult] = await Promise.all([
+    const [questionsResult, cardsResult, attemptsResult, videosResult, levelsResult, languageResult, replacementsResult] = await Promise.all([
       readAllStudyRows<PublishedQuestionRow>((from, to) => supabase!
         .from("published_lesson_questions")
         .select("*")
@@ -313,6 +318,7 @@ export default function Dashboard() {
         .order("created_at", { ascending: false }),
       supabase.from("language_levels").select("id, code, language_id"),
       supabase.from("languages").select("id").eq("code", "en").maybeSingle(),
+      readAllStudyRows<SavedReplacement>((from, to) => supabase!.rpc("get_my_question_replacements").range(from, to)),
     ]);
 
     if (questionsResult.error) {
@@ -354,13 +360,19 @@ export default function Dashboard() {
         : [];
     });
 
+    // A deploy before the migration must not block existing lessons. Other failures
+    // remain errors: silently hiding saved replacements could grade the wrong prompt.
+    const replacementErrorCode = (replacementsResult.error as { code?: string } | null)?.code;
+    const replacementFunctionMissing = replacementErrorCode === "PGRST202" || replacementErrorCode === "42883";
+    if (replacementsResult.error && !replacementFunctionMissing) throw new Error("Não foi possível carregar suas questões substituídas. Tente novamente.");
+    const replacements = new Map(replacementsResult.data.map((item) => [item.question_id, item]));
     const groupedLessons = new Map<string, Lesson>();
     for (const row of questionsResult.data) {
       const matchedLevel = levels.find((level) => level.id === row.level_code);
       if (!matchedLevel) {
         throw new Error(`O nível ${row.level_code} de uma lição não é compatível com a trilha.`);
       }
-      const question: LessonQuestion = {
+      let question: LessonQuestion = {
         id: row.question_id,
         type: row.question_type,
         prompt: row.prompt,
@@ -373,6 +385,8 @@ export default function Dashboard() {
         hint: row.hint,
         passage: row.reading_passage ?? null,
       };
+      const replacement = replacements.get(question.id);
+      if (replacement) question = applyReplacement(question, replacement);
       const lesson = groupedLessons.get(row.lesson_id);
       if (lesson) {
         lesson.questions.push(question);
@@ -532,6 +546,7 @@ export default function Dashboard() {
   const canTakePromotionExam = profile?.level !== "C2" && promotionProgress(currentLessons, profile?.completedQuestionIds ?? []).eligible;
   const activeQuestion = activeLesson?.questions[questionIndex] ?? null;
   activeQuestionId.current = activeQuestion?.id ?? null;
+  currentUserId.current = profile?.userId ?? null;
   const activeCompletedIds = [...new Set([
     ...(profile?.completedQuestionIds ?? []),
     ...(answerResult === "correct" && activeQuestion ? [activeQuestion.id] : []),
@@ -642,21 +657,48 @@ export default function Dashboard() {
 
   const [audioSessionNotice, setAudioSessionNotice] = useState("");
 
-  function studyWithoutAudio() {
-    if (!activeLesson || !profile || answerSaving) return;
-    const questions = textSession(activeLesson, lessons, questionIndex, profile.completedQuestionIds);
-    if (!questions) {
-      setAudioSessionNotice("Não há questões de texto suficientes neste nível para substituir todos os áudios agora.");
-      return;
-    }
+  async function studyWithoutAudio() {
+    if (!activeLesson || !activeQuestion || !profile || !supabase || answerSaving || replacementPending.current) return;
     answerSounds.mute();
-    setActiveLesson({ ...activeLesson, questions });
-    setSelectedAnswer("");
-    setAnswerResult(null);
-    setAnswerFeedback("");
-    setAnswerHint("");
-    setWrongAttempts(0);
-    setAudioSessionNotice("Modo sem áudio ativado nesta sessão. Questões pendentes de áudio foram substituídas por texto do mesmo nível. Seu progresso foi preservado.");
+    replacementPending.current = true;
+    setReplacingAudio(true);
+    const questionId = activeQuestion.id;
+    const userId = profile.userId;
+    setAudioSessionNotice("Buscando uma nova questão do seu nível na internet…");
+    try {
+      const { data: auth } = await supabase.auth.getSession();
+      if (!auth.session) throw new Error("Sua sessão expirou. Entre novamente.");
+      const response = await fetch("/api/question-replacement", {
+        method: "POST", signal: AbortSignal.timeout(110_000),
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${auth.session.access_token}` },
+        body: JSON.stringify({ questionId }),
+      });
+      const payload = await response.json();
+      if (!response.ok || !payload.replacement) throw new Error(payload.error || "Não foi possível buscar uma nova questão.");
+      const replacement = payload.replacement as SavedReplacement;
+      if (replacement.question_id !== questionId) throw new Error("A nova questão não corresponde a este exercício.");
+      if (currentUserId.current !== userId) return;
+      const replaceInLesson = (lesson: Lesson): Lesson => ({ ...lesson,
+        questions: lesson.questions.map((question) => question.id === questionId ? applyReplacement(question, replacement) : question),
+      });
+      setLessons((current) => current.map(replaceInLesson));
+      setActiveLesson((current) => current ? replaceInLesson(current) : null);
+      if (activeQuestionId.current === questionId) {
+        setSelectedAnswer("");
+        setAnswerResult(null);
+        setAnswerFeedback("");
+        setAnswerHint("");
+        setWrongAttempts(0);
+        setAudioSessionNotice("Nova questão de texto salva. Ao acertar, ela contará neste mesmo conjunto e no progresso das missões.");
+      }
+    } catch (error) {
+      if (currentUserId.current === userId && activeQuestionId.current === questionId) {
+        setAudioSessionNotice(error instanceof Error ? error.message : "Não foi possível buscar a questão. Tente novamente.");
+      }
+    } finally {
+      replacementPending.current = false;
+      setReplacingAudio(false);
+    }
   }
 
   function openLesson(lesson: Lesson) {
@@ -675,7 +717,7 @@ export default function Dashboard() {
   }
 
   async function submitAnswer() {
-    if (!supabase || !profile || !session || !activeQuestion || !selectedAnswer.trim() || answerPending.current || profile.completedQuestionIds.includes(activeQuestion.id) || answerResult === "correct") return;
+    if (!supabase || !profile || !session || !activeQuestion || !selectedAnswer.trim() || answerPending.current || replacementPending.current || profile.completedQuestionIds.includes(activeQuestion.id) || answerResult === "correct") return;
     answerPending.current = true;
     answerSounds.prepare();
     setAnswerSaving(true);
@@ -904,7 +946,7 @@ export default function Dashboard() {
           <footer className="app-footer"><span>Pequenos passos também levam longe. <span className="footer-heart">♥</span></span><span>Seu progresso fica sincronizado com sua conta.</span></footer>
         </div>
       </div>
-      {activeLesson && activeQuestion && <LessonModal practiceStatus={practiceStatus} audioSessionNotice={audioSessionNotice} onStudyWithoutAudio={studyWithoutAudio} lesson={activeLesson} question={activeQuestion} questionIndex={questionIndex} selectedAnswer={selectedAnswer} result={answerResult} feedback={answerFeedback} hint={answerHint} wrongAttempts={wrongAttempts} levelCompleted={canTakePromotionExam} saving={answerSaving} completed={profile.completedQuestionIds.includes(activeQuestion.id)} onSelect={(answer) => { setSelectedAnswer(answer); setAnswerResult(null); setAnswerFeedback(""); }} onSubmit={submitAnswer} onNext={nextQuestion} onClose={() => setActiveLesson(null)} onStartPromotionExam={() => { setActiveLesson(null); setPage("exam"); }} />}
+      {activeLesson && activeQuestion && <LessonModal key={`${activeQuestion.id}-${activeQuestion.type}`} replacingAudio={replacingAudio} practiceStatus={practiceStatus} audioSessionNotice={audioSessionNotice} onStudyWithoutAudio={studyWithoutAudio} lesson={activeLesson} question={activeQuestion} questionIndex={questionIndex} selectedAnswer={selectedAnswer} result={answerResult} feedback={answerFeedback} hint={answerHint} wrongAttempts={wrongAttempts} levelCompleted={canTakePromotionExam} saving={answerSaving} completed={profile.completedQuestionIds.includes(activeQuestion.id)} onSelect={(answer) => { setSelectedAnswer(answer); setAnswerResult(null); setAnswerFeedback(""); }} onSubmit={submitAnswer} onNext={nextQuestion} onClose={() => setActiveLesson(null)} onStartPromotionExam={() => { setActiveLesson(null); setPage("exam"); }} />}
       {activeVideo && <VideoPlayerModal video={activeVideo} onClose={() => setActiveVideo(null)} />}
     </main>
   );
@@ -1441,7 +1483,8 @@ function ReadingPassage({ passage }: { passage: string | null }) {
   return <section className="reading-passage" aria-label="Texto para leitura"><span className="section-kicker">LEIA O TEXTO</span><p lang="en">{passage}</p></section>;
 }
 
-function LessonModal({ practiceStatus, audioSessionNotice, onStudyWithoutAudio, lesson, question, questionIndex, selectedAnswer, result, feedback, hint, wrongAttempts, levelCompleted, saving, completed, onSelect, onSubmit, onNext, onClose, onStartPromotionExam }: {
+function LessonModal({ replacingAudio, practiceStatus, audioSessionNotice, onStudyWithoutAudio, lesson, question, questionIndex, selectedAnswer, result, feedback, hint, wrongAttempts, levelCompleted, saving, completed, onSelect, onSubmit, onNext, onClose, onStartPromotionExam }: {
+  replacingAudio: boolean;
   practiceStatus: PracticeStatus;
   audioSessionNotice: string;
   onStudyWithoutAudio: () => void;
@@ -1489,7 +1532,7 @@ function LessonModal({ practiceStatus, audioSessionNotice, onStudyWithoutAudio, 
   }
 
   if (question.type === "word_order") {
-    return <WordOrderModal practiceStatus={practiceStatus} audioSessionNotice={audioSessionNotice} onStudyWithoutAudio={onStudyWithoutAudio} lesson={lesson} question={question} questionIndex={questionIndex} selectedAnswer={selectedAnswer} result={result} feedback={feedback} hint={hint} levelCompleted={levelCompleted} saving={saving} completed={completed} onSelect={onSelect} onSubmit={onSubmit} onNext={onNext} onClose={onClose} onStartPromotionExam={onStartPromotionExam} />;
+    return <WordOrderModal replacingAudio={replacingAudio} practiceStatus={practiceStatus} audioSessionNotice={audioSessionNotice} onStudyWithoutAudio={onStudyWithoutAudio} lesson={lesson} question={question} questionIndex={questionIndex} selectedAnswer={selectedAnswer} result={result} feedback={feedback} hint={hint} levelCompleted={levelCompleted} saving={saving} completed={completed} onSelect={onSelect} onSubmit={onSubmit} onNext={onNext} onClose={onClose} onStartPromotionExam={onStartPromotionExam} />;
   }
 
   async function loadListeningTranscript() {
@@ -1514,10 +1557,11 @@ function LessonModal({ practiceStatus, audioSessionNotice, onStudyWithoutAudio, 
     }
   }
 
-  return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><section className="lesson-modal" role="dialog" aria-modal="true" aria-labelledby="lesson-title"><button className="modal-close" onClick={onClose} aria-label="Fechar lição">×</button><span className="eyebrow"><span className="live-dot" /> {lesson.category.toUpperCase()} · {lesson.duration} MIN</span><LessonProgress questions={lesson.questions} questionIndex={questionIndex} status={practiceStatus} /><h2 id="lesson-title">{lesson.title}</h2><p className="modal-description">{lesson.description}</p>{audioSessionNotice && <p className="audio-session-notice" role="status">{audioSessionNotice}</p>}<div className={`exercise-box practice-exercise ${answeredCorrectly ? "practice-exercise-correct" : result === "incorrect" ? "practice-exercise-incorrect" : ""}`}><span className="exercise-label">{question.type === "listening" ? "OUÇA E ESCREVA" : question.type === "fill_blank" ? "COMPLETE A FRASE" : "HORA DE PRATICAR"}</span>{(question.type === "listening" || question.audioUrl) && <><LessonAudioPlayer key={question.id} questionId={question.id} fallbackUrl={question.audioUrl} onEnded={() => setCompletedAudioPlays((plays) => plays + 1)} /><button className="study-without-audio" type="button" disabled={saving || answeredCorrectly} onClick={onStudyWithoutAudio}>Não posso ouvir áudio agora</button></>}{question.type === "listening" && completedAudioPlays >= 5 && !listeningTranscript && <button className="listening-transcript-button" type="button" onClick={() => void loadListeningTranscript()} disabled={transcriptLoading}>{transcriptLoading ? "Carregando texto..." : "Mudar para texto"}</button>}{transcriptError && <p className="form-message form-error" role="alert">{transcriptError}</p>}{listeningTranscript && <p className="listening-transcript"><strong>Texto em inglês:</strong> {listeningTranscript}</p>}<ReadingPassage passage={question.passage} /><h3>{question.prompt}</h3><div className="answer-options">{question.type === "multiple_choice" ? question.options.map((option, index) => <button key={option} className={`answer-option ${selectedAnswer === option ? "answer-selected" : ""} ${result === "incorrect" && selectedAnswer === option ? "answer-incorrect" : ""}`} onClick={() => onSelect(option)} disabled={answeredCorrectly || saving}><span>{String.fromCharCode(65 + index)}</span>{option}<i>{result === "correct" && selectedAnswer === option ? "✓" : ""}</i></button>) : <input className="answer-text-input" value={selectedAnswer} onChange={(event) => onSelect(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && selectedAnswer.trim()) onSubmit(); }} placeholder={question.type === "listening" ? "Digite o que você ouviu" : "Digite sua resposta"} disabled={answeredCorrectly || saving} />}</div>{result === "incorrect" && <p className="answer-feedback feedback-error" role="status"><strong>✕ Ainda não foi desta vez.</strong> {feedback || "Tente outra vez; você consegue."} {wrongAttempts > 0 && !hint && `(${wrongAttempts} de 5 tentativas)`}</p>}{result === "incorrect" && hint && <p className="answer-hint"><strong>Dica após {wrongAttempts} tentativas:</strong> {hint}</p>}{answeredCorrectly && <p className="answer-feedback feedback-success" role="status"><strong>✓ Resposta certa!</strong> {feedback || "Muito bem! Resposta certa."} {levelCompleted ? "Você já concluiu pelo menos metade das questões do nível. A prova de avanço está liberada." : "Seu progresso foi atualizado. ✨"}</p>}</div>{!answeredCorrectly && <AiHelpButton />}{!answeredCorrectly ? <button className="button button-primary modal-submit" onClick={onSubmit} disabled={!selectedAnswer.trim() || saving}>{saving ? "Conferindo..." : "Conferir resposta"} <span>→</span></button> : levelCompleted ? <button className="button button-primary modal-submit" onClick={onStartPromotionExam}>Fazer prova de avanço <span>→</span></button> : <button className="button button-primary modal-submit" onClick={isLastQuestion ? onClose : onNext}>{isLastQuestion ? "Concluir lição" : "Próxima questão"} <span>→</span></button>}<div className="modal-footer-note"><span>◈</span> Errar faz parte. Você pode tentar quantas vezes quiser.</div></section></div>;
+  return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><section className="lesson-modal" role="dialog" aria-modal="true" aria-labelledby="lesson-title"><button className="modal-close" onClick={onClose} aria-label="Fechar lição">×</button><span className="eyebrow"><span className="live-dot" /> {lesson.category.toUpperCase()} · {lesson.duration} MIN</span><LessonProgress questions={lesson.questions} questionIndex={questionIndex} status={practiceStatus} /><h2 id="lesson-title">{lesson.title}</h2><p className="modal-description">{lesson.description}</p>{audioSessionNotice && <p className="audio-session-notice" role="status">{audioSessionNotice}</p>}<div className={`exercise-box practice-exercise ${answeredCorrectly ? "practice-exercise-correct" : result === "incorrect" ? "practice-exercise-incorrect" : ""}`}><span className="exercise-label">{question.type === "listening" ? "OUÇA E ESCREVA" : question.type === "fill_blank" ? "COMPLETE A FRASE" : "HORA DE PRATICAR"}</span>{(question.type === "listening" || question.audioUrl) && <><LessonAudioPlayer disabled={replacingAudio} key={question.id} questionId={question.id} fallbackUrl={question.audioUrl} onEnded={() => setCompletedAudioPlays((plays) => plays + 1)} /><button className="study-without-audio" type="button" disabled={saving || replacingAudio || answeredCorrectly} onClick={onStudyWithoutAudio}>{replacingAudio ? "Buscando nova questão…" : "Não posso ouvir áudio agora"}</button></>}{question.type === "listening" && completedAudioPlays >= 5 && !listeningTranscript && <button className="listening-transcript-button" type="button" onClick={() => void loadListeningTranscript()} disabled={transcriptLoading}>{transcriptLoading ? "Carregando texto..." : "Mudar para texto"}</button>}{transcriptError && <p className="form-message form-error" role="alert">{transcriptError}</p>}{listeningTranscript && <p className="listening-transcript"><strong>Texto em inglês:</strong> {listeningTranscript}</p>}<ReadingPassage passage={question.passage} /><h3>{question.prompt}</h3>{question.sourceUrl && <p className="replacement-source">Questão adaptada com IA · <a href={question.sourceUrl} target="_blank" rel="noopener noreferrer">Fonte: {question.sourceTitle || "material de referência"} ↗</a></p>}<div className="answer-options">{question.type === "multiple_choice" ? question.options.map((option, index) => <button key={option} className={`answer-option ${selectedAnswer === option ? "answer-selected" : ""} ${result === "incorrect" && selectedAnswer === option ? "answer-incorrect" : ""}`} onClick={() => onSelect(option)} disabled={answeredCorrectly || saving || replacingAudio}><span>{String.fromCharCode(65 + index)}</span>{option}<i>{result === "correct" && selectedAnswer === option ? "✓" : ""}</i></button>) : <input className="answer-text-input" value={selectedAnswer} onChange={(event) => onSelect(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && selectedAnswer.trim()) onSubmit(); }} placeholder={question.type === "listening" ? "Digite o que você ouviu" : "Digite sua resposta"} disabled={answeredCorrectly || saving || replacingAudio} />}</div>{result === "incorrect" && <p className="answer-feedback feedback-error" role="status"><strong>✕ Ainda não foi desta vez.</strong> {feedback || "Tente outra vez; você consegue."} {wrongAttempts > 0 && !hint && `(${wrongAttempts} de 5 tentativas)`}</p>}{result === "incorrect" && hint && <p className="answer-hint"><strong>Dica após {wrongAttempts} tentativas:</strong> {hint}</p>}{answeredCorrectly && <p className="answer-feedback feedback-success" role="status"><strong>✓ Resposta certa!</strong> {feedback || "Muito bem! Resposta certa."} {levelCompleted ? "Você já concluiu pelo menos metade das questões do nível. A prova de avanço está liberada." : "Seu progresso foi atualizado. ✨"}</p>}</div>{!answeredCorrectly && <AiHelpButton />}{!answeredCorrectly ? <button className="button button-primary modal-submit" onClick={onSubmit} disabled={!selectedAnswer.trim() || saving || replacingAudio}>{saving ? "Conferindo..." : "Conferir resposta"} <span>→</span></button> : levelCompleted ? <button className="button button-primary modal-submit" onClick={onStartPromotionExam}>Fazer prova de avanço <span>→</span></button> : <button className="button button-primary modal-submit" onClick={isLastQuestion ? onClose : onNext}>{isLastQuestion ? "Concluir lição" : "Próxima questão"} <span>→</span></button>}<div className="modal-footer-note"><span>◈</span> Errar faz parte. Você pode tentar quantas vezes quiser.</div></section></div>;
 }
 
-function WordOrderModal({ practiceStatus, audioSessionNotice, lesson, question, questionIndex, selectedAnswer, result, feedback, hint, levelCompleted, saving, completed, onSelect, onSubmit, onNext, onClose, onStartPromotionExam }: {
+function WordOrderModal({ replacingAudio, practiceStatus, audioSessionNotice, lesson, question, questionIndex, selectedAnswer, result, feedback, hint, levelCompleted, saving, completed, onSelect, onSubmit, onNext, onClose, onStartPromotionExam }: {
+  replacingAudio: boolean;
   practiceStatus: PracticeStatus;
   audioSessionNotice: string;
   onStudyWithoutAudio: () => void;
@@ -1555,5 +1599,5 @@ function WordOrderModal({ practiceStatus, audioSessionNotice, lesson, question, 
     onSelect(next.join(" "));
   }
 
-  return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><section className="lesson-modal word-order-modal" role="dialog" aria-modal="true" aria-labelledby="word-order-title"><button className="modal-close" onClick={onClose} aria-label="Fechar lição">×</button><span className="eyebrow"><span className="live-dot" /> {lesson.category.toUpperCase()} · {lesson.duration} MIN</span><LessonProgress questions={lesson.questions} questionIndex={questionIndex} status={practiceStatus} /><h2 id="word-order-title">{lesson.title}</h2><p className="modal-description">{lesson.description}</p>{audioSessionNotice && <p className="audio-session-notice" role="status">{audioSessionNotice}</p>}<div className={`exercise-box practice-exercise ${answeredCorrectly ? "practice-exercise-correct" : result === "incorrect" ? "practice-exercise-incorrect" : ""}`}><span className="exercise-label">ORGANIZE AS PALAVRAS</span><h3>{question.prompt}</h3><div className="word-order-answer" aria-label="Resposta montada">{words.length ? words.map((word, index) => <button key={`${word}-${index}`} type="button" onClick={() => removeWord(index)} disabled={answeredCorrectly || saving}>{word}</button>) : <span>As palavras escolhidas aparecem aqui</span>}</div><div className="word-bank">{question.options.map((word, index) => <button key={`${word}-${index}`} type="button" onClick={() => addWord(word)} disabled={answeredCorrectly || saving || words.filter((selectedWord) => selectedWord === word).length >= question.options.filter((optionWord) => optionWord === word).length}>{word}</button>)}</div><small className="word-order-note">Clique em uma palavra da frase para removê-la.</small>{result === "incorrect" && <p className="answer-feedback feedback-error" role="status"><strong>✕ Ainda não foi desta vez.</strong> {feedback || "Tente outra vez; você consegue."}</p>}{answeredCorrectly && <div className="answer-feedback feedback-success" role="status"><strong>✓ Resposta certa!</strong><span>Resposta: {selectedAnswer}</span>{feedback && <span>{feedback}</span>}{(question.hint || hint) && <span className="answer-context-tip"><b>Em outros contextos:</b> {question.hint || hint}</span>}</div>}</div>{!answeredCorrectly && <AiHelpButton />}{!answeredCorrectly ? <button className="button button-primary modal-submit" onClick={onSubmit} disabled={!selectedAnswer.trim() || saving}>{saving ? "Conferindo..." : "Verificar resposta"} <span>→</span></button> : levelCompleted ? <button className="button button-primary modal-submit" onClick={onStartPromotionExam}>Fazer prova de avanço <span>→</span></button> : <button className="button button-primary modal-submit" onClick={isLastQuestion ? onClose : onNext}>{isLastQuestion ? "Concluir lição" : "Próxima questão"} <span>→</span></button>}<div className="modal-footer-note"><span>◈</span> Monte a frase e confira quando estiver pronto.</div></section></div>;
+  return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><section className="lesson-modal word-order-modal" role="dialog" aria-modal="true" aria-labelledby="word-order-title"><button className="modal-close" onClick={onClose} aria-label="Fechar lição">×</button><span className="eyebrow"><span className="live-dot" /> {lesson.category.toUpperCase()} · {lesson.duration} MIN</span><LessonProgress questions={lesson.questions} questionIndex={questionIndex} status={practiceStatus} /><h2 id="word-order-title">{lesson.title}</h2><p className="modal-description">{lesson.description}</p>{audioSessionNotice && <p className="audio-session-notice" role="status">{audioSessionNotice}</p>}<div className={`exercise-box practice-exercise ${answeredCorrectly ? "practice-exercise-correct" : result === "incorrect" ? "practice-exercise-incorrect" : ""}`}><span className="exercise-label">ORGANIZE AS PALAVRAS</span><h3>{question.prompt}</h3><div className="word-order-answer" aria-label="Resposta montada">{words.length ? words.map((word, index) => <button key={`${word}-${index}`} type="button" onClick={() => removeWord(index)} disabled={answeredCorrectly || saving || replacingAudio}>{word}</button>) : <span>As palavras escolhidas aparecem aqui</span>}</div><div className="word-bank">{question.options.map((word, index) => <button key={`${word}-${index}`} type="button" onClick={() => addWord(word)} disabled={answeredCorrectly || saving || replacingAudio || words.filter((selectedWord) => selectedWord === word).length >= question.options.filter((optionWord) => optionWord === word).length}>{word}</button>)}</div><small className="word-order-note">Clique em uma palavra da frase para removê-la.</small>{result === "incorrect" && <p className="answer-feedback feedback-error" role="status"><strong>✕ Ainda não foi desta vez.</strong> {feedback || "Tente outra vez; você consegue."}</p>}{answeredCorrectly && <div className="answer-feedback feedback-success" role="status"><strong>✓ Resposta certa!</strong><span>Resposta: {selectedAnswer}</span>{feedback && <span>{feedback}</span>}{(question.hint || hint) && <span className="answer-context-tip"><b>Em outros contextos:</b> {question.hint || hint}</span>}</div>}</div>{!answeredCorrectly && <AiHelpButton />}{!answeredCorrectly ? <button className="button button-primary modal-submit" onClick={onSubmit} disabled={!selectedAnswer.trim() || saving || replacingAudio}>{saving ? "Conferindo..." : "Verificar resposta"} <span>→</span></button> : levelCompleted ? <button className="button button-primary modal-submit" onClick={onStartPromotionExam}>Fazer prova de avanço <span>→</span></button> : <button className="button button-primary modal-submit" onClick={isLastQuestion ? onClose : onNext}>{isLastQuestion ? "Concluir lição" : "Próxima questão"} <span>→</span></button>}<div className="modal-footer-note"><span>◈</span> Monte a frase e confira quando estiver pronto.</div></section></div>;
 }
