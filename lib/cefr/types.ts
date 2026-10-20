@@ -1,0 +1,30 @@
+export const cefrLevels = ["A1", "A2", "B1", "B2", "C1", "C2"] as const;
+export type CefrLevel = typeof cefrLevels[number];
+export type ReviewQuestion = {
+  id: string;
+  prompt: string;
+  choices: string[];
+  correctAnswer: string;
+  source: "manual" | "opentdb" | "trivia";
+  sourceUrl: string;
+  sourceLabel: string;
+  license: string;
+  category: string;
+  triviaDifficulty: string;
+};
+export type CefrAnalysis = {
+  level: CefrLevel | null;
+  range: string;
+  confidence: "baixa" | "moderada";
+  summary: string;
+  wordCount: number;
+  coverage: number;
+  averageSentenceLength: number;
+  vocabulary: { word: string; lemma: string; level: CefrLevel }[];
+  distribution: Record<CefrLevel, number>;
+  unknownWords: string[];
+  possibleNames: string[];
+  evidence: { label: string; level: CefrLevel; detail: string }[];
+  warnings: string[];
+  method: "cefr-editorial-v1";
+};

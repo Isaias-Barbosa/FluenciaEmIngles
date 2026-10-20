@@ -2,6 +2,8 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
+import QuestionReview from "./question-review";
+import type { CefrLevel, ReviewQuestion } from "@/lib/cefr/types";
 import type { Json } from "@/lib/supabase/database.types";
 
 type AdminLevel = {
@@ -72,7 +74,7 @@ type AdminData = {
   questions: AdminQuestion[];
   videos: AdminVideo[];
 };
-type AdminView = "overview" | "questions" | "videos" | "users";
+type AdminView = "overview" | "questions" | "review" | "videos" | "users";
 type QuestionType = AdminQuestion["type"];
 
 const typeLabels: Record<QuestionType, string> = {
@@ -146,13 +148,13 @@ export default function AdminDashboard() {
     [data.videos, selectedLevel?.id],
   );
 
-  const adminRequest = useCallback(async (method: "GET" | "POST", body?: unknown) => {
+  const adminRequest = useCallback(async (method: "GET" | "POST", body?: unknown, endpoint: "/api/admin" | "/api/admin/question-review" = "/api/admin") => {
     if (!supabase) throw new Error("O Supabase não está configurado.");
     const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
     if (sessionError) throw new Error(sessionError.message);
     const token = sessionData.session?.access_token;
     if (!token) throw new Error("Entre na sua conta para acessar o painel.");
-    const response = await fetch("/api/admin", {
+    const response = await fetch(endpoint, {
       method,
       headers: {
         Authorization: `Bearer ${token}`,
@@ -197,6 +199,25 @@ export default function AdminDashboard() {
       setQuestionLessonId(levelLessons[0]?.id ?? "");
     }
   }, [levelLessons, questionLessonId]);
+
+  const reviewRequest = useCallback((body: unknown) => adminRequest("POST", body, "/api/admin/question-review"), [adminRequest]);
+
+  function useReviewedQuestion(question: ReviewQuestion, level: CefrLevel) {
+    const target = data.levels.find((item) => item.code === level);
+    if (!target) { setError("Esse nível ainda não está cadastrado."); return; }
+    const attribution = question.source === "manual" ? "" : `\n\nFonte: ${question.sourceLabel} · ${question.sourceUrl} · ${question.license} (texto sujeito a edição).`;
+    const prompt = question.prompt + attribution;
+    if (prompt.length > 2000) { setError("Reduza o enunciado para manter a atribuição da fonte."); return; }
+    setSelectedLevelId(target.id);
+    setQuestionLessonId(data.lessons.find((lesson) => lesson.levelId === target.id)?.id ?? "");
+    setQuestionType(question.choices.length ? "multiple_choice" : "fill_blank");
+    setQuestionPrompt(prompt);
+    setQuestionChoices(question.choices.join("\n"));
+    setQuestionAnswers(question.correctAnswer);
+    setQuestionExplanation(""); setQuestionAudioPath("");
+    setView("questions"); setError("");
+    setNotice(`Questão preparada em ${level}. Confira a lição e acrescente uma explicação antes de salvar o rascunho.`);
+  }
 
   async function submitAdminAction(event: FormEvent<HTMLFormElement>, action: string, payload: Record<string, unknown>) {
     event.preventDefault();
@@ -355,10 +376,11 @@ export default function AdminDashboard() {
           {([
             ["overview", "▦", "Dashboard"],
             ["questions", "✎", "Questões"],
+            ["review", "◎", "Verifique a Questão"],
             ["videos", "▶", "Vídeos"],
             ["users", "♙", "Usuários"],
           ] as [AdminView, string, string][]).map(([id, icon, label]) => (
-            <button key={id} className={`admin-nav-item ${view === id ? "active" : ""}`} onClick={() => setView(id)}>
+            <button key={id} title={label} aria-label={label} className={`admin-nav-item ${view === id ? "active" : ""}`} onClick={() => setView(id)}>
               <span>{icon}</span>{label}{view === id && <i />}
             </button>
           ))}
@@ -370,12 +392,12 @@ export default function AdminDashboard() {
 
       <section className="admin-main">
         <header className="admin-topbar">
-          <div><span className="section-kicker">FLUÊNCIA · ADMIN</span><h1>{view === "overview" ? "Dashboard" : view === "questions" ? "Questões" : view === "videos" ? "Vídeos" : "Usuários"}</h1></div>
+          <div><span className="section-kicker">FLUÊNCIA · ADMIN</span><h1>{view === "overview" ? "Dashboard" : view === "questions" ? "Questões" : view === "review" ? "Verifique a Questão" : view === "videos" ? "Vídeos" : "Usuários"}</h1></div>
           <button className="admin-refresh" onClick={() => void loadAdminData()} disabled={loading}>↻ <span>Atualizar dados</span></button>
         </header>
         <div className="admin-content">
           {notice && <div className="admin-message success" role="status">{notice}<button onClick={() => setNotice("")} aria-label="Fechar aviso">×</button></div>}
-          {loading ? <div className="admin-loading"><span className="live-dot" /> Carregando dados administrativos...</div> : loadFailed ? <div className="admin-access-error" role="alert"><span>!</span><h2>Painel indisponível</h2><p>{error}</p><button className="button button-dark" onClick={() => void loadAdminData()}>Tentar novamente <span>↻</span></button></div> : <>
+          {loading && data.levels.length === 0 ? <div className="admin-loading"><span className="live-dot" /> Carregando dados administrativos...</div> : loadFailed ? <div className="admin-access-error" role="alert"><span>!</span><h2>Painel indisponível</h2><p>{error}</p><button className="button button-dark" onClick={() => void loadAdminData()}>Tentar novamente <span>↻</span></button></div> : <>
             {error && <div className="admin-message error" role="alert">{error}<button onClick={() => setError("")} aria-label="Fechar aviso">×</button></div>}
             {view === "overview" && <section className="admin-view">
               <div className="admin-welcome"><div><span className="section-kicker">VISÃO GERAL DA PLATAFORMA</span><h2>Uma visão clara do aprendizado.</h2><p>Indicadores e atividade dos últimos 30 dias.</p></div><span className="admin-welcome-spark">✦</span></div>
@@ -399,6 +421,8 @@ export default function AdminDashboard() {
                 <UserTable users={data.users.slice(0, 5)} />
               </section>
             </section>}
+
+            <div hidden={view !== "review"}><QuestionReview request={reviewRequest} availableLevels={data.levels.map((level) => level.code)} onUseQuestion={useReviewedQuestion} /></div>
 
             {view === "questions" && <section className="admin-view">
               <div className="admin-page-intro"><div><span className="section-kicker">BIBLIOTECA DE CONTEÚDO</span><h2>Crie questões para cada nível.</h2><p>Novas lições e questões começam como rascunho. Revise e publique quando estiverem prontas.</p></div><label className="admin-level-select-label">NÍVEL<select value={selectedLevel?.id ?? ""} onChange={(event) => setSelectedLevelId(event.target.value)}>{data.levels.map((level) => <option key={level.id} value={level.id}>{level.code} · {level.title}</option>)}</select></label></div>
