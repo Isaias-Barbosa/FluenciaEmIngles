@@ -133,3 +133,11 @@ npm run start      # Inicia a versão de produção
 - CSS responsivo
 
 O conteúdo da página inicial também está em `aprender-ingles.html`; a aplicação Next.js usa esse conteúdo na rota `/`.
+
+### Player de escuta e voz de IA
+
+Configure `OPENAI_API_KEY` no ambiente do servidor (na Vercel, Settings → Environment Variables) e faça um novo deploy para habilitar a narração `gpt-4o-mini-tts`, voz `marin`. A integração usa a função existente `get_listening_transcript`; não é necessária uma nova migration. A API só aceita IDs de questões de escuta publicadas e exige uma sessão Supabase válida. A chave nunca é enviada ao navegador. A geração usa a API paga da OpenAI.
+
+O player prepara a voz no primeiro clique, permite pausar, repetir, navegar e selecionar 0,75×, 1×, 1,25× ou 1,5×. Se a voz de IA estiver indisponível, reproduz o arquivo original e informa o estudante. O cache é limitado à instância do servidor, com deduplicação de pedidos simultâneos; limites de geração também são por instância, não uma cota global de cobrança.
+
+“Não posso ouvir áudio agora” substitui as questões de áudio pendentes na sessão por questões de texto do mesmo nível, priorizando as ainda não concluídas e evitando duplicatas. Preserva quantidade e progresso; questões de áudio removidas continuam pendentes na trilha original. A alteração vale até fechar a sessão. “Pedir à IA” fica bloqueado, identificado como recurso futuro.

@@ -502,3 +502,24 @@ html:has(.app-shell.theme-light), body:has(.app-shell.theme-light) { background:
   .lessons-page .roadmap-lessons { margin-left: 0; }
   .promotion-lesson { flex-wrap: wrap; }
 }
+
+/* Listening exercise controls share the lesson modal's visual language. */
+.lesson-audio-card { margin: 14px 0; padding: 16px; border: 1px solid var(--line); border-radius: 12px; background: #191c27; }
+.lesson-audio-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.lesson-audio-heading strong { font-size: 14px; color: #f1f3f8; }
+.lesson-audio-heading span { color: var(--mint); font-size: 11px; }
+.lesson-audio-card p { color: #b9becd; font-size: 12px; line-height: 1.6; }
+.lesson-audio-controls, .audio-speeds { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.lesson-audio-card button { min-height: 44px; padding: 8px 12px; border: 1px solid #4a5064; border-radius: 8px; background: #242837; color: #e7eaf2; cursor: pointer; }
+.lesson-audio-card .audio-play, .audio-speeds button[aria-pressed="true"] { background: var(--mint); color: #10251f; border-color: var(--mint); }
+.lesson-audio-card button:disabled { opacity: .55; cursor: wait; }
+.audio-time { margin-left: auto; color: #c4c9d7; font-size: 12px; font-variant-numeric: tabular-nums; }
+.audio-seek { width: 100%; min-height: 32px; margin: 8px 0; accent-color: var(--mint); }
+.audio-speeds > span { color: #b9becd; font-size: 12px; margin-right: 4px; }
+.study-without-audio { width: 100%; min-height: 44px; margin: 0 0 14px; padding: 10px; color: #e5e9f3; background: transparent; border: 1px solid #60697c; border-radius: 8px; cursor: pointer; }
+.study-without-audio:disabled { opacity: .5; cursor: default; }
+.audio-session-notice { color: var(--mint); font-size: 12px; line-height: 1.6; }
+.ai-help-button { width: 100%; margin-top: 16px; min-height: 44px; gap: 8px; flex-wrap: wrap; color: #a9afc0; border: 1px dashed #51596d; background: #202430; cursor: not-allowed; opacity: .8; }
+.ai-help-badge { margin-left: auto; font-size: 10px; }
+.lesson-audio-card button:focus-visible, .study-without-audio:focus-visible { outline: 2px solid var(--mint); outline-offset: 3px; }
+@media (max-width: 420px) { .lesson-audio-card { padding: 12px; } .audio-speeds { gap: 6px; } .audio-speeds > span { width: 100%; } }
