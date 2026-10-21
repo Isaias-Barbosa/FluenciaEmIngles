@@ -5,10 +5,11 @@ function runtime(){let slots=[],deps=[],effects=[],cleanups=[],cursor=0;return {
 function load(path,deps){const context={exports:{},Error,Object,crypto:require('node:crypto'),require:name=>{if(name in deps)return deps[name];throw Error(name);}};vm.runInNewContext(compile(path),context);return context.exports;}
 (async()=>{
  const initial={id:'run',user_id:'one',lesson_id:'lesson',question_ids:['a','b','c','d','e'],answers:[],passed:false,finished_at:null};
- let stored=structuredClone(initial),fail=false,calls=0,resolveDelayed,conflict=false;
+ let stored=structuredClone(initial),fail=false,calls=0,resolveDelayed,conflict=false,missingRpc=false;
  const client={rpc:async(name,args)=>{
   calls++;if(fail)return {error:{}};
   if(name==='start_lesson_run')return {data:structuredClone(stored),error:null};
+  if(missingRpc)return {data:null,error:{code:'PGRST202'}};
   if(conflict)return {data:null,error:{code:'40001'}};
   if(resolveDelayed)return await new Promise(resolve=>resolveDelayed=resolve);
   const correct=args.p_submitted_answer==='correct';stored.answers.push({question_id:args.p_question_id,is_correct:correct,submitted_answer:args.p_submitted_answer,correct_answer:'correct',explanation:'Explanation'});
@@ -21,6 +22,7 @@ function load(path,deps){const context={exports:{},Error,Object,crypto:require('
  const pending=view().answer('b','correct');assert.equal(await view().answer('b','correct'),null);await pending;assert.equal(calls,before+2,'one request for the successful double click');
  view().cancel();assert.equal(view().run,null);await view().start('lesson');assert.equal(view().run.answers.length,2,'reopen restores saved attempt');
  stored.attempts=[{question_id:'c',attempt_number:1,is_correct:false}];conflict=true;assert.equal(await view().answer('c','wrong'),null);assert.equal(view().run.attempts.length,1);assert.match(view().error,/outra aba/);conflict=false;
+ missingRpc=true;const attemptsBefore=view().run.attempts.length;assert.equal(await view().answer('c','correct'),null);assert.equal(view().run.attempts.length,attemptsBefore);assert.match(view().error,/Nenhuma chance foi consumida/);missingRpc=false;
  resolveDelayed=true;const old=view().answer('c','correct');assert.equal(view('two').run,null);resolveDelayed({data:{...initial,answers:[{question_id:'c',is_correct:true}]},error:null});await old;assert.equal(view('two').run,null,'stale response cannot populate another account');rt.cleanup();
  const lessonHelpers=load('lib/learning/lesson-run.ts',{});
  const score=lessonHelpers.lessonRunScore({...initial,answers:[{is_correct:true},{is_correct:false},{is_correct:true},{is_correct:false},{is_correct:true}]});assert.equal(score.correct,3);assert.equal(score.incorrect,2);assert.equal(score.required,3);
