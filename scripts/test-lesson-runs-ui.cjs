@@ -5,10 +5,11 @@ function runtime(){let slots=[],deps=[],effects=[],cleanups=[],cursor=0;return {
 function load(path,deps){const context={exports:{},Error,Object,crypto:require('node:crypto'),require:name=>{if(name in deps)return deps[name];throw Error(name);}};vm.runInNewContext(compile(path),context);return context.exports;}
 (async()=>{
  const initial={id:'run',user_id:'one',lesson_id:'lesson',question_ids:['a','b','c','d','e'],answers:[],passed:false,finished_at:null};
- let stored=structuredClone(initial),fail=false,calls=0,resolveDelayed;
+ let stored=structuredClone(initial),fail=false,calls=0,resolveDelayed,conflict=false;
  const client={rpc:async(name,args)=>{
   calls++;if(fail)return {error:{}};
   if(name==='start_lesson_run')return {data:structuredClone(stored),error:null};
+  if(conflict)return {data:null,error:{code:'40001'}};
   if(resolveDelayed)return await new Promise(resolve=>resolveDelayed=resolve);
   const correct=args.p_submitted_answer==='correct';stored.answers.push({question_id:args.p_question_id,is_correct:correct,submitted_answer:args.p_submitted_answer,correct_answer:'correct',explanation:'Explanation'});
   return {data:structuredClone(stored),error:null};
@@ -19,6 +20,7 @@ function load(path,deps){const context={exports:{},Error,Object,crypto:require('
  fail=true;const before=calls;assert.equal(await view().answer('b','correct'),null);assert.equal(view().run.answers.length,1);assert.match(view().error,/não foi pulada/);fail=false;
  const pending=view().answer('b','correct');assert.equal(await view().answer('b','correct'),null);await pending;assert.equal(calls,before+2,'one request for the successful double click');
  view().cancel();assert.equal(view().run,null);await view().start('lesson');assert.equal(view().run.answers.length,2,'reopen restores saved attempt');
+ stored.attempts=[{question_id:'c',attempt_number:1,is_correct:false}];conflict=true;assert.equal(await view().answer('c','wrong'),null);assert.equal(view().run.attempts.length,1);assert.match(view().error,/outra aba/);conflict=false;
  resolveDelayed=true;const old=view().answer('c','correct');assert.equal(view('two').run,null);resolveDelayed({data:{...initial,answers:[{question_id:'c',is_correct:true}]},error:null});await old;assert.equal(view('two').run,null,'stale response cannot populate another account');rt.cleanup();
  const lessonHelpers=load('lib/learning/lesson-run.ts',{});
  const score=lessonHelpers.lessonRunScore({...initial,answers:[{is_correct:true},{is_correct:false},{is_correct:true},{is_correct:false},{is_correct:true}]});assert.equal(score.correct,3);assert.equal(score.incorrect,2);assert.equal(score.required,3);
@@ -31,6 +33,7 @@ function load(path,deps){const context={exports:{},Error,Object,crypto:require('
  const ctx={profile:state.profile,activeQuestion:{id:'a'},selectedAnswer:'wrong',answerPending:{current:false},replacementPending:{current:false},currentUserId:{current:'one'},answerSounds:{prepare(){},play(type){state.sound=type;}},setAnswerSaving:value=>state.saving=value,setSelectedAnswer:value=>state.selected=value,setAudioSessionNotice(){},setProfile:update=>state.profile=update(state.profile),round:{answer:async()=>response},lessonRunScore:lessonHelpers.lessonRunScore,Set};
  vm.runInNewContext(ts.transpileModule(fragment,{compilerOptions:{target:ts.ScriptTarget.ES2020}}).outputText,ctx);
  await ctx.submitAnswer();assert.equal(state.sound,'incorrect');assert.equal(state.selected,'','previously correct questions are answered again in a fresh attempt');assert.equal(state.profile.completedLessons.length,0);
+ response={...initial,attempts:[{question_id:'a',submitted_answer:'wrong',is_correct:false,attempt_number:1,attempt_limit:2,hint:'Think about it.'}],answers:[]};state.selected='wrong';await ctx.submitAnswer();assert.equal(state.sound,'incorrect');assert.equal(state.selected,'','an intermediate error clears the input without advancing');assert.equal(state.profile.completedLessons.length,0);assert.equal(Object.keys(state.profile.lessonResults).length,0,'an intermediate error does not create a final score');
  response={...initial,passed:true,finished_at:'2026-10-21T12:00:00Z',answers:initial.question_ids.map((id,index)=>({question_id:id,is_correct:index%2===0}))};await ctx.submitAnswer();assert.equal(state.profile.completedLessons[0],'lesson');
  assert.equal(state.profile.lessonResults.lesson.correct,3);assert.equal(state.profile.lessonResults.lesson.incorrect,2);assert.equal(state.profile.completedQuestionIds.length,5,'cumulative history remains distinct from this attempt');
  const failed={...response,answers:initial.question_ids.map((id,index)=>({question_id:id,is_correct:index<2})),passed:false};

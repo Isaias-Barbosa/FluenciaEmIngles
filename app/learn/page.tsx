@@ -722,9 +722,12 @@ export default function Dashboard() {
       const next=await round.answer(questionId,selectedAnswer);
       if (!next || currentUserId.current!==userId) return;
       const answer=next.answers.find(answer=>answer.question_id===questionId);
-      if (!answer) return;
-      answerSounds.play(answer.is_correct?"correct":"incorrect");
+      const attempt=next.attempts?.filter(attempt=>attempt.question_id===questionId).at(-1);
+      const feedback=attempt??answer;
+      if (!feedback) return;
+      answerSounds.play(feedback.is_correct?"correct":"incorrect");
       setSelectedAnswer("");setAudioSessionNotice("");
+      if (!answer) return;
       setProfile(current=>current?.userId===userId?{...current,
         completedQuestionIds:answer.is_correct?[...new Set([...current.completedQuestionIds,questionId])]:current.completedQuestionIds,
         lessonResults:next.finished_at?{...current.lessonResults,[next.lesson_id]:lessonRunScore(next)}:current.lessonResults,

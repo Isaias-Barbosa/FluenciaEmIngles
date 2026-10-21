@@ -43,6 +43,6 @@ export function LessonProgress({ questions, questionIndex, status }: {
         <span aria-hidden="true">{done ? "✓" : wrong ? "×" : index + 1}</span>
       </li>;
     })}</ol>
-    <p className="practice-guide">{answeredCount === total ? completedCount >= required ? "Lição concluída. Muito bem!" : "Refaça a lição para atingir o mínimo de acertos." : `Acerte pelo menos ${required} de ${total} nesta tentativa. Se errar, você segue para a próxima questão.`}</p>
+    <p className="practice-guide">{answeredCount === total ? completedCount >= required ? "Lição concluída. Muito bem!" : "Refaça a lição para atingir o mínimo de acertos." : `Acerte pelo menos ${required} de ${total} nesta tentativa. Você avança ao acertar ou esgotar as chances da questão.`}</p>
   </section>;
 }

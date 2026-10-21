@@ -1,5 +1,7 @@
-export type LessonRunAnswer = {question_id:string;submitted_answer:string;is_correct:boolean;correct_answer:string;explanation:string|null};
-export type LessonRun = {id:string;user_id:string;lesson_id:string;question_ids:string[];answers:LessonRunAnswer[];passed:boolean;finished_at:string|null};
+export type LessonQuestionAttempt={request_id:string;question_id:string;submitted_answer:string;is_correct:boolean;attempt_number:number;attempt_limit:number;hint:string|null;prompt:string};
+export function questionAttemptLimit(type:string){return type==="multiple_choice"?2:type==="fill_blank"?3:1;}
+export type LessonRunAnswer = {question_id:string;submitted_answer:string;is_correct:boolean;correct_answer:string;explanation:string|null;attempt_count?:number};
+export type LessonRun = {id:string;user_id:string;lesson_id:string;question_ids:string[];answers:LessonRunAnswer[];attempts?:LessonQuestionAttempt[];passed:boolean;finished_at:string|null};
 export function lessonRunScore(run:LessonRun) {
   const correct=run.answers.filter(answer=>answer.is_correct).length;
   return {correct,incorrect:run.answers.length-correct,total:run.question_ids.length,required:Math.ceil(run.question_ids.length*0.6)};

@@ -26,7 +26,7 @@ export type Database = {
   public: {
     Tables: {
       lesson_completions: Table<{user_id:string;lesson_id:string;completed_at:string},never,never>;
-      lesson_runs: Table<{id:string;user_id:string;lesson_id:string;question_ids:string[];answers:Json;passed:boolean;created_at:string;finished_at:string|null},never,never>;
+      lesson_runs: Table<{id:string;user_id:string;lesson_id:string;question_ids:string[];answers:Json;attempts:Json;passed:boolean;created_at:string;finished_at:string|null},never,never>;
       student_feedback: Table<{ id: string; user_id: string; request_id: string; message: string; created_at: string }, never, never>;
       flashcard_progress: Table<{ user_id: string; card_id: string; rating: "remembered" | "review"; updated_at: string }, { user_id: string; card_id: string; rating: "remembered" | "review" }, { rating: "remembered" | "review" }>;
 
@@ -322,7 +322,7 @@ export type Database = {
       finish_teaching_provider: {Args:{p_provider:string;p_lease_id:string;p_cooldown_seconds:number};Returns:boolean};
       admin_set_questions_published: {Args:{p_ids:string[];p_published:boolean};Returns:number};
       start_lesson_run: {Args:{p_lesson_id:string};Returns:Json};
-      submit_lesson_run_answer: {Args:{p_run_id:string;p_question_id:string;p_submitted_answer:string};Returns:Json};
+      submit_lesson_run_answer: {Args:{p_run_id:string;p_question_id:string;p_submitted_answer:string;p_request_id:string;p_expected_attempt:number};Returns:Json};
       submit_student_feedback: { Args: { p_message: string; p_request_id: string }; Returns: string };
       get_student_feedback: { Args: { p_offset: number; p_limit: number }; Returns: Json };
 
