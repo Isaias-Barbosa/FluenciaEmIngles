@@ -868,3 +868,21 @@ html:has(.app-shell.theme-light), body:has(.app-shell.theme-light) { background:
 .feedback-table time { font-size: 13px; white-space: nowrap; }
 .feedback-pagination { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 20px; }
 @media (max-width: 600px) { .review-backdrop { padding: 10px; } .card-review-dialog { padding: 20px; max-height: 90dvh; } .review-card-list article { padding: 16px; } .feedback-admin-heading { flex-wrap: wrap; } .feedback-pagination { flex-wrap: wrap; } }
+
+.practice-question-steps li.is-incorrect { border-color: #e78484; background: rgba(231,132,132,.12); color: #f4a4a4; }
+.lesson-round-result { margin: 24px 0; padding: clamp(20px,4vw,32px); border: 1px solid rgba(231,132,132,.25); border-radius: 14px; background: linear-gradient(145deg,rgba(231,132,132,.09),transparent); }
+.lesson-round-passed { border-color: rgba(83,224,186,.3); background: linear-gradient(145deg,rgba(83,224,186,.1),transparent); }
+.lesson-round-result h3 { margin: 12px 0 20px; font-size: clamp(22px,4vw,30px); }
+.lesson-round-result > p { line-height: 1.7; color: var(--copy); font-size: 14px; }
+.lesson-round-totals { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+.lesson-round-totals > div { padding: 20px; border: 1px solid var(--line); border-radius: 12px; background: rgba(0,0,0,.12); }
+.lesson-round-totals strong { display: block; font-size: 44px; color: var(--mint); }
+.lesson-round-totals > div + div strong { color: #f4a4a4; }
+.lesson-round-totals span { display: block; margin-top: 6px; font-size: 13px; color: var(--copy); }
+.lesson-round-actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 24px; }
+.lesson-round-review { margin: 24px 0; border: 1px solid var(--line); border-radius: 12px; padding: 18px; font-size: 14px; }
+.lesson-round-review summary { cursor: pointer; color: var(--mint); font-weight: 600; }
+.lesson-round-review article { border-top: 1px solid var(--line); padding-top: 18px; margin-top: 18px; overflow-wrap: anywhere; line-height: 1.7; }
+.lesson-round-review p { color: var(--copy); }
+.lesson-round-review .feedback-success { color: var(--mint); }
+.lesson-round-review .feedback-error { color: #f4a4a4; }

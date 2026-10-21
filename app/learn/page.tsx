@@ -7,10 +7,11 @@ import { JourneyMetric, QuizHistoryPanel } from "./components/journey-widgets";
 import { useQuizHistory } from "./components/use-quiz-history";
 import { summarizeLearning, summarizeQuizHistory } from "@/lib/quiz/progress";
 import VocabularyQuiz from "./components/vocabulary-quiz";
-import { LessonProgress, type PracticeStatus } from "./components/lesson-progress";
+import { type PracticeStatus } from "./components/lesson-progress";
 import { useAnswerSounds } from "./components/use-answer-sounds";
-import { LessonAudioPlayer } from "./components/lesson-audio-player";
-import { AiHelpButton } from "./components/ai-help-button";
+import LessonModal from "./components/lesson-modal";
+import {useLessonRun} from "./components/use-lesson-run";
+import type {StudyLesson as Lesson,LessonQuestion} from "@/lib/learning/lesson-run";
 import { applyReplacement, type SavedReplacement } from "@/lib/learning/web-question";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase/client";
@@ -44,29 +45,6 @@ type ProficiencyExamResult = {
   c2_score: number;
 };
 type QuestionType = "multiple_choice" | "fill_blank" | "listening" | "word_order";
-type LessonQuestion = {
-  passage: string | null;
-  id: string;
-  type: QuestionType;
-  prompt: string;
-  options: string[];
-  audioUrl: string | null;
-  sourceUrl?: string;
-  sourceTitle?: string;
-  sourceLicense?: string;
-  replacementOrigin?: string;
-  hint: string | null;
-};
-type Lesson = {
-  id: string;
-  level: LevelId;
-  title: string;
-  category: string;
-  duration: number;
-  description: string;
-  sortOrder: number;
-  questions: LessonQuestion[];
-};
 type Flashcard = {
   id: string;
   front: string;
@@ -217,13 +195,9 @@ export default function Dashboard() {
   const [replacingAudio, setReplacingAudio] = useState(false);
   const activeQuestionId = useRef<string | null>(null);
   const [activeVideo, setActiveVideo] = useState<LearningVideo | null>(null);
-  const [questionIndex, setQuestionIndex] = useState(0);
+  const round = useLessonRun(profile?.userId ?? null);
+  const questionIndex = round.run?.answers.length ?? 0;
   const [selectedAnswer, setSelectedAnswer] = useState("");
-  const [answerResult, setAnswerResult] = useState<"correct" | "incorrect" | null>(null);
-  const [answerFeedback, setAnswerFeedback] = useState("");
-  const [answerHint, setAnswerHint] = useState("");
-  const [wrongAttempts, setWrongAttempts] = useState(0);
-  const [levelCompleted, setLevelCompleted] = useState(false);
   const [answerSaving, setAnswerSaving] = useState(false);
   const [authBusy, setAuthBusy] = useState(false);
   const [authMessage, setAuthMessage] = useState("");
@@ -300,7 +274,7 @@ export default function Dashboard() {
   const loadStudyData = useCallback(async (activeProfile: Profile) => {
     if (!supabase) throw new Error("Supabase não está configurado.");
 
-    const [questionsResult, cardsResult, attemptsResult, videosResult, levelsResult, languageResult, replacementsResult] = await Promise.all([
+    const [questionsResult, cardsResult, attemptsResult, videosResult, levelsResult, languageResult, replacementsResult, completionsResult] = await Promise.all([
       readAllStudyRows<PublishedQuestionRow>((from, to) => supabase!
         .from("published_lesson_questions")
         .select("*")
@@ -329,8 +303,10 @@ export default function Dashboard() {
       supabase.from("language_levels").select("id, code, language_id"),
       supabase.from("languages").select("id").eq("code", "en").maybeSingle(),
       readAllStudyRows<SavedReplacement>((from, to) => supabase!.rpc("get_my_question_replacements").range(from, to)),
+      readAllStudyRows<{lesson_id:string}>((from,to)=>supabase!.from("lesson_completions").select("lesson_id").eq("user_id",activeProfile.userId).order("lesson_id").range(from,to)),
     ]);
 
+    if (completionsResult.error) throw new Error("Não foi possível carregar as conclusões das lições. Confira a migration de tentativas de lição.");
     if (questionsResult.error) {
       throw new Error(`Não foi possível carregar as lições: ${questionsResult.error.message}`);
     }
@@ -420,9 +396,7 @@ export default function Dashboard() {
         .filter((attempt) => attempt.is_correct)
         .map((attempt) => attempt.question_id),
     );
-    const completedLessons = nextLessons
-      .filter((lesson) => lesson.questions.every((question) => correctQuestionIds.has(question.id)))
-      .map((lesson) => lesson.id);
+    const completedLessons = completionsResult.data.map(row=>row.lesson_id);
     const nextCards = cardsResult.data.map((card) => ({
       id: card.id,
       front: card.front,
@@ -567,15 +541,12 @@ export default function Dashboard() {
     (lesson) => !profile?.completedLessons.includes(lesson.id),
   );
   const canTakePromotionExam = profile?.level !== "C2" && promotionProgress(currentLessons, profile?.completedQuestionIds ?? []).eligible;
-  const activeQuestion = activeLesson?.questions[questionIndex] ?? null;
+  const activeQuestion = activeLesson?.questions.find(question => question.id === round.run?.question_ids[questionIndex]) ?? null;
   activeQuestionId.current = activeQuestion?.id ?? null;
   currentUserId.current = profile?.userId ?? null;
-  const activeCompletedIds = [...new Set([
-    ...(profile?.completedQuestionIds ?? []),
-    ...(answerResult === "correct" && activeQuestion ? [activeQuestion.id] : []),
-  ])];
   const practiceStatus: PracticeStatus = {
-    completedIds: activeCompletedIds,
+    completedIds: round.run?.answers.filter(answer=>answer.is_correct).map(answer=>answer.question_id) ?? [],
+    incorrectIds: round.run?.answers.filter(answer=>!answer.is_correct).map(answer=>answer.question_id) ?? [],
     soundsEnabled: answerSounds.enabled,
     onToggleSounds: answerSounds.toggle,
   };
@@ -708,10 +679,6 @@ export default function Dashboard() {
       setActiveLesson((current) => current ? replaceInLesson(current) : null);
       if (activeQuestionId.current === questionId) {
         setSelectedAnswer("");
-        setAnswerResult(null);
-        setAnswerFeedback("");
-        setAnswerHint("");
-        setWrongAttempts(0);
         setAudioSessionNotice("Nova questão de texto salva. Ao acertar, ela contará neste mesmo conjunto e no progresso das missões.");
       }
     } catch (error) {
@@ -724,51 +691,37 @@ export default function Dashboard() {
     }
   }
 
+  function closeLesson() {
+    round.cancel();
+    setActiveLesson(null);
+    setSelectedAnswer("");
+  }
+
   function openLesson(lesson: Lesson) {
     setAudioSessionNotice("");
-    const nextQuestionIndex = lesson.questions.findIndex(
-      (question) => !profile?.completedQuestionIds.includes(question.id),
-    );
-    setActiveLesson(lesson);
-    setQuestionIndex(nextQuestionIndex >= 0 ? nextQuestionIndex : 0);
     setSelectedAnswer("");
-    setAnswerResult(null);
-    setAnswerFeedback("");
-    setAnswerHint("");
-    setWrongAttempts(0);
-    setLevelCompleted(false);
+    setActiveLesson(lesson);
+    void round.start(lesson.id);
   }
 
   async function submitAnswer() {
-    if (!supabase || !profile || !session || !activeQuestion || !selectedAnswer.trim() || answerPending.current || replacementPending.current || profile.completedQuestionIds.includes(activeQuestion.id) || answerResult === "correct") return;
-    answerPending.current = true;
+    if (!profile || !activeQuestion || !selectedAnswer.trim() || answerPending.current || replacementPending.current) return;
+    const userId=profile.userId,questionId=activeQuestion.id;
+    answerPending.current=true;
     answerSounds.prepare();
     setAnswerSaving(true);
-    setAppError("");
     try {
-      const { data, error } = await supabase.rpc("submit_question_answer", {
-        p_question_id: activeQuestion.id,
-        p_submitted_answer: selectedAnswer.trim(),
-      });
-      if (error) throw new Error(error.message);
-      const result = data[0];
-      if (!result) throw new Error("O Supabase não retornou o resultado da correção.");
-
-      if (activeQuestionId.current !== activeQuestion.id) return;
-      answerSounds.play(result.is_correct ? "correct" : "incorrect");
-      setAnswerResult(result.is_correct ? "correct" : "incorrect");
-      setAnswerFeedback(result.is_correct ? `Muito bem!\nResposta: ${selectedAnswer}\n${result.explanation || "Use esta resposta para continuar praticando."}${activeQuestion.hint ? `\nEm outros contextos: ${activeQuestion.hint}` : ""}` : result.explanation || "");
-      setAnswerHint(result.hint || "");
-      setWrongAttempts(result.wrong_attempts);
-      setLevelCompleted(result.level_completed);
-      const updatedProfile = await loadProfile(session);
-      await loadStudyData(updatedProfile);
-    } catch (error) {
-      setAppError(error instanceof Error ? error.message : "Não foi possível enviar sua resposta.");
-    } finally {
-      answerPending.current = false;
-      setAnswerSaving(false);
-    }
+      const next=await round.answer(questionId,selectedAnswer);
+      if (!next || currentUserId.current!==userId) return;
+      const answer=next.answers.find(answer=>answer.question_id===questionId);
+      if (!answer) return;
+      answerSounds.play(answer.is_correct?"correct":"incorrect");
+      setSelectedAnswer("");setAudioSessionNotice("");
+      setProfile(current=>current?.userId===userId?{...current,
+        completedQuestionIds:answer.is_correct?[...new Set([...current.completedQuestionIds,questionId])]:current.completedQuestionIds,
+        completedLessons:next.passed?[...new Set([...current.completedLessons,next.lesson_id])]:current.completedLessons,
+      }:current);
+    } finally { answerPending.current=false;setAnswerSaving(false); }
   }
 
   async function saveProfileDetails(name: string, learningGoal: string, minutes: number) {
@@ -801,15 +754,6 @@ export default function Dashboard() {
     const { error } = await supabase.auth.signOut();
     if (error) setAppError(`Não foi possível sair da conta: ${error.message}`);
     await syncAdminSession(null);
-  }
-
-  function nextQuestion() {
-    setQuestionIndex((index) => index + 1);
-    setSelectedAnswer("");
-    setAnswerResult(null);
-    setAnswerFeedback("");
-    setAnswerHint("");
-    setWrongAttempts(0);
   }
 
   if (!ready || (session && profileLoading && !profile)) {
@@ -971,7 +915,7 @@ export default function Dashboard() {
           <footer className="app-footer"><span>Pequenos passos também levam longe. <span className="footer-heart">♥</span></span><span>{page === "quiz" ? "O histórico deste quiz fica neste navegador." : page === "progress" || page === "profile" ? "Lições sincronizadas · histórico do Quiz neste navegador." : "Seu progresso fica sincronizado com sua conta."}</span></footer>
         </div>
       </div>
-      {activeLesson && activeQuestion && <LessonModal key={`${activeQuestion.id}-${activeQuestion.type}`} replacingAudio={replacingAudio} practiceStatus={practiceStatus} audioSessionNotice={audioSessionNotice} onStudyWithoutAudio={studyWithoutAudio} lesson={activeLesson} question={activeQuestion} questionIndex={questionIndex} selectedAnswer={selectedAnswer} result={answerResult} feedback={answerFeedback} hint={answerHint} wrongAttempts={wrongAttempts} levelCompleted={canTakePromotionExam} saving={answerSaving} completed={profile.completedQuestionIds.includes(activeQuestion.id)} onSelect={(answer) => { setSelectedAnswer(answer); setAnswerResult(null); setAnswerFeedback(""); }} onSubmit={submitAnswer} onNext={nextQuestion} onClose={() => setActiveLesson(null)} onStartPromotionExam={() => { setActiveLesson(null); setPage("exam"); }} />}
+      {activeLesson && <LessonModal lesson={activeLesson} run={round.run?.lesson_id===activeLesson.id?round.run:null} loading={round.loading} error={round.error} saving={answerSaving} replacingAudio={replacingAudio} audioSessionNotice={audioSessionNotice} practiceStatus={practiceStatus} selectedAnswer={selectedAnswer} onSelect={setSelectedAnswer} onSubmit={()=>void submitAnswer()} onStudyWithoutAudio={()=>void studyWithoutAudio()} onRetry={()=>openLesson(activeLesson)} onClose={closeLesson} canTakePromotionExam={canTakePromotionExam} onStartPromotionExam={()=>{closeLesson();setPage("exam");}} />}
       {activeVideo && <VideoPlayerModal video={activeVideo} onClose={() => setActiveVideo(null)} />}
     </main>
   );
@@ -989,10 +933,10 @@ function HomePage({ profile, lessons: currentLessons, progressPercent, completed
         <div className="main-column">
           <article className="level-banner"><div className="banner-orbit orbit-one" /><div className="banner-orbit orbit-two" /><div className="level-banner-content"><div className="banner-top"><span className="banner-label"><span className="banner-spark">✦</span> SUA JORNADA ATUAL</span><span className="level-pill">{profile.level} <span>·</span> {profile.levelTitle}</span></div><h2>O começo de algo <em>grande.</em></h2><p>Você está construindo sua base no inglês. Cada pequena conquista conta — continue no seu ritmo.</p><div className="banner-progress"><div className="progress-meta"><span>Progresso neste nível</span><strong>{completedInLevel} <small>/ {currentLessons.length} lições</small></strong></div><div className="progress-track"><span style={{ width: `${progressPercent}%` }} /></div><div className="progress-caption"><span>{progressPercent}% concluído</span><span>Nível {levelIndex + 1} de 6</span></div></div></div><div className="banner-art"><div className="art-circle"><span>✦</span></div><span className="art-spark spark-one">✳</span><span className="art-spark spark-two">✧</span><span className="art-spark spark-three">·</span><div className="art-word">hello<span>.</span></div><div className="art-label">uma palavra<br />de cada vez</div></div></article>
           <section className="section-block"><div className="section-title-row"><div><span className="section-kicker">SUA TRILHA</span><h2>Continue aprendendo</h2></div><button className="text-link" onClick={() => onPage("lessons")}>Ver todas <span>↗</span></button></div>
-            <div className="lesson-feature">{nextLesson ? <><div className="lesson-feature-icon">{nextLesson.category === "Conversação" ? "◉" : nextLesson.category === "Gramática" ? "⌘" : "✦"}</div><div className="lesson-feature-info"><span className="lesson-category">{nextLesson.category} <i /> {nextLesson.duration} min · {nextLesson.questions.filter((question) => profile.completedQuestionIds.includes(question.id)).length} de {nextLesson.questions.length} questões feitas</span><h3>{nextLesson.title}</h3><p>{nextLesson.description}</p><div className="lesson-feature-bottom"><span><span className="lesson-dot" /> PRÓXIMA NA SUA TRILHA</span><button className="button button-dark" onClick={onStudy}>Começar lição <span>→</span></button></div></div></> : currentLessons.length ? <div className="level-finished"><span>🎉</span><h3>{profile.level === "C2" ? "Você concluiu toda a trilha!" : "Você concluiu este nível!"}</h3><p>{canTakePromotionExam ? `Faça a prova de 10 questões para avançar do ${profile.level} ao próximo nível. É preciso acertar pelo menos 7.` : "Explore suas lições concluídas e acompanhe seu progresso."}</p>{canTakePromotionExam ? <button className="button button-primary" onClick={onPromotionExam}>Fazer prova de avanço <span>→</span></button> : <button className="button button-primary" onClick={() => onPage("progress")}>Ver meu progresso <span>→</span></button>}</div> : <div className="level-finished"><span>📚</span><h3>Estamos preparando sua trilha</h3><p>Ainda não há lições publicadas para este nível.</p></div>}</div>
+            <div className="lesson-feature">{nextLesson ? <><div className="lesson-feature-icon">{nextLesson.category === "Conversação" ? "◉" : nextLesson.category === "Gramática" ? "⌘" : "✦"}</div><div className="lesson-feature-info"><span className="lesson-category">{nextLesson.category} <i /> {nextLesson.duration} min · {nextLesson.questions.filter((question) => profile.completedQuestionIds.includes(question.id)).length} de {nextLesson.questions.length} questões já acertadas</span><h3>{nextLesson.title}</h3><p>{nextLesson.description}</p><div className="lesson-feature-bottom"><span><span className="lesson-dot" /> PRÓXIMA NA SUA TRILHA</span><button className="button button-dark" onClick={onStudy}>Começar lição <span>→</span></button></div></div></> : currentLessons.length ? <div className="level-finished"><span>🎉</span><h3>{profile.level === "C2" ? "Você concluiu toda a trilha!" : "Você concluiu este nível!"}</h3><p>{canTakePromotionExam ? `Faça a prova de 10 questões para avançar do ${profile.level} ao próximo nível. É preciso acertar pelo menos 7.` : "Explore suas lições concluídas e acompanhe seu progresso."}</p>{canTakePromotionExam ? <button className="button button-primary" onClick={onPromotionExam}>Fazer prova de avanço <span>→</span></button> : <button className="button button-primary" onClick={() => onPage("progress")}>Ver meu progresso <span>→</span></button>}</div> : <div className="level-finished"><span>📚</span><h3>Estamos preparando sua trilha</h3><p>Ainda não há lições publicadas para este nível.</p></div>}</div>
           </section>
           {canTakePromotionExam && <div className="promotion-ready"><p>Você concluiu pelo menos 50% das questões. Sua prova de avanço está liberada!</p><button className="button button-primary" onClick={onPromotionExam}>Fazer prova de avanço →</button></div>}
-          <section className="section-block"><div className="section-title-row"><div><span className="section-kicker">PARA VOCÊ</span><h2>Na sua trilha de hoje</h2></div><span className="tiny-count">{profile.level} · {recommendations.length} lições</span></div><div className="lesson-list">{recommendations.length ? recommendations.map((lesson, index) => { const done = profile.completedLessons.includes(lesson.id); return <button key={lesson.id} className={`lesson-row ${done ? "lesson-done" : ""}`} onClick={() => onSelectLesson(lesson)}><span className={`lesson-index ${done ? "index-done" : ""}`}>{done ? "✓" : `0${index + 1}`}</span><span className="lesson-row-title"><strong>{lesson.title}</strong><small>{lesson.category} <i /> {lesson.duration} min · {lesson.questions.filter((question) => profile.completedQuestionIds.includes(question.id)).length} de {lesson.questions.length} questões feitas</small></span><span className="lesson-row-status">{done ? "Concluída" : "→"}</span></button>; }) : <div className="empty-state">As lições publicadas aparecerão aqui.</div>}</div></section>
+          <section className="section-block"><div className="section-title-row"><div><span className="section-kicker">PARA VOCÊ</span><h2>Na sua trilha de hoje</h2></div><span className="tiny-count">{profile.level} · {recommendations.length} lições</span></div><div className="lesson-list">{recommendations.length ? recommendations.map((lesson, index) => { const done = profile.completedLessons.includes(lesson.id); return <button key={lesson.id} className={`lesson-row ${done ? "lesson-done" : ""}`} onClick={() => onSelectLesson(lesson)}><span className={`lesson-index ${done ? "index-done" : ""}`}>{done ? "✓" : `0${index + 1}`}</span><span className="lesson-row-title"><strong>{lesson.title}</strong><small>{lesson.category} <i /> {lesson.duration} min · {lesson.questions.filter((question) => profile.completedQuestionIds.includes(question.id)).length} de {lesson.questions.length} questões já acertadas</small></span><span className="lesson-row-status">{done ? "Concluída" : "→"}</span></button>; }) : <div className="empty-state">As lições publicadas aparecerão aqui.</div>}</div></section>
         </div>
         <aside className="right-column">
           <article className="daily-card"><div className="daily-card-top"><span className="daily-icon">✧</span><span className="daily-label">FOCO DE HOJE</span><span className="daily-menu">···</span></div><h3>Um hábito de cada vez.</h3><p>Seu objetivo é <strong>{profile.goal.toLowerCase()}</strong>. Um pouquinho de prática diária aproxima você dele.</p><div className="daily-goal"><div className="goal-circle"><span>{profile.dailyMinutes}</span></div><div><strong>minutos por dia</strong><small>seu combinado com você</small></div></div><button className="daily-link" onClick={onStudy}>Fazer minha prática <span>↗</span></button></article>
@@ -1038,7 +982,7 @@ function LessonsPage({ profile, lessons: allLessons, videos, onSelectLesson, onS
       <div className="page-heading">
         <span className="eyebrow"><span className="live-dot" /> SUA TRILHA DE APRENDIZADO</span>
         <h1>Conteúdo no <span>seu ritmo.</span></h1>
-        <p>Encontre uma lição, acompanhe o que já concluiu e avance passo a passo.</p>
+        <p>Acerte pelo menos 3 das 5 questões para concluir cada lição. Se não atingir o mínimo, refaça o conjunto.</p>
       </div>
       <section className="lessons-overview" aria-label="Resumo do conteúdo">
         <div><span className="lessons-overview-icon">▤</span><div><strong>{completedLessons} de {totalLessons}</strong><span>lições concluídas no seu nível</span></div></div>
@@ -1081,7 +1025,7 @@ function LessonsPage({ profile, lessons: allLessons, videos, onSelectLesson, onS
                   const completed = profile.completedLessons.includes(lesson.id);
                   return <button key={lesson.id} className={`roadmap-lesson ${completed ? "roadmap-lesson-done" : ""}`} onClick={() => onSelectLesson(lesson)}>
                     <span className={`roadmap-lesson-number ${completed ? "completed-number" : ""}`}>{completed ? "✓" : String(levelLessons.indexOf(lesson) + 1).padStart(2, "0")}</span>
-                    <span className="roadmap-lesson-copy"><strong>{lesson.title}</strong><small>{lesson.category} <i /> {lesson.duration} min <i /> {lesson.questions.filter((question) => profile.completedQuestionIds.includes(question.id)).length} de {lesson.questions.length} questões feitas</small></span>
+                    <span className="roadmap-lesson-copy"><strong>{lesson.title}</strong><small>{lesson.category} <i /> {lesson.duration} min <i /> {lesson.questions.filter((question) => profile.completedQuestionIds.includes(question.id)).length} de {lesson.questions.length} questões já acertadas</small></span>
                     <span className="roadmap-lesson-arrow">{completed ? "Concluída" : "Começar"} <b aria-hidden="true">→</b></span>
                   </button>;
                 }) : <div className="lessons-empty">{levelLessons.length ? "Nenhuma lição corresponde a essa busca ou filtro." : "As lições deste nível estarão disponíveis em breve."}</div>}
@@ -1195,7 +1139,7 @@ function ProfilePage({ profile, levelIndex, lessons: allLessons, onSave, onPage 
   const pendingSave = useRef(false);
   const quiz = useQuizHistory(profile.userId);
   const quizSummary = summarizeQuizHistory(quiz.stats);
-  const current = summarizeLearning(allLessons, profile.completedQuestionIds).find((level) => level.code === profile.level)!;
+  const current = summarizeLearning(allLessons, profile.completedQuestionIds,profile.completedLessons).find((level) => level.code === profile.level)!;
   const changed = name !== profile.name || goal !== profile.goal || minutes !== profile.dailyMinutes;
   function clearMessage() { setSaveMessage(""); setFormError(""); }
   function resetForm() { setName(profile.name); setGoal(profile.goal); setMinutes(profile.dailyMinutes); clearMessage(); }
@@ -1233,7 +1177,7 @@ function ProgressPage({ profile, levelIndex, lessons: allLessons, canTakePromoti
 }) {
   const quiz = useQuizHistory(profile.userId);
   const quizSummary = summarizeQuizHistory(quiz.stats);
-  const learning = summarizeLearning(allLessons, profile.completedQuestionIds);
+  const learning = summarizeLearning(allLessons, profile.completedQuestionIds,profile.completedLessons);
   const current = learning.find((level) => level.code === profile.level)!;
   const quizAvailable = quiz.ready && !quiz.unavailable;
   const quizNote = quiz.unavailable ? "Histórico indisponível" : quiz.ready ? "Neste navegador" : "Carregando histórico…";
@@ -1354,128 +1298,4 @@ function PromotionExamPage({ level, onExit, onPassed }: {
       </div>
     </section>
   );
-}
-
-function ReadingPassage({ passage }: { passage: string | null }) {
-  if (!passage) return null;
-  return <section className="reading-passage" aria-label="Texto para leitura"><span className="section-kicker">LEIA O TEXTO</span><p lang="en">{passage}</p></section>;
-}
-
-function LessonModal({ replacingAudio, practiceStatus, audioSessionNotice, onStudyWithoutAudio, lesson, question, questionIndex, selectedAnswer, result, feedback, hint, wrongAttempts, levelCompleted, saving, completed, onSelect, onSubmit, onNext, onClose, onStartPromotionExam }: {
-  replacingAudio: boolean;
-  practiceStatus: PracticeStatus;
-  audioSessionNotice: string;
-  onStudyWithoutAudio: () => void;
-  lesson: Lesson;
-  question: LessonQuestion;
-  questionIndex: number;
-  selectedAnswer: string;
-  result: "correct" | "incorrect" | null;
-  feedback: string;
-  hint: string;
-  wrongAttempts: number;
-  levelCompleted: boolean;
-  saving: boolean;
-  completed: boolean;
-  onSelect: (answer: string) => void;
-  onSubmit: () => void;
-  onNext: () => void;
-  onClose: () => void;
-  onStartPromotionExam: () => void;
-}) {
-  const [completedAudioPlays, setCompletedAudioPlays] = useState(0);
-  const [listeningTranscript, setListeningTranscript] = useState("");
-  const [transcriptLoading, setTranscriptLoading] = useState(false);
-  const [transcriptError, setTranscriptError] = useState("");
-  const [orderedWords, setOrderedWords] = useState<string[]>([]);
-  const isLastQuestion = questionIndex === lesson.questions.length - 1;
-  const answeredCorrectly = result === "correct" || completed;
-  useEffect(() => {
-    setCompletedAudioPlays(0);
-    setListeningTranscript("");
-    setTranscriptError("");
-    setOrderedWords([]);
-  }, [question.id]);
-
-  function selectWord(word: string) {
-    const nextWords = [...orderedWords, word];
-    setOrderedWords(nextWords);
-    onSelect(nextWords.join(" "));
-  }
-
-  function removeWord(index: number) {
-    const nextWords = orderedWords.filter((_, wordIndex) => wordIndex !== index);
-    setOrderedWords(nextWords);
-    onSelect(nextWords.join(" "));
-  }
-
-  if (question.type === "word_order") {
-    return <WordOrderModal replacingAudio={replacingAudio} practiceStatus={practiceStatus} audioSessionNotice={audioSessionNotice} onStudyWithoutAudio={onStudyWithoutAudio} lesson={lesson} question={question} questionIndex={questionIndex} selectedAnswer={selectedAnswer} result={result} feedback={feedback} hint={hint} levelCompleted={levelCompleted} saving={saving} completed={completed} onSelect={onSelect} onSubmit={onSubmit} onNext={onNext} onClose={onClose} onStartPromotionExam={onStartPromotionExam} />;
-  }
-
-  async function loadListeningTranscript() {
-    if (!supabase) {
-      setTranscriptError("Supabase não está configurado.");
-      return;
-    }
-
-    setTranscriptLoading(true);
-    setTranscriptError("");
-    try {
-      const { data, error } = await supabase.rpc("get_listening_transcript", {
-        p_question_id: question.id,
-      });
-      if (error) throw new Error(error.message);
-      if (!data) throw new Error("A transcrição desta questão não está disponível.");
-      setListeningTranscript(data);
-    } catch (error) {
-      setTranscriptError(error instanceof Error ? error.message : "Não foi possível carregar a transcrição.");
-    } finally {
-      setTranscriptLoading(false);
-    }
-  }
-
-  return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><section className="lesson-modal" role="dialog" aria-modal="true" aria-labelledby="lesson-title"><button className="modal-close" onClick={onClose} aria-label="Fechar lição">×</button><span className="eyebrow"><span className="live-dot" /> {lesson.category.toUpperCase()} · {lesson.duration} MIN</span><LessonProgress questions={lesson.questions} questionIndex={questionIndex} status={practiceStatus} /><h2 id="lesson-title">{lesson.title}</h2><p className="modal-description">{lesson.description}</p>{audioSessionNotice && <p className="audio-session-notice" role="status">{audioSessionNotice}</p>}<div className={`exercise-box practice-exercise ${answeredCorrectly ? "practice-exercise-correct" : result === "incorrect" ? "practice-exercise-incorrect" : ""}`}><span className="exercise-label">{question.type === "listening" ? "OUÇA E ESCREVA" : question.type === "fill_blank" ? "COMPLETE A FRASE" : "HORA DE PRATICAR"}</span>{(question.type === "listening" || question.audioUrl) && <><LessonAudioPlayer disabled={replacingAudio} key={question.id} questionId={question.id} fallbackUrl={question.audioUrl} onEnded={() => setCompletedAudioPlays((plays) => plays + 1)} /><button className="study-without-audio" type="button" disabled={saving || replacingAudio || answeredCorrectly} onClick={onStudyWithoutAudio}>{replacingAudio ? "Selecionando questão…" : "Não posso ouvir áudio agora"}</button></>}{question.type === "listening" && completedAudioPlays >= 5 && !listeningTranscript && <button className="listening-transcript-button" type="button" onClick={() => void loadListeningTranscript()} disabled={transcriptLoading}>{transcriptLoading ? "Carregando texto..." : "Mudar para texto"}</button>}{transcriptError && <p className="form-message form-error" role="alert">{transcriptError}</p>}{listeningTranscript && <p className="listening-transcript"><strong>Texto em inglês:</strong> {listeningTranscript}</p>}<ReadingPassage passage={question.passage} /><h3>{question.prompt}</h3>{question.sourceUrl && <p className="replacement-source">{question.replacementOrigin === "reserve" ? "Questão do banco de reservas" : "Questão adaptada com IA"} · <a href={question.sourceUrl} target="_blank" rel="noopener noreferrer">Fonte: {question.sourceTitle || "material de referência"} ↗</a>{question.sourceLicense && <> · {question.sourceLicense}</>}</p>}<div className="answer-options">{question.type === "multiple_choice" ? question.options.map((option, index) => <button key={option} className={`answer-option ${selectedAnswer === option ? "answer-selected" : ""} ${result === "incorrect" && selectedAnswer === option ? "answer-incorrect" : ""}`} onClick={() => onSelect(option)} disabled={answeredCorrectly || saving || replacingAudio}><span>{String.fromCharCode(65 + index)}</span>{option}<i>{result === "correct" && selectedAnswer === option ? "✓" : ""}</i></button>) : <input className="answer-text-input" value={selectedAnswer} onChange={(event) => onSelect(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && selectedAnswer.trim()) onSubmit(); }} placeholder={question.type === "listening" ? "Digite o que você ouviu" : "Digite sua resposta"} disabled={answeredCorrectly || saving || replacingAudio} />}</div>{result === "incorrect" && <p className="answer-feedback feedback-error" role="status"><strong>✕ Ainda não foi desta vez.</strong> {feedback || "Tente outra vez; você consegue."} {wrongAttempts > 0 && !hint && `(${wrongAttempts} de 5 tentativas)`}</p>}{result === "incorrect" && hint && <p className="answer-hint"><strong>Dica após {wrongAttempts} tentativas:</strong> {hint}</p>}{answeredCorrectly && <p className="answer-feedback feedback-success" role="status"><strong>✓ Resposta certa!</strong> {feedback || "Muito bem! Resposta certa."} {levelCompleted ? "Você já concluiu pelo menos metade das questões do nível. A prova de avanço está liberada." : "Seu progresso foi atualizado. ✨"}</p>}</div>{!answeredCorrectly && <AiHelpButton />}{!answeredCorrectly ? <button className="button button-primary modal-submit" onClick={onSubmit} disabled={!selectedAnswer.trim() || saving || replacingAudio}>{saving ? "Conferindo..." : "Conferir resposta"} <span>→</span></button> : levelCompleted ? <button className="button button-primary modal-submit" onClick={onStartPromotionExam}>Fazer prova de avanço <span>→</span></button> : <button className="button button-primary modal-submit" onClick={isLastQuestion ? onClose : onNext}>{isLastQuestion ? "Concluir lição" : "Próxima questão"} <span>→</span></button>}<div className="modal-footer-note"><span>◈</span> Errar faz parte. Você pode tentar quantas vezes quiser.</div></section></div>;
-}
-
-function WordOrderModal({ replacingAudio, practiceStatus, audioSessionNotice, lesson, question, questionIndex, selectedAnswer, result, feedback, hint, levelCompleted, saving, completed, onSelect, onSubmit, onNext, onClose, onStartPromotionExam }: {
-  replacingAudio: boolean;
-  practiceStatus: PracticeStatus;
-  audioSessionNotice: string;
-  onStudyWithoutAudio: () => void;
-  lesson: Lesson;
-  question: LessonQuestion;
-  questionIndex: number;
-  selectedAnswer: string;
-  result: "correct" | "incorrect" | null;
-  feedback: string;
-  hint: string;
-  levelCompleted: boolean;
-  saving: boolean;
-  completed: boolean;
-  onSelect: (answer: string) => void;
-  onSubmit: () => void;
-  onNext: () => void;
-  onClose: () => void;
-  onStartPromotionExam: () => void;
-}) {
-  const [words, setWords] = useState<string[]>([]);
-  const answeredCorrectly = result === "correct" || completed;
-  const isLastQuestion = questionIndex === lesson.questions.length - 1;
-
-  useEffect(() => setWords([]), [question.id]);
-
-  function addWord(word: string) {
-    const next = [...words, word];
-    setWords(next);
-    onSelect(next.join(" "));
-  }
-
-  function removeWord(index: number) {
-    const next = words.filter((_, wordIndex) => wordIndex !== index);
-    setWords(next);
-    onSelect(next.join(" "));
-  }
-
-  return <div className="modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><section className="lesson-modal word-order-modal" role="dialog" aria-modal="true" aria-labelledby="word-order-title"><button className="modal-close" onClick={onClose} aria-label="Fechar lição">×</button><span className="eyebrow"><span className="live-dot" /> {lesson.category.toUpperCase()} · {lesson.duration} MIN</span><LessonProgress questions={lesson.questions} questionIndex={questionIndex} status={practiceStatus} /><h2 id="word-order-title">{lesson.title}</h2><p className="modal-description">{lesson.description}</p>{audioSessionNotice && <p className="audio-session-notice" role="status">{audioSessionNotice}</p>}<div className={`exercise-box practice-exercise ${answeredCorrectly ? "practice-exercise-correct" : result === "incorrect" ? "practice-exercise-incorrect" : ""}`}><span className="exercise-label">ORGANIZE AS PALAVRAS</span><h3>{question.prompt}</h3><div className="word-order-answer" aria-label="Resposta montada">{words.length ? words.map((word, index) => <button key={`${word}-${index}`} type="button" onClick={() => removeWord(index)} disabled={answeredCorrectly || saving || replacingAudio}>{word}</button>) : <span>As palavras escolhidas aparecem aqui</span>}</div><div className="word-bank">{question.options.map((word, index) => <button key={`${word}-${index}`} type="button" onClick={() => addWord(word)} disabled={answeredCorrectly || saving || replacingAudio || words.filter((selectedWord) => selectedWord === word).length >= question.options.filter((optionWord) => optionWord === word).length}>{word}</button>)}</div><small className="word-order-note">Clique em uma palavra da frase para removê-la.</small>{result === "incorrect" && <p className="answer-feedback feedback-error" role="status"><strong>✕ Ainda não foi desta vez.</strong> {feedback || "Tente outra vez; você consegue."}</p>}{answeredCorrectly && <div className="answer-feedback feedback-success" role="status"><strong>✓ Resposta certa!</strong><span>Resposta: {selectedAnswer}</span>{feedback && <span>{feedback}</span>}{(question.hint || hint) && <span className="answer-context-tip"><b>Em outros contextos:</b> {question.hint || hint}</span>}</div>}</div>{!answeredCorrectly && <AiHelpButton />}{!answeredCorrectly ? <button className="button button-primary modal-submit" onClick={onSubmit} disabled={!selectedAnswer.trim() || saving || replacingAudio}>{saving ? "Conferindo..." : "Verificar resposta"} <span>→</span></button> : levelCompleted ? <button className="button button-primary modal-submit" onClick={onStartPromotionExam}>Fazer prova de avanço <span>→</span></button> : <button className="button button-primary modal-submit" onClick={isLastQuestion ? onClose : onNext}>{isLastQuestion ? "Concluir lição" : "Próxima questão"} <span>→</span></button>}<div className="modal-footer-note"><span>◈</span> Monte a frase e confira quando estiver pronto.</div></section></div>;
 }

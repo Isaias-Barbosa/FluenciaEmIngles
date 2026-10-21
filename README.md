@@ -219,3 +219,13 @@ Aplique `supabase/migrations/20261021000000_feedback_and_flashcard_progress.sql`
 - A prova inicial mantém as respostas ao receber eventos de autenticação da mesma conta, como ao voltar para a janela. Sair ou trocar de conta limpa a prova em memória. Recarregar a página continua iniciando uma nova sessão da prova.
 
 Validação: `npm run test:feedback`, `npm run test:journey`, `npm run typecheck` e `npm run build`.
+
+### Lições por tentativa: mínimo de 3 em 5
+
+Aplique `supabase/migrations/20261021120000_lesson_rounds.sql` antes de publicar esta atualização.
+
+Cada questão aceita uma única resposta por tentativa. Depois de conferir, o estudante avança automaticamente, acertando ou errando. O resultado aparece após todas as questões e mostra acertos, erros e uma revisão das respostas. Nas lições de cinco questões, três acertos concluem a lição; dois ou menos exigem refazer as cinco com um placar novo. Para conjuntos de outro tamanho, o mínimo é 60%, arredondado para cima.
+
+A tentativa é salva no Supabase e retomada ao reabrir a lição. A correção e a aprovação são calculadas no servidor, com isolamento por usuário e proteção contra respostas fora de ordem ou duplicadas. A troca de áudio por uma questão de texto mantém a mesma posição e conta normalmente na tentativa. Lições já concluídas pela regra anterior são preservadas. Os acertos individuais continuam registrados no histórico geral, mas somente uma tentativa aprovada conclui uma nova lição.
+
+Execute `npm run test:lessons` para verificar a migration, as regras de aprovação, o progresso da tentativa, a retomada e o fluxo de substituição de áudio.
