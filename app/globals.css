@@ -519,7 +519,7 @@ html:has(.app-shell.theme-light), body:has(.app-shell.theme-light) { background:
 .study-without-audio { width: 100%; min-height: 44px; margin: 0 0 14px; padding: 10px; color: #e5e9f3; background: transparent; border: 1px solid #60697c; border-radius: 8px; cursor: pointer; }
 .study-without-audio:disabled { opacity: .5; cursor: default; }
 .audio-session-notice { color: var(--mint); font-size: 12px; line-height: 1.6; }
-.ai-help-button { width: 100%; margin-top: 16px; min-height: 44px; gap: 8px; flex-wrap: wrap; color: #a9afc0; border: 1px dashed #51596d; background: #202430; cursor: not-allowed; opacity: .8; }
+.ai-help-button { width: 100%; margin-top: 16px; min-height: 44px; gap: 8px; flex-wrap: wrap; color: #ddd6fe; border: 1px solid #7564b7; background: #302844; cursor: pointer; }
 .ai-help-badge { margin-left: auto; font-size: 10px; }
 .lesson-audio-card button:focus-visible, .study-without-audio:focus-visible { outline: 2px solid var(--mint); outline-offset: 3px; }
 @media (max-width: 420px) { .lesson-audio-card { padding: 12px; } .audio-speeds { gap: 6px; } .audio-speeds > span { width: 100%; } }
@@ -938,3 +938,11 @@ html:has(.app-shell.theme-light), body:has(.app-shell.theme-light) { background:
   .question-library-detail { padding: 12px; font-size: 12px; white-space: normal; }
   .question-publication-issue { max-width: none; }
 }
+
+.ai-help-button:disabled { cursor: not-allowed; opacity: .65; }
+.ai-help-button:not(:disabled):hover { background: #40345c; border-color: #b19ae8; }
+.ai-help-note { margin: 8px 0 12px; color: #a9afc0; font-size: 12px; line-height: 1.5; }
+.ai-help-result { margin: 12px 0; padding: 16px 18px; border: 1px solid #7564b7; border-radius: 14px; background: #302844; }
+.ai-help-result strong { color: #e3d7ff; font-size: 14px; }
+.ai-help-result p { margin: 10px 0; line-height: 1.6; overflow-wrap: anywhere; }
+.ai-help-result small { color: #b8b0c9; font-size: 11px; }
