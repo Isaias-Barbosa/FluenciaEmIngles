@@ -1,5 +1,11 @@
 import type { CefrLevel } from "@/lib/cefr/types";
-export type VocabularyEntry = { id: string; level: CefrLevel; word: string; meaning: string; example: string; translation: string };
+import tatoebaData from "./data/tatoeba.json";
+export type TatoebaSentenceCredit = { id: number; owner: string; license: string };
+export type VocabularyEntry = { id: string; level: CefrLevel; word: string; meaning: string; example: string; translation: string;
+  source?: { sentence: TatoebaSentenceCredit; translation?: TatoebaSentenceCredit; editorialTranslation?: boolean } };
+export const tatoebaLicenseUrl = (license: string) => license === "CC0 1.0"
+  ? "https://creativecommons.org/publicdomain/zero/1.0/"
+  : "https://creativecommons.org/licenses/by/2.0/fr/";
 // Original contextual practice content. Bands are editorial teaching suggestions,
 // not official CEFR certification. Each entry tests the sense used in its example.
 const content: Record<CefrLevel, [string, string, string, string][]> = {
@@ -226,12 +232,40 @@ const content: Record<CefrLevel, [string, string, string, string][]> = {
     ["prescient","capaz de antecipar acontecimentos","Her once dismissed warning now seems remarkably prescient.","Seu alerta, antes ignorado, agora parece ter antecipado os acontecimentos de forma notável."],
   ],
 };
-export const vocabulary: VocabularyEntry[] = Object.entries(content).flatMap(([level, rows]) => rows.map(([word, meaning, example, translation], i) => ({ id: `${level}-vocab-${i + 1}`, level: level as CefrLevel, word, meaning, example, translation })));
+export const vocabulary: VocabularyEntry[] = [
+  ...Object.entries(content).flatMap(([level, rows]) => rows.map(([word, meaning, example, translation], i) => ({ id: `${level}-vocab-${i + 1}`, level: level as CefrLevel, word, meaning, example, translation }))),
+  ...tatoebaData.entries.map((entry) => ({ ...entry, level: entry.level as CefrLevel })),
+];
 export type QuizQuestion = VocabularyEntry & { options: string[] };
 function shuffle<T>(items: T[], random: () => number): T[] {
   const result = [...items];
   for (let i = result.length - 1; i > 0; i--) { const j = Math.floor(random() * (i + 1)); [result[i], result[j]] = [result[j], result[i]]; }
   return result;
+}
+// Keep close synonyms out of the same answer set, including across contexts.
+// These editorial families supplement exact-meaning deduplication.
+const meaningFamilies = [
+  ["bellicose", "pugnacious", "inimical", "vitriolic", "fractious", "irascible"],
+  ["mendacious", "disingenuous", "specious", "apocryphal", "perfidious"],
+  ["obdurate", "implacable", "recalcitrant", "intransigent", "recalcitrance"],
+  ["recondite", "abstruse", "obfuscate", "esoteric", "hermetic", "obtuse"],
+  ["sycophant", "unctuous"], ["phlegmatic", "equanimity", "insouciant"],
+  ["astute", "discerning", "perspicacious", "sagacious"],
+  ["substantiate", "corroborate", "attest"],
+  ["bolster", "foster", "augment", "enhance"],
+  ["meticulous", "conscientious", "assiduous", "fastidious"],
+  ["as a rule", "in general", "for the most part"],
+  ["effect", "impact", "consequence", "outcome"],
+  ["up to a point", "to some extent", "to some degree"],
+  ["hamper", "inhibit", "constraint"],
+  ["in common", "have something in common"], ["by virtue of", "by dint of"],
+  ["contentious", "acrimonious"], ["cut no ice", "to no avail"],
+  ["garrulous", "expatiate", "grandiloquent"],
+];
+export function canBeDistractor(question: VocabularyEntry, other: VocabularyEntry) {
+  const target = question.word.toLowerCase(), alternative = other.word.toLowerCase();
+  return question.meaning !== other.meaning && target !== alternative
+    && !meaningFamilies.some((family) => family.includes(target) && family.includes(alternative));
 }
 export type QuizDrawHistory = Partial<Record<CefrLevel, string[]>>;
 export const quizDrawHistoryKey = (userId: string) => `fluencia-vocabulary-draws-v1:${userId}`;
@@ -269,7 +303,7 @@ export function drawVocabularyRound(level: CefrLevel, seenIds: readonly string[]
     nextSeen = refill.map((item) => item.id);
   }
   return { seenIds: nextSeen, round: selected.map((item) => ({ ...item,
-    options: shuffle([item.meaning, ...shuffle([...new Set(pool.filter((other) => other.meaning !== item.meaning).map((other) => other.meaning))], random).slice(0, 3)], random) })) };
+    options: shuffle([item.meaning, ...shuffle([...new Set(pool.filter((other) => canBeDistractor(item, other)).map((other) => other.meaning))], random).slice(0, 3)], random) })) };
 }
 
 export function makeVocabularyRound(level: CefrLevel, random = Math.random): QuizQuestion[] {
