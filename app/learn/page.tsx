@@ -11,7 +11,7 @@ import { type PracticeStatus } from "./components/lesson-progress";
 import { useAnswerSounds } from "./components/use-answer-sounds";
 import LessonModal from "./components/lesson-modal";
 import {useLessonRun} from "./components/use-lesson-run";
-import type {StudyLesson as Lesson,LessonQuestion} from "@/lib/learning/lesson-run";
+import {latestLessonResults,lessonResultLabel,lessonRunScore,type LessonResult,type SavedLessonResult,type StudyLesson as Lesson,type LessonQuestion} from "@/lib/learning/lesson-run";
 import { applyReplacement, type SavedReplacement } from "@/lib/learning/web-question";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase/client";
@@ -69,6 +69,7 @@ type Profile = {
   dailyMinutes: number;
   onboardingComplete: boolean;
   completedLessons: string[];
+  lessonResults: Record<string,LessonResult>;
   completedQuestionIds: string[];
 };
 type PublishedQuestionRow =
@@ -262,6 +263,7 @@ export default function Dashboard() {
         dailyMinutes: profileRow.daily_goal_minutes,
         onboardingComplete: profileRow.onboarding_completed,
         completedLessons: [],
+        lessonResults: {},
         completedQuestionIds: [],
       };
       if (authIdentity.current === activeSession.user.id) setProfile(nextProfile);
@@ -274,7 +276,7 @@ export default function Dashboard() {
   const loadStudyData = useCallback(async (activeProfile: Profile) => {
     if (!supabase) throw new Error("Supabase não está configurado.");
 
-    const [questionsResult, cardsResult, attemptsResult, videosResult, levelsResult, languageResult, replacementsResult, completionsResult] = await Promise.all([
+    const [questionsResult, cardsResult, attemptsResult, videosResult, levelsResult, languageResult, replacementsResult, completionsResult, lessonRunsResult] = await Promise.all([
       readAllStudyRows<PublishedQuestionRow>((from, to) => supabase!
         .from("published_lesson_questions")
         .select("*")
@@ -304,8 +306,13 @@ export default function Dashboard() {
       supabase.from("languages").select("id").eq("code", "en").maybeSingle(),
       readAllStudyRows<SavedReplacement>((from, to) => supabase!.rpc("get_my_question_replacements").range(from, to)),
       readAllStudyRows<{lesson_id:string}>((from,to)=>supabase!.from("lesson_completions").select("lesson_id").eq("user_id",activeProfile.userId).order("lesson_id").range(from,to)),
+      readAllStudyRows<SavedLessonResult>((from,to)=>supabase!.from("lesson_runs")
+        .select("id,lesson_id,question_ids,answers,finished_at")
+        .eq("user_id",activeProfile.userId).not("finished_at","is",null)
+        .order("finished_at",{ascending:false}).order("id",{ascending:false}).range(from,to)),
     ]);
 
+    if (lessonRunsResult.error) throw new Error("Não foi possível carregar os resultados das lições. Tente novamente.");
     if (completionsResult.error) throw new Error("Não foi possível carregar as conclusões das lições. Confira a migration de tentativas de lição.");
     if (questionsResult.error) {
       throw new Error(`Não foi possível carregar as lições: ${questionsResult.error.message}`);
@@ -413,6 +420,7 @@ export default function Dashboard() {
         ? {
             ...current,
             completedLessons,
+            lessonResults:latestLessonResults(lessonRunsResult.data),
             completedQuestionIds: [...correctQuestionIds],
           }
         : current,
@@ -719,6 +727,7 @@ export default function Dashboard() {
       setSelectedAnswer("");setAudioSessionNotice("");
       setProfile(current=>current?.userId===userId?{...current,
         completedQuestionIds:answer.is_correct?[...new Set([...current.completedQuestionIds,questionId])]:current.completedQuestionIds,
+        lessonResults:next.finished_at?{...current.lessonResults,[next.lesson_id]:lessonRunScore(next)}:current.lessonResults,
         completedLessons:next.passed?[...new Set([...current.completedLessons,next.lesson_id])]:current.completedLessons,
       }:current);
     } finally { answerPending.current=false;setAnswerSaving(false); }
@@ -933,10 +942,10 @@ function HomePage({ profile, lessons: currentLessons, progressPercent, completed
         <div className="main-column">
           <article className="level-banner"><div className="banner-orbit orbit-one" /><div className="banner-orbit orbit-two" /><div className="level-banner-content"><div className="banner-top"><span className="banner-label"><span className="banner-spark">✦</span> SUA JORNADA ATUAL</span><span className="level-pill">{profile.level} <span>·</span> {profile.levelTitle}</span></div><h2>O começo de algo <em>grande.</em></h2><p>Você está construindo sua base no inglês. Cada pequena conquista conta — continue no seu ritmo.</p><div className="banner-progress"><div className="progress-meta"><span>Progresso neste nível</span><strong>{completedInLevel} <small>/ {currentLessons.length} lições</small></strong></div><div className="progress-track"><span style={{ width: `${progressPercent}%` }} /></div><div className="progress-caption"><span>{progressPercent}% concluído</span><span>Nível {levelIndex + 1} de 6</span></div></div></div><div className="banner-art"><div className="art-circle"><span>✦</span></div><span className="art-spark spark-one">✳</span><span className="art-spark spark-two">✧</span><span className="art-spark spark-three">·</span><div className="art-word">hello<span>.</span></div><div className="art-label">uma palavra<br />de cada vez</div></div></article>
           <section className="section-block"><div className="section-title-row"><div><span className="section-kicker">SUA TRILHA</span><h2>Continue aprendendo</h2></div><button className="text-link" onClick={() => onPage("lessons")}>Ver todas <span>↗</span></button></div>
-            <div className="lesson-feature">{nextLesson ? <><div className="lesson-feature-icon">{nextLesson.category === "Conversação" ? "◉" : nextLesson.category === "Gramática" ? "⌘" : "✦"}</div><div className="lesson-feature-info"><span className="lesson-category">{nextLesson.category} <i /> {nextLesson.duration} min · {nextLesson.questions.filter((question) => profile.completedQuestionIds.includes(question.id)).length} de {nextLesson.questions.length} questões já acertadas</span><h3>{nextLesson.title}</h3><p>{nextLesson.description}</p><div className="lesson-feature-bottom"><span><span className="lesson-dot" /> PRÓXIMA NA SUA TRILHA</span><button className="button button-dark" onClick={onStudy}>Começar lição <span>→</span></button></div></div></> : currentLessons.length ? <div className="level-finished"><span>🎉</span><h3>{profile.level === "C2" ? "Você concluiu toda a trilha!" : "Você concluiu este nível!"}</h3><p>{canTakePromotionExam ? `Faça a prova de 10 questões para avançar do ${profile.level} ao próximo nível. É preciso acertar pelo menos 7.` : "Explore suas lições concluídas e acompanhe seu progresso."}</p>{canTakePromotionExam ? <button className="button button-primary" onClick={onPromotionExam}>Fazer prova de avanço <span>→</span></button> : <button className="button button-primary" onClick={() => onPage("progress")}>Ver meu progresso <span>→</span></button>}</div> : <div className="level-finished"><span>📚</span><h3>Estamos preparando sua trilha</h3><p>Ainda não há lições publicadas para este nível.</p></div>}</div>
+            <div className="lesson-feature">{nextLesson ? <><div className="lesson-feature-icon">{nextLesson.category === "Conversação" ? "◉" : nextLesson.category === "Gramática" ? "⌘" : "✦"}</div><div className="lesson-feature-info"><span className="lesson-category">{nextLesson.category} <i /> {nextLesson.duration} min · {lessonResultLabel(nextLesson,profile.lessonResults?.[nextLesson.id])}</span><h3>{nextLesson.title}</h3><p>{nextLesson.description}</p><div className="lesson-feature-bottom"><span><span className="lesson-dot" /> PRÓXIMA NA SUA TRILHA</span><button className="button button-dark" onClick={onStudy}>Começar lição <span>→</span></button></div></div></> : currentLessons.length ? <div className="level-finished"><span>🎉</span><h3>{profile.level === "C2" ? "Você concluiu toda a trilha!" : "Você concluiu este nível!"}</h3><p>{canTakePromotionExam ? `Faça a prova de 10 questões para avançar do ${profile.level} ao próximo nível. É preciso acertar pelo menos 7.` : "Explore suas lições concluídas e acompanhe seu progresso."}</p>{canTakePromotionExam ? <button className="button button-primary" onClick={onPromotionExam}>Fazer prova de avanço <span>→</span></button> : <button className="button button-primary" onClick={() => onPage("progress")}>Ver meu progresso <span>→</span></button>}</div> : <div className="level-finished"><span>📚</span><h3>Estamos preparando sua trilha</h3><p>Ainda não há lições publicadas para este nível.</p></div>}</div>
           </section>
           {canTakePromotionExam && <div className="promotion-ready"><p>Você concluiu pelo menos 50% das questões. Sua prova de avanço está liberada!</p><button className="button button-primary" onClick={onPromotionExam}>Fazer prova de avanço →</button></div>}
-          <section className="section-block"><div className="section-title-row"><div><span className="section-kicker">PARA VOCÊ</span><h2>Na sua trilha de hoje</h2></div><span className="tiny-count">{profile.level} · {recommendations.length} lições</span></div><div className="lesson-list">{recommendations.length ? recommendations.map((lesson, index) => { const done = profile.completedLessons.includes(lesson.id); return <button key={lesson.id} className={`lesson-row ${done ? "lesson-done" : ""}`} onClick={() => onSelectLesson(lesson)}><span className={`lesson-index ${done ? "index-done" : ""}`}>{done ? "✓" : `0${index + 1}`}</span><span className="lesson-row-title"><strong>{lesson.title}</strong><small>{lesson.category} <i /> {lesson.duration} min · {lesson.questions.filter((question) => profile.completedQuestionIds.includes(question.id)).length} de {lesson.questions.length} questões já acertadas</small></span><span className="lesson-row-status">{done ? "Concluída" : "→"}</span></button>; }) : <div className="empty-state">As lições publicadas aparecerão aqui.</div>}</div></section>
+          <section className="section-block"><div className="section-title-row"><div><span className="section-kicker">PARA VOCÊ</span><h2>Na sua trilha de hoje</h2></div><span className="tiny-count">{profile.level} · {recommendations.length} lições</span></div><div className="lesson-list">{recommendations.length ? recommendations.map((lesson, index) => { const done = profile.completedLessons.includes(lesson.id); return <button key={lesson.id} className={`lesson-row ${done ? "lesson-done" : ""}`} onClick={() => onSelectLesson(lesson)}><span className={`lesson-index ${done ? "index-done" : ""}`}>{done ? "✓" : `0${index + 1}`}</span><span className="lesson-row-title"><strong>{lesson.title}</strong><small>{lesson.category} <i /> {lesson.duration} min · {lessonResultLabel(lesson,profile.lessonResults?.[lesson.id])}</small></span><span className="lesson-row-status">{done ? "Concluída" : "→"}</span></button>; }) : <div className="empty-state">As lições publicadas aparecerão aqui.</div>}</div></section>
         </div>
         <aside className="right-column">
           <article className="daily-card"><div className="daily-card-top"><span className="daily-icon">✧</span><span className="daily-label">FOCO DE HOJE</span><span className="daily-menu">···</span></div><h3>Um hábito de cada vez.</h3><p>Seu objetivo é <strong>{profile.goal.toLowerCase()}</strong>. Um pouquinho de prática diária aproxima você dele.</p><div className="daily-goal"><div className="goal-circle"><span>{profile.dailyMinutes}</span></div><div><strong>minutos por dia</strong><small>seu combinado com você</small></div></div><button className="daily-link" onClick={onStudy}>Fazer minha prática <span>↗</span></button></article>
@@ -1025,7 +1034,7 @@ function LessonsPage({ profile, lessons: allLessons, videos, onSelectLesson, onS
                   const completed = profile.completedLessons.includes(lesson.id);
                   return <button key={lesson.id} className={`roadmap-lesson ${completed ? "roadmap-lesson-done" : ""}`} onClick={() => onSelectLesson(lesson)}>
                     <span className={`roadmap-lesson-number ${completed ? "completed-number" : ""}`}>{completed ? "✓" : String(levelLessons.indexOf(lesson) + 1).padStart(2, "0")}</span>
-                    <span className="roadmap-lesson-copy"><strong>{lesson.title}</strong><small>{lesson.category} <i /> {lesson.duration} min <i /> {lesson.questions.filter((question) => profile.completedQuestionIds.includes(question.id)).length} de {lesson.questions.length} questões já acertadas</small></span>
+                    <span className="roadmap-lesson-copy"><strong>{lesson.title}</strong><small>{lesson.category} <i /> {lesson.duration} min <i /> {lessonResultLabel(lesson,profile.lessonResults?.[lesson.id])}</small></span>
                     <span className="roadmap-lesson-arrow">{completed ? "Concluída" : "Começar"} <b aria-hidden="true">→</b></span>
                   </button>;
                 }) : <div className="lessons-empty">{levelLessons.length ? "Nenhuma lição corresponde a essa busca ou filtro." : "As lições deste nível estarão disponíveis em breve."}</div>}
