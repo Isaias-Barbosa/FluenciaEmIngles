@@ -24,4 +24,6 @@ assert.match(html, /5 acertos/);
 assert.match(html, /Lição concluída/);
 assert.match(html, /Sons desligados/);
 assert.match(html, /aria-pressed="false"/);
+const mixed = renderToStaticMarkup(React.createElement(context.exports.LessonProgress,{questions,questionIndex:4,status:{completedIds:['q0','q2'],incorrectIds:['q1','q3'],soundsEnabled:true,onToggleSounds(){}}}));
+assert.match(mixed,/2 acertos/);assert.match(mixed,/2 erros/);assert.match(mixed,/4\/5 respondidas/);assert.match(mixed,/Questão 2: errada/);assert.match(mixed,/aria-valuenow="4"/);assert.match(mixed,/pelo menos 3 de 5/);
 console.log('Lesson progress: counts, duplicate IDs, saved progress, question states and mute label passed.');
