@@ -1,0 +1,25 @@
+const assert=require('node:assert/strict'),fs=require('node:fs');const {PGlite}=require('@electric-sql/pglite');
+const id=n=>`10000000-0000-4000-8000-${String(n).padStart(12,'0')}`;
+(async()=>{const db=new PGlite();try{
+ await db.exec(`create role anon;create role authenticated;create role service_role bypassrls;
+ create table languages(id uuid primary key,code text);create table language_levels(id uuid primary key,language_id uuid);
+ create table lessons(id uuid primary key,level_id uuid,is_published boolean);
+ create table questions(id uuid primary key,lesson_id uuid,prompt text,question_type text,choices jsonb,audio_path text,is_published boolean);
+ create table question_answers(question_id uuid primary key,accepted_answers text[]);
+ insert into languages values('${id(1)}','en'),('${id(2)}','fr');insert into language_levels values('${id(3)}','${id(1)}'),('${id(4)}','${id(2)}');
+ insert into lessons values('${id(5)}','${id(3)}',true),('${id(6)}','${id(4)}',true);
+ insert into questions values('${id(10)}','${id(5)}','Choose the greeting','multiple_choice','["Hello","Bye"]',null,false),('${id(11)}','${id(5)}','Say hello','fill_blank','[]',null,false),('${id(12)}','${id(6)}','Bonjour','fill_blank','[]',null,false);
+ insert into question_answers values('${id(10)}',array['Hello']);`);
+ await db.exec(fs.readFileSync('supabase/migrations/20261021180000_admin_question_batch_publication.sql','utf8'));
+ const role=async value=>{await db.exec('reset role');await db.exec(`set role ${value}`);};
+ const publish=(ids,value=true)=>db.query('select admin_set_questions_published($1,$2) as count',[ids,value]);
+ await role('anon');await assert.rejects(publish([id(10)]),/permission denied/);await role('authenticated');await assert.rejects(publish([id(10)]),/permission denied/);
+ await role('service_role');await assert.rejects(publish([id(10),id(11)]),/Revise/);
+ await role('postgres');assert.equal((await db.query('select count(*) from questions where is_published')).rows[0].count,0,'entire batch rolled back');await db.query('insert into question_answers values($1,$2)',[id(11),['Hello']]);
+ await role('service_role');assert.equal((await publish([id(10),id(11)])).rows[0].count,2);await publish([id(10),id(11)]);await assert.rejects(publish([id(12)]),/inglês/);await assert.rejects(publish([id(10),id(10)]),/distintas/);await assert.rejects(publish([]),/distintas/);await assert.rejects(publish(Array.from({length:51},(_,i)=>id(i+50))),/distintas/);
+ await role('postgres');await db.query('update lessons set is_published=false where id=$1',[id(5)]);await role('service_role');await assert.rejects(publish([id(10)]),/Revise/);await publish([id(10)],false);
+ await role('postgres');assert.equal((await db.query('select is_published from questions where id=$1',[id(10)])).rows[0].is_published,false);await db.query('update lessons set is_published=true where id=$1',[id(5)]);await db.query('update question_answers set accepted_answers=$1 where question_id=$2',[['Unknown'],id(10)]);
+ await role('service_role');await assert.rejects(publish([id(10)]),/Revise/);
+ await role('postgres');await db.query('update questions set question_type=$1 where id=$2',['listening',id(11)]);await role('service_role');await assert.rejects(publish([id(11)]),/Revise/);
+ console.log('Admin workflow DB passed: service-only access, atomic batches, validation, English scope, draft lessons, answer keys, choices, audio and unpublishing.');
+}finally{await db.close();}})().catch(error=>{console.error(error);process.exitCode=1;});

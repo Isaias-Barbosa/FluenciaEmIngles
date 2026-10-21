@@ -1,7 +1,8 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
+import QuestionManager from "./question-manager";
 import Feedbacks from "./feedbacks";
 import QuestionReserve from "./question-reserve";
 import QuestionReview from "./question-review";
@@ -37,7 +38,7 @@ type AdminQuestion = {
   id: string;
   lessonId: string;
   levelId?: string;
-  type: "multiple_choice" | "fill_blank" | "listening";
+  type: "multiple_choice" | "fill_blank" | "listening" | "word_order";
   difficulty: "easy" | "intermediate" | "hard";
   prompt: string;
   readingPassage?: string | null;
@@ -79,16 +80,6 @@ type AdminData = {
 type AdminView = "feedback" | "overview" | "questions" | "review" | "reserve" | "videos" | "users";
 type QuestionType = AdminQuestion["type"];
 
-const typeLabels: Record<QuestionType, string> = {
-  multiple_choice: "Múltipla escolha",
-  fill_blank: "Resposta digitada",
-  listening: "Com áudio",
-};
-const difficultyLabels: Record<AdminQuestion["difficulty"], string> = {
-  easy: "Fácil",
-  intermediate: "Intermediária",
-  hard: "Difícil",
-};
 const learningGoals = [
   "Conversar em viagens",
   "Crescer na carreira",
@@ -117,6 +108,8 @@ export default function AdminDashboard() {
   const [notice, setNotice] = useState("");
   const [lessonFormOpen, setLessonFormOpen] = useState(false);
   const [questionType, setQuestionType] = useState<QuestionType>("multiple_choice");
+  const [createPanelOpen,setCreatePanelOpen]=useState(false);
+  const publicationPending=useRef(false);
   const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
   const [userName, setUserName] = useState("");
   const [userEmail, setUserEmail] = useState("");
@@ -205,6 +198,7 @@ export default function AdminDashboard() {
   const reviewRequest = useCallback((body: unknown) => adminRequest("POST", body, "/api/admin/question-review"), [adminRequest]);
 
   const feedbackRequest = useCallback((page:number) => adminRequest("GET", undefined, `/api/admin/feedback?page=${page}`), [adminRequest]);
+  const generateNotes = useCallback((question:unknown)=>adminRequest("POST",{question},"/api/admin/question-notes"),[adminRequest]);
   const reserveRequest = useCallback((method: "GET" | "POST", body?: unknown, query = "") => adminRequest(method, body, `/api/admin/question-reserve${query ? `?${query}` : ""}`), [adminRequest]);
   const saveReviewedReserve = useCallback(async (question: ReviewQuestion, level: CefrLevel | "") => {
     const result = await reserveRequest("POST", { action: "save", ...(question.reserveId ? { id: question.reserveId, updatedAt: question.reserveUpdatedAt, status: "pending", preserveTeachingNotes: true } : {}),
@@ -213,6 +207,7 @@ export default function AdminDashboard() {
   }, [reserveRequest]);
 
   function useReviewedQuestion(question: ReviewQuestion, level: CefrLevel) {
+    setCreatePanelOpen(true);
     const target = data.levels.find((item) => item.code === level);
     if (!target) { setError("Esse nível ainda não está cadastrado."); return; }
     const attribution = question.source === "manual" ? "" : `\n\nFonte: ${question.sourceLabel} · ${question.sourceUrl} · ${question.license} (texto sujeito a edição).`;
@@ -295,22 +290,41 @@ export default function AdminDashboard() {
     if (success) setVideoUrl("");
   }
 
+  function updateQuestionPublication(ids:string[],published:boolean) {
+    const selected=new Set(ids);
+    setData(current=>{
+      const changed=current.questions.filter(question=>selected.has(question.id)&&question.published!==published);
+      const direction=published?1:-1;
+      return {...current,questions:current.questions.map(question=>selected.has(question.id)?{...question,published}:question),
+        stats:{...current.stats,publishedQuestions:current.stats.publishedQuestions+direction*changed.length},
+        levels:current.levels.map(level=>({...level,publishedQuestionCount:level.publishedQuestionCount+direction*changed.filter(question=>question.levelId===level.id).length}))};
+    });
+  }
+  async function publishMany(ids:string[],published:boolean) {
+    if(publicationPending.current)return false;
+    publicationPending.current=true;setSaving(true);setError("");setNotice("");
+    try{
+      const result=await adminRequest("POST",{action:"setQuestionsPublished",ids,published}) as {message:string};
+      updateQuestionPublication(ids,published);setNotice(result.message);return true;
+    }catch(error){setError(error instanceof Error?error.message:"Não foi possível atualizar o lote.");return false;}
+    finally{publicationPending.current=false;setSaving(false);}
+  }
   async function setPublished(action: "setLessonPublished" | "setQuestionPublished" | "setVideoPublished", id: string, published: boolean) {
-    setSaving(true);
-    setError("");
-    setNotice("");
+    if(publicationPending.current)return false;
+    publicationPending.current=true;setSaving(true);setError("");setNotice("");
     try {
       const result = (await adminRequest("POST", {
         action,
         [action === "setLessonPublished" ? "lesson" : action === "setQuestionPublished" ? "question" : "video"]: { id, published },
       })) as { message?: string };
       setNotice(result.message ?? "Status de publicação atualizado.");
-      await loadAdminData();
+      if(action==="setQuestionPublished")updateQuestionPublication([id],published);
+      else if(action==="setLessonPublished")setData(current=>({...current,lessons:current.lessons.map(lesson=>lesson.id===id?{...lesson,published}:lesson)}));
+      else await loadAdminData();
+      return true;
     } catch (publishError) {
-      setError(publishError instanceof Error ? publishError.message : "Não foi possível atualizar a publicação.");
-    } finally {
-      setSaving(false);
-    }
+      setError(publishError instanceof Error ? publishError.message : "Não foi possível atualizar a publicação.");return false;
+    } finally { publicationPending.current=false;setSaving(false); }
   }
 
   async function deleteVideo(video: AdminVideo) {
@@ -392,7 +406,7 @@ export default function AdminDashboard() {
             ["videos", "▶", "Vídeos"],
             ["users", "♙", "Usuários"],
           ] as [AdminView, string, string][]).map(([id, icon, label]) => (
-            <button key={id} title={label} aria-label={label} className={`admin-nav-item ${view === id ? "active" : ""}`} onClick={() => setView(id)}>
+            <button key={id} title={label} aria-label={label} className={`admin-nav-item ${view === id ? "active" : ""}`} onClick={() => {setView(id);setNotice("");setError("");}}>
               <span>{icon}</span>{label}{view === id && <i />}
             </button>
           ))}
@@ -437,20 +451,13 @@ export default function AdminDashboard() {
             <div hidden={view !== "review"}><QuestionReview request={reviewRequest} availableLevels={data.levels.map((level) => level.code)} onUseQuestion={useReviewedQuestion} onSaveReserve={saveReviewedReserve} /></div>
 
             <div hidden={view !== "feedback"}><Feedbacks active={view === "feedback"} request={feedbackRequest} /></div>
-            <div hidden={view !== "reserve"}><QuestionReserve active={view === "reserve"} request={reserveRequest} onImport={() => setView("review")} /></div>
+            <div hidden={view !== "reserve"}><QuestionReserve generate={generateNotes} active={view === "reserve"} request={reserveRequest} onImport={() => setView("review")} /></div>
 
             {view === "questions" && <section className="admin-view">
-              <div className="admin-page-intro"><div><span className="section-kicker">BIBLIOTECA DE CONTEÚDO</span><h2>Crie questões para cada nível.</h2><p>Novas lições e questões começam como rascunho. Revise e publique quando estiverem prontas.</p></div><label className="admin-level-select-label">NÍVEL<select value={selectedLevel?.id ?? ""} onChange={(event) => setSelectedLevelId(event.target.value)}>{data.levels.map((level) => <option key={level.id} value={level.id}>{level.code} · {level.title}</option>)}</select></label></div>
-              <div className="admin-question-layout">
-                <section className="admin-panel admin-question-list">
-                  <div className="admin-panel-heading"><div><span className="section-kicker">{selectedLevel?.code ?? "—"} · {selectedLevel?.title ?? ""}</span><h2>Questões cadastradas</h2></div><span className="admin-count-badge">{levelQuestions.length}</span></div>
-                  {levelLessons.length > 0 && <div className="admin-lesson-publish-list">{levelLessons.map((lesson) => <div className="admin-lesson-row" key={lesson.id}><div><strong>{lesson.title}</strong><small>{lesson.category} · {data.questions.filter((question) => question.lessonId === lesson.id).length} questões</small></div><button className={`admin-status-button ${lesson.published ? "published" : ""}`} disabled={saving} onClick={() => void setPublished("setLessonPublished", lesson.id, !lesson.published)}>{lesson.published ? "Publicada" : "Rascunho"}</button></div>)}</div>}
-                  <div className="admin-question-rows">{levelQuestions.map((question) => {
-                    const lesson = data.lessons.find((item) => item.id === question.lessonId);
-                    return <article className="admin-question-row" key={question.id}><div className="admin-question-row-top"><div className="admin-question-badges"><span className="admin-type-badge">{typeLabels[question.type]}</span><span className={`admin-difficulty-badge difficulty-${question.difficulty}`}>{difficultyLabels[question.difficulty]}</span></div><button className={`admin-status-button ${question.published ? "published" : ""}`} disabled={saving || !lesson?.published} title={!lesson?.published ? "Publique a lição primeiro" : ""} onClick={() => void setPublished("setQuestionPublished", question.id, !question.published)}>{question.published ? "Publicada" : "Rascunho"}</button></div><p>{question.prompt}</p>{question.readingPassage && <div className="reading-passage"><span className="section-kicker">TEXTO DE APOIO</span><p lang="en">{question.readingPassage}</p></div>}<small>{lesson?.title ?? "Lição"} · {new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(question.createdAt))}</small></article>;
-                  })}{!levelQuestions.length && <div className="admin-empty">Ainda não há questões neste nível. Você pode criar a primeira ao lado.</div>}</div>
-                </section>
-                <div className="admin-create-column">
+              <div className="admin-page-intro"><div><span className="section-kicker">BIBLIOTECA DE CONTEÚDO</span><h2>Encontre, revise e publique.</h2><p>Filtre por nível e lição, confira os detalhes e publique até 50 questões de uma vez.</p></div><div className="question-level-actions"><button className="button button-primary" type="button" onClick={()=>setCreatePanelOpen(value=>!value)}>{createPanelOpen?"Fechar criação":"+ Adicionar conteúdo"}</button><label className="admin-level-select-label">NÍVEL<select value={selectedLevel?.id ?? ""} onChange={(event) => setSelectedLevelId(event.target.value)}>{data.levels.map((level) => <option key={level.id} value={level.id}>{level.code} · {level.title}</option>)}</select></label></div></div>
+              <div className={`admin-question-layout ${createPanelOpen?"":"admin-question-layout-compact"}`}>
+                <QuestionManager key={selectedLevel?.id} questions={levelQuestions} lessons={levelLessons} saving={saving} onPublish={(id,published)=>setPublished("setQuestionPublished",id,published)} onPublishLesson={(id,published)=>setPublished("setLessonPublished",id,published)} onPublishMany={publishMany}/>
+                <div className="admin-create-column" hidden={!createPanelOpen}>
                   <section className="admin-panel admin-create-panel">
                     <div className="admin-panel-heading"><div><span className="section-kicker">NOVA QUESTÃO</span><h2>Adicionar conteúdo</h2></div></div>
                     {levelLessons.length > 0 ? <form onSubmit={createQuestion} className="admin-form">

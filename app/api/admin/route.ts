@@ -614,6 +614,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ message: body.lesson.published ? "Lição publicada." : "Lição retirada do conteúdo publicado." });
     }
 
+    if (body.action === "setQuestionsPublished") {
+      if (!Array.isArray(body.ids) || body.ids.length < 1 || body.ids.length > 50 || new Set(body.ids).size !== body.ids.length || body.ids.some((id:unknown)=>typeof id!=="string" || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) || typeof body.published!=="boolean") return errorResponse("Selecione de 1 a 50 questões distintas.",400);
+      const {data:count,error}=await client.rpc("admin_set_questions_published",{p_ids:body.ids,p_published:body.published});
+      if(error)return errorResponse(error.code==="22023"?error.message:"Não foi possível atualizar o lote. Confira a migration 20261021180000_admin_question_batch_publication.sql.",error.code==="22023"?400:503);
+      return NextResponse.json({message:`${count} questão(ões) ${body.published?"publicada(s)":"movida(s) para rascunho"}.`,count});
+    }
+
     if (body.action === "setQuestionPublished") {
       if (!isRecord(body.question) || typeof body.question.id !== "string" || typeof body.question.published !== "boolean") {
         return errorResponse("Dados de publicação da questão inválidos.", 400);

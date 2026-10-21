@@ -229,3 +229,15 @@ Cada questão aceita uma única resposta por tentativa. Depois de conferir, o es
 A tentativa é salva no Supabase e retomada ao reabrir a lição. A correção e a aprovação são calculadas no servidor, com isolamento por usuário e proteção contra respostas fora de ordem ou duplicadas. A troca de áudio por uma questão de texto mantém a mesma posição e conta normalmente na tentativa. Lições já concluídas pela regra anterior são preservadas. Os acertos individuais continuam registrados no histórico geral, mas somente uma tentativa aprovada conclui uma nova lição.
 
 Execute `npm run test:lessons` para verificar a migration, as regras de aprovação, o progresso da tentativa, a retomada e o fluxo de substituição de áudio.
+
+### Admin: biblioteca de questões e Gerar campos
+
+Aplique `supabase/migrations/20261021180000_admin_question_batch_publication.sql` antes de usar a publicação em lote. A função é restrita ao servidor administrativo e atualiza o lote em uma transação: uma questão inválida impede a publicação de toda a seleção. A lição precisa estar publicada e o enunciado, alternativas, gabarito e áudio devem estar consistentes.
+
+Em **Admin → Questões**, escolha um nível, busque por enunciado/lição e filtre por lição, status ou tipo. A tabela mostra 10 questões por página; os detalhes exibem enunciado completo, alternativas, gabarito e explicação. Selecione até 50 questões para publicar ou retornar a rascunho. Ao filtrar uma lição, é possível publicar a própria lição. **Adicionar conteúdo** abre os formulários existentes de criação de questão e lição. Publicar mantém os filtros e a paginação atuais.
+
+Em **Banco de reservas → Revisar/editar → Gerar campos**, o servidor usa `OPENAI_API_KEY` para sugerir explicação e dica em português a partir do enunciado, alternativas, gabarito e nível atuais do editor. A geração usa créditos da API OpenAI, não consulta a internet e não salva nem publica a questão. O resultado deve ser revisado e salvo explicitamente; gerar novamente substitui os dois campos. Falhas mantêm os textos anteriores. Inconsistências sinalizadas pela IA, saída inválida e dicas que contêm literalmente o gabarito são rejeitadas. A revisão humana continua necessária, inclusive para detectar pistas indiretas ou erros factuais.
+
+O modelo padrão é `gpt-4o-mini`; `OPENAI_TEACHING_MODEL` pode substituí-lo por um modelo compatível com Structured Outputs na Responses API. A chave fica somente no servidor. Documentação: https://developers.openai.com/api/docs/guides/structured-outputs?api-mode=responses
+
+Validação: `npm run test:admin-workflow`, `npm run test:reserve`, `npm run typecheck` e `npm run build`. Os testes da geração usam respostas simuladas e não gastam créditos da OpenAI.
