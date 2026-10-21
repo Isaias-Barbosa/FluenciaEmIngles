@@ -2,6 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase/client";
+import Feedbacks from "./feedbacks";
 import QuestionReserve from "./question-reserve";
 import QuestionReview from "./question-review";
 import type { CefrLevel, ReviewQuestion } from "@/lib/cefr/types";
@@ -75,7 +76,7 @@ type AdminData = {
   questions: AdminQuestion[];
   videos: AdminVideo[];
 };
-type AdminView = "overview" | "questions" | "review" | "reserve" | "videos" | "users";
+type AdminView = "feedback" | "overview" | "questions" | "review" | "reserve" | "videos" | "users";
 type QuestionType = AdminQuestion["type"];
 
 const typeLabels: Record<QuestionType, string> = {
@@ -203,6 +204,7 @@ export default function AdminDashboard() {
 
   const reviewRequest = useCallback((body: unknown) => adminRequest("POST", body, "/api/admin/question-review"), [adminRequest]);
 
+  const feedbackRequest = useCallback((page:number) => adminRequest("GET", undefined, `/api/admin/feedback?page=${page}`), [adminRequest]);
   const reserveRequest = useCallback((method: "GET" | "POST", body?: unknown, query = "") => adminRequest(method, body, `/api/admin/question-reserve${query ? `?${query}` : ""}`), [adminRequest]);
   const saveReviewedReserve = useCallback(async (question: ReviewQuestion, level: CefrLevel | "") => {
     const result = await reserveRequest("POST", { action: "save", ...(question.reserveId ? { id: question.reserveId, updatedAt: question.reserveUpdatedAt, status: "pending", preserveTeachingNotes: true } : {}),
@@ -385,6 +387,7 @@ export default function AdminDashboard() {
             ["overview", "▦", "Dashboard"],
             ["questions", "✎", "Questões"],
             ["review", "◎", "Verifique a Questão"],
+            ["feedback", "✉", "Feedbacks"],
             ["reserve", "▣", "Banco de reservas"],
             ["videos", "▶", "Vídeos"],
             ["users", "♙", "Usuários"],
@@ -401,7 +404,7 @@ export default function AdminDashboard() {
 
       <section className="admin-main">
         <header className="admin-topbar">
-          <div><span className="section-kicker">FLUÊNCIA · ADMIN</span><h1>{view === "overview" ? "Dashboard" : view === "questions" ? "Questões" : view === "review" ? "Verifique a Questão" : view === "reserve" ? "Banco de reservas" : view === "videos" ? "Vídeos" : "Usuários"}</h1></div>
+          <div><span className="section-kicker">FLUÊNCIA · ADMIN</span><h1>{view === "feedback" ? "Feedbacks" : view === "overview" ? "Dashboard" : view === "questions" ? "Questões" : view === "review" ? "Verifique a Questão" : view === "reserve" ? "Banco de reservas" : view === "videos" ? "Vídeos" : "Usuários"}</h1></div>
           <button className="admin-refresh" onClick={() => void loadAdminData()} disabled={loading}>↻ <span>Atualizar dados</span></button>
         </header>
         <div className="admin-content">
@@ -433,6 +436,7 @@ export default function AdminDashboard() {
 
             <div hidden={view !== "review"}><QuestionReview request={reviewRequest} availableLevels={data.levels.map((level) => level.code)} onUseQuestion={useReviewedQuestion} onSaveReserve={saveReviewedReserve} /></div>
 
+            <div hidden={view !== "feedback"}><Feedbacks active={view === "feedback"} request={feedbackRequest} /></div>
             <div hidden={view !== "reserve"}><QuestionReserve active={view === "reserve"} request={reserveRequest} onImport={() => setView("review")} /></div>
 
             {view === "questions" && <section className="admin-view">

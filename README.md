@@ -208,3 +208,14 @@ O caminho A1–C2 e as barras do nível atual mostram a proporção real de ques
 **Meu Perfil** organiza identidade, nível, dados pessoais, objetivo e tempo diário em painéis responsivos, com resumo de estudo e quantidade de quizzes. O formulário mantém a gravação Supabase existente, com nome validado após remover espaços, e-mail somente para leitura, prevenção de envios duplicados, feedback de salvamento/erro e opção de desfazer alterações ainda não salvas. A meta em minutos é apresentada como objetivo de estudo, não como tempo medido.
 
 Não há migration ou variável de ambiente nova para estas páginas. Testes: `npm run test:journey`, `npm run test:quiz`, `npm run typecheck` e `npm run build`.
+
+### Feedbacks e progresso dos Cards
+
+Aplique `supabase/migrations/20261021000000_feedback_and_flashcard_progress.sql` no projeto Supabase antes de usar estas funcionalidades.
+
+- **Meu Perfil → Seu feedback:** envia mensagens de 10 a 3000 caracteres. A autoria vem da sessão autenticada; tentativas repetidas do mesmo envio não duplicam a mensagem.
+- **Admin → Feedbacks:** lista autor, e-mail, mensagem e data, com paginação. O endpoint usa a configuração de administradores existente; estudantes não podem consultar os feedbacks de outras pessoas.
+- **Cards:** as marcações Acertei/Para revisar são salvas na conta por ID do card. Embaralhar e reiniciar a navegação mantêm os totais. “Questões de revisão” mostra os cards para revisar e suas respostas; “Já aprendi” atualiza a marcação salva.
+- A prova inicial mantém as respostas ao receber eventos de autenticação da mesma conta, como ao voltar para a janela. Sair ou trocar de conta limpa a prova em memória. Recarregar a página continua iniciando uma nova sessão da prova.
+
+Validação: `npm run test:feedback`, `npm run test:journey`, `npm run typecheck` e `npm run build`.

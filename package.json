@@ -10,7 +10,8 @@
     "test:question-review": "node scripts/test-question-review.cjs",
     "test:reserve": "node scripts/test-reserve-db.cjs && node scripts/test-reserve-admin-api.cjs && node scripts/test-question-replacement-api.cjs",
     "test:quiz": "node scripts/test-tatoeba-quiz.cjs && node scripts/test-vocabulary-quiz.cjs && node scripts/test-sound-preference.cjs",
-    "test:journey": "node scripts/test-journey-progress.cjs"
+    "test:journey": "node scripts/test-journey-progress.cjs",
+    "test:feedback": "node scripts/test-feedback-cards-db.cjs && node scripts/test-feedback-auth.cjs && node scripts/test-feedback-cards-ui.cjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.3",
