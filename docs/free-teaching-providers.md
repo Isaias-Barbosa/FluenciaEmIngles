@@ -38,3 +38,15 @@ Não se cria conta/chave extra para contornar cota nem se considera a assinatura
 `npm run test:admin-workflow` cobre autenticação, adaptadores com HTTP simulado, troca de provedores, pausas, limites, persistência, permissões SQL e proteção contra reservas antigas. Os testes não consomem créditos reais. Execute também `npm run typecheck` e `npm run build`.
 
 Documentação dos formatos: https://ai.google.dev/gemini-api/docs/generate-content/structured-output, https://console.groq.com/docs/structured-outputs e https://developers.cloudflare.com/workers-ai/features/json-mode/. Consulte preços/limites vigentes antes de habilitar cada conta.
+
+## Ajuda aos alunos — uma utilização a cada 40 minutos
+
+Aplique também `supabase/migrations/20261021210000_student_question_ai_help.sql` depois das migrações do rodízio e das tentativas de lição. As chaves existentes bastam; não há nova variável de ambiente. A ajuda usa os mesmos provedores e os mesmos tetos globais do admin.
+
+O botão **Pedir à IA** funciona na questão atual de uma lição em andamento de um aluno autenticado que concluiu a avaliação inicial. Não é disponibilizado na avaliação inicial, provas de avanço ou quiz. O servidor obtém enunciado, alternativas, texto de leitura, nível e gabaritos privados diretamente do banco, respeitando a questão de reserva atribuída ao aluno; o navegador envia somente os IDs da questão e da tentativa. Apenas uma dica é devolvida. A explicação do gabarito e comentários internos da IA não são enviados ao aluno.
+
+Depois de uma dica gerada e salva com sucesso, o banco libera o próximo uso **40 minutos após a conclusão**, para a conta inteira, em qualquer questão, aba ou dispositivo. O contador é informativo: quem autoriza o uso é o relógio do banco. Há uma reserva de 90 segundos por aluno para impedir solicitações simultâneas e permitir recuperação se o processo cair. Falhas liberam a reserva sem consumir os 40 minutos; os limites globais dos provedores continuam valendo.
+
+A última dica fica salva e pode ser relida na mesma questão/tentativa, inclusive após atualizar a página, sem nova geração nem novo consumo. Ao mudar de questão ou substituir o áudio, a dica anterior não aparece no novo conteúdo. O auxílio não envia respostas, altera notas nem marca questões como concluídas. Dicas de IA ainda podem conter imprecisões ou pistas indiretas; o texto orienta o aluno a conferir o raciocínio.
+
+Validação específica: `npm run test:student-ai` cobre permissões, identidade, contexto privado, simultaneidade, intervalo, cache, substituições e falhas sem consumo, com respostas de IA simuladas.

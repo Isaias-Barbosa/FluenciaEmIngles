@@ -243,3 +243,9 @@ A geração não consulta a internet, não salva nem publica a questão. O resul
 Antes de ativar, aplique `supabase/migrations/20261021200000_free_teaching_provider_router.sql` e configure as variáveis em `.env.example`. Gemini, Groq e Cloudflare exigem confirmação de conta/projeto gratuito com cobrança paga desativada: a aplicação não consegue verificar o plano da chave. Consulte [configuração, modelos e limites do gerador](docs/free-teaching-providers.md). A narração de áudio OpenAI permanece independente.
 
 Validação: `npm run test:admin-workflow`, `npm run test:reserve`, `npm run typecheck` e `npm run build`. Os testes simulam respostas dos provedores sem consumir créditos reais.
+
+### Pedir à IA nas lições
+
+O botão antes de Conferir resposta oferece uma dica usando o rodízio gratuito já configurado. Cada aluno pode gerar uma dica a cada **40 minutos**, com controle no servidor para toda a conta. O contador indica quando poderá pedir outra; a última dica é restaurada na mesma questão sem nova chamada. Falhas de geração não consomem o intervalo e não alteram o progresso.
+
+**Antes do deploy, aplique `supabase/migrations/20261021210000_student_question_ai_help.sql`**, além das migrações anteriores de lições e provedores. Não são necessárias novas chaves ou variáveis. A ajuda funciona nas lições, sem incluir provas/avaliação inicial. O servidor retorna somente a dica, mantendo o gabarito privado. Detalhes em [configuração do gerador](docs/free-teaching-providers.md). Testes: `npm run test:student-ai`.
