@@ -46,7 +46,15 @@ export function useLessonRun(userId:string|null) {
       const next=data as unknown as LessonRun;
       if(next?.id!==run.id||next.user_id!==owner)throw Error();
       submission.current=null;setRun(next);return next;
-    }catch{if(ticket===revision.current)setError("Não foi possível salvar sua resposta. Tente novamente; a questão não foi pulada.");return null;}
+    }catch(cause){
+      if(ticket===revision.current){
+        const code=(cause as {code?:string}|null)?.code;
+        setError(code==="PGRST202"||code==="42883"
+          ?"A correção está temporariamente indisponível. Atualize a página e tente novamente. Se continuar, avise a administração. Nenhuma chance foi consumida."
+          :"Não foi possível salvar sua resposta. Tente novamente; a questão não foi pulada.");
+      }
+      return null;
+    }
     finally{if(ticket===revision.current)pending.current=false;}
   }
   return {run:run?.user_id===userId?run:null,loading,error,start,answer,cancel};
