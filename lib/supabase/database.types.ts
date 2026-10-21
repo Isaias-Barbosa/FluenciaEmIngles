@@ -316,6 +316,8 @@ export type Database = {
       };
     };
     Functions: {
+      claim_teaching_provider: {Args:{p_enabled:string[];p_exclude:string[];p_daily_limit:number;p_minute_limit:number};Returns:Json};
+      finish_teaching_provider: {Args:{p_provider:string;p_lease_id:string;p_cooldown_seconds:number};Returns:boolean};
       admin_set_questions_published: {Args:{p_ids:string[];p_published:boolean};Returns:number};
       start_lesson_run: {Args:{p_lesson_id:string};Returns:Json};
       submit_lesson_run_answer: {Args:{p_run_id:string;p_question_id:string;p_submitted_answer:string};Returns:Json};

@@ -1,6 +1,8 @@
 import {NextRequest,NextResponse} from "next/server";
-import {adminAuthClient,hasConfiguredAdmins,isConfiguredAdmin} from "@/lib/supabase/admin-server";
-import {generateTeachingNotes,parseTeachingQuestion,TeachingNotesError} from "@/lib/admin/teaching-notes";
+import {adminServiceClient,adminAuthClient,hasConfiguredAdmins,isConfiguredAdmin} from "@/lib/supabase/admin-server";
+import {parseTeachingQuestion,TeachingNotesError} from "@/lib/admin/teaching-notes";
+import {generateTeachingNotes} from "@/lib/admin/free-teaching-router";
+export const maxDuration=60;
 export const runtime="nodejs";
 const json=(body:unknown,status=200)=>NextResponse.json(body,{status,headers:{"Cache-Control":"no-store"}});
 export async function POST(request:NextRequest){
@@ -15,6 +17,6 @@ export async function POST(request:NextRequest){
   const raw=await request.text();if(raw.length>5000)return json({error:"Solicitação muito grande."},413);
   let body;try{body=JSON.parse(raw);}catch{return json({error:"JSON inválido."},400);}
   const question=parseTeachingQuestion(body?.question);
-  return json({notes:await generateTeachingNotes(question)});
+  return json({notes:await generateTeachingNotes(question,adminServiceClient)});
  }catch(error){return json({error:error instanceof TeachingNotesError?error.message:"Não foi possível gerar os campos. Tente novamente."},error instanceof TeachingNotesError?error.status:503);}
 }

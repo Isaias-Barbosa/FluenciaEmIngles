@@ -37,11 +37,11 @@ export default function QuestionReserve({ active, request, onImport, generate }:
     const turn=++generationSequence.current,id=editing.id;
     generationPending.current=true;setGenerating(true);setError("");setNotice("");
     try{
-      const result=await generate({level:editLevel,prompt:editing.prompt,choices:options.split("\n").map(value=>value.trim()).filter(Boolean),correctAnswer:editing.correct_answer}) as {notes:{explanation:string;hint:string}};
+      const result=await generate({level:editLevel,prompt:editing.prompt,choices:options.split("\n").map(value=>value.trim()).filter(Boolean),correctAnswer:editing.correct_answer}) as {notes:{explanation:string;hint:string;provider?:string}};
       if(turn!==generationSequence.current)return;
       if(typeof result.notes?.explanation!=="string"||typeof result.notes?.hint!=="string")throw new Error("A geração não retornou campos válidos.");
       setEditing(current=>current?.id===id?{...current,explanation:result.notes.explanation,hint:result.notes.hint}:current);
-      setNotice("Campos gerados. Revise a explicação e a dica antes de salvar; nada foi publicado.");
+      setNotice(`Campos gerados${result.notes.provider?` com ${result.notes.provider}`:""}. Revise a explicação e a dica antes de salvar; nada foi publicado.`);
     }catch(error){if(turn===generationSequence.current)setError(error instanceof Error?error.message:"Não foi possível gerar. Seus campos foram mantidos.");}
     finally{generationPending.current=false;setGenerating(false);}
   }
@@ -76,7 +76,7 @@ export default function QuestionReserve({ active, request, onImport, generate }:
         <label>Enunciado em inglês<textarea required minLength={10} maxLength={1200} rows={4} value={editing.prompt} disabled={saving || generating} onChange={(event) => setEditing({ ...editing, prompt: event.target.value })} /></label>
         <label>Alternativas · uma por linha<textarea rows={4} value={options} maxLength={1506} disabled={saving || generating} onChange={(event) => setOptions(event.target.value)} /></label>
         <label>Resposta correta · copie exatamente uma alternativa<input value={editing.correct_answer} maxLength={250} disabled={saving || generating} onChange={(event) => setEditing({ ...editing, correct_answer: event.target.value })} /></label>
-        <div className="reserve-generate-panel"><div><span className="section-kicker">ASSISTENTE DE REVISÃO</span><strong>Prepare a explicação e a dica em um clique.</strong><p>A IA usa enunciado, alternativas, gabarito e nível. Ao gerar novamente, os dois campos abaixo serão substituídos. Revise antes de salvar. Usa créditos da API OpenAI.</p></div><button className="button button-primary" type="button" disabled={saving || generating} onClick={()=>void generateFields()}>{generating?"Gerando campos…":"✦ Gerar campos"}</button></div>
+        <div className="reserve-generate-panel"><div><span className="section-kicker">ASSISTENTE DE REVISÃO</span><strong>Prepare a explicação e a dica em um clique.</strong><p>A IA usa enunciado, alternativas, gabarito e nível. Ao gerar novamente, os dois campos abaixo serão substituídos. Revise antes de salvar. Alterna entre os provedores gratuitos configurados, respeitando suas pausas e limites.</p></div><button className="button button-primary" type="button" disabled={saving || generating} onClick={()=>void generateFields()}>{generating?"Gerando campos…":"✦ Gerar campos"}</button></div>
         <label>Explicação para o estudante<textarea rows={3} value={editing.explanation} maxLength={1500} disabled={saving || generating} onChange={(event) => setEditing({ ...editing, explanation: event.target.value })} /></label>
         <label>Dica · ajude sem revelar a resposta<textarea rows={2} value={editing.hint} maxLength={500} disabled={saving || generating} onChange={(event) => setEditing({ ...editing, hint: event.target.value })} /></label>
         <p className="review-source"><a href={editing.source_url} target="_blank" rel="noreferrer">{editing.source_title} ↗</a><span>{editing.source_license} · atribuição preservada, inclusive em edições.</span></p>
