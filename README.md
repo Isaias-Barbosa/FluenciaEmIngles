@@ -257,3 +257,9 @@ Aplique `supabase/migrations/20261021220000_lesson_question_attempts.sql` antes 
 O aluno avança ao acertar ou esgotar as chances. Um acerto dentro das chances vale um acerto na questão; esgotá-las vale um erro. Cada lição continua sendo avaliada pelo número de questões, exigindo no mínimo 3 de 5 acertos. As dicas automáticas são editoriais, sem chamada à IA nem consumo do uso de 40 minutos.
 
 O banco salva cada tentativa e a dica liberada, mantendo as chances ao recarregar. Reenvios de rede são idempotentes; requisições concorrentes de abas desatualizadas não gastam tentativas extras. Uma nova rodada começa com as chances zeradas, preservando resultados antigos. O protocolo de envio mudou: após aplicar a migração e o deploy, atualize abas antigas. Validação: `npm run test:lessons` inclui os testes específicos de tentativas.
+
+### Cache de explicações e dicas do banco de reservas
+
+O botão Gerar campos reutiliza resultados por 24 horas quando nível, enunciado, alternativas e gabarito são iguais. A tela informa quando o resultado veio do cache e sua validade. A primeira geração e mudanças no conteúdo ainda usam o rodízio de IA; cliques repetidos dentro do prazo não consomem cota. Gerações simultâneas da mesma questão são bloqueadas no servidor e falhas não viram resultados de cache. Expirar não faz chamadas automáticas.
+
+**Aplique `supabase/migrations/20261021230000_admin_teaching_notes_cache.sql` antes do deploy.** A configuração opcional `TEACHING_NOTES_CACHE_TTL_SECONDS` usa segundos (86400 por padrão). Não exige novas chaves. O cache não altera revisão/salvamento nem o limite de 40 minutos dos alunos. Detalhes em [configuração dos provedores e cache](docs/free-teaching-providers.md). Testes: `npm run test:admin-workflow`.

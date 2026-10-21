@@ -316,6 +316,8 @@ export type Database = {
       };
     };
     Functions: {
+      claim_teaching_notes_cache: {Args:{p_cache_key:string;p_ttl_seconds:number};Returns:Json};
+      finish_teaching_notes_cache: {Args:{p_cache_key:string;p_lease_id:string;p_explanation:string|null;p_hint:string|null;p_provider:string|null;p_ttl_seconds:number};Returns:Json};
       prepare_student_question_help: {Args:{p_user_id:string;p_run_id:string;p_question_id:string;p_claim:boolean};Returns:Json};
       finish_student_question_help: {Args:{p_user_id:string;p_lease_id:string;p_hint:string|null;p_provider:string|null};Returns:Json};
       claim_teaching_provider: {Args:{p_enabled:string[];p_exclude:string[];p_daily_limit:number;p_minute_limit:number};Returns:Json};
