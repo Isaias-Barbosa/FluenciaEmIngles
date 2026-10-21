@@ -316,6 +316,7 @@ export type Database = {
       };
     };
     Functions: {
+      admin_set_questions_published: {Args:{p_ids:string[];p_published:boolean};Returns:number};
       start_lesson_run: {Args:{p_lesson_id:string};Returns:Json};
       submit_lesson_run_answer: {Args:{p_run_id:string;p_question_id:string;p_submitted_answer:string};Returns:Json};
       submit_student_feedback: { Args: { p_message: string; p_request_id: string }; Returns: string };
