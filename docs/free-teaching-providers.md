@@ -50,3 +50,19 @@ Depois de uma dica gerada e salva com sucesso, o banco libera o próximo uso **4
 A última dica fica salva e pode ser relida na mesma questão/tentativa, inclusive após atualizar a página, sem nova geração nem novo consumo. Ao mudar de questão ou substituir o áudio, a dica anterior não aparece no novo conteúdo. O auxílio não envia respostas, altera notas nem marca questões como concluídas. Dicas de IA ainda podem conter imprecisões ou pistas indiretas; o texto orienta o aluno a conferir o raciocínio.
 
 Validação específica: `npm run test:student-ai` cobre permissões, identidade, contexto privado, simultaneidade, intervalo, cache, substituições e falhas sem consumo, com respostas de IA simuladas.
+
+## Cache do Gerar campos no admin
+
+Aplique `supabase/migrations/20261021230000_admin_teaching_notes_cache.sql` antes de publicar esta versão. O cache do admin é compartilhado entre administradores/instâncias no Supabase e restrito ao serviço do servidor. Não altera o cache das dicas dos alunos nem seu intervalo de 40 minutos.
+
+A primeira geração com sucesso guarda explicação, dica e provedor por **24 horas**. Dentro desse período, o mesmo conteúdo é recuperado do banco sem chamar provedores, reservar suas cotas ou prolongar a validade. O aviso do editor identifica o cache e mostra até quando vale. Expirar não dispara nenhuma geração automática: uma nova chamada só ocorre ao clicar novamente, sem resultado válido no cache.
+
+A chave SHA-256 considera versão do contrato, nível, enunciado, alternativas (incluindo sua ordem) e gabarito já validados. Mudar qualquer entrada exige nova geração; questões com conteúdo exatamente igual compartilham resultado. Voltar ao conteúdo anterior permite reaproveitar o cache anterior ainda válido. Os campos de explicação e dica editados manualmente não fazem parte da entrada para IA: Gerar campos continua substituindo esses dois campos após o clique, inclusive se vierem do cache. Revisão humana e salvamento explícito continuam necessários.
+
+Opcionalmente configure `TEACHING_NOTES_CACHE_TTL_SECONDS` no servidor: padrão `86400`, mínimo `60`, máximo `604800` (7 dias). Valores inválidos voltam ao padrão. Diminuir o prazo invalida entradas antigas mais cedo; aumentar não prolonga resultados que já tinham vencimento definido. Mantenha a variável sem prefixo NEXT_PUBLIC. Ao mudar instruções de geração, contrato ou validações, incremente CACHE_VERSION em `lib/admin/cached-teaching-notes.ts`.
+
+Uma reserva de 90 segundos impede chamadas simultâneas para conteúdo idêntico. Outro pedido recebe uma mensagem para aguardar e tentar novamente, sem consumir IA. Se a execução cair, a reserva expira; uma resposta antiga não pode sobrescrever a nova. Falhas/questões inconsistentes não são armazenadas como resultados válidos. Sem acesso ao cache ou sem a migração, o gerador mantém os campos e falha sem fazer chamadas sem coordenação. Entradas vencidas há mais de sete dias são limpas durante consultas futuras, desde que não haja geração ativa.
+
+O Cache-Control HTTP continua no-store: trata-se de um cache de resultados privado da aplicação, sem expor respostas administrativas por caches de navegador/CDN. Os limites e pausas do rodízio continuam valendo nas gerações novas. O cache não elimina o custo da primeira geração de cada questão diferente.
+
+`npm run test:admin-workflow` inclui testes de cache, expiração, simultaneidade, recuperação, permissões e ausência de chamadas à IA em acertos de cache.

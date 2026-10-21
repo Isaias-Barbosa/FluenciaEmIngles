@@ -13,7 +13,7 @@
     "test:journey": "node scripts/test-journey-progress.cjs",
     "test:feedback": "node scripts/test-feedback-cards-db.cjs && node scripts/test-feedback-auth.cjs && node scripts/test-feedback-cards-ui.cjs",
     "test:lessons": "node scripts/test-lesson-runs-db.cjs && node scripts/test-question-attempts-db.cjs && node scripts/test-lesson-runs-ui.cjs && node scripts/test-lesson-progress.cjs && node scripts/test-replacement-flow.cjs && node scripts/test-study-pagination.cjs",
-    "test:admin-workflow": "node scripts/test-admin-workflow-db.cjs && node scripts/test-admin-workflow-api.cjs && node scripts/test-free-teaching-router.cjs && node scripts/test-free-teaching-router-db.cjs",
+    "test:admin-workflow": "node scripts/test-admin-workflow-db.cjs && node scripts/test-admin-workflow-api.cjs && node scripts/test-free-teaching-router.cjs && node scripts/test-free-teaching-router-db.cjs && node scripts/test-teaching-cache.cjs && node scripts/test-teaching-cache-db.cjs",
     "test:student-ai": "node scripts/test-student-ai-help-db.cjs && node scripts/test-student-ai-help-api.cjs"
   },
   "dependencies": {
