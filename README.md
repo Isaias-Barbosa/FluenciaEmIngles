@@ -224,7 +224,7 @@ Validação: `npm run test:feedback`, `npm run test:journey`, `npm run typecheck
 
 Aplique `supabase/migrations/20261021120000_lesson_rounds.sql` antes de publicar esta atualização.
 
-Cada questão aceita uma única resposta por tentativa. Depois de conferir, o estudante avança automaticamente, acertando ou errando. O resultado aparece após todas as questões e mostra acertos, erros e uma revisão das respostas. Nas lições de cinco questões, três acertos concluem a lição; dois ou menos exigem refazer as cinco com um placar novo. Para conjuntos de outro tamanho, o mínimo é 60%, arredondado para cima.
+Cada questão tem um número de chances conforme o tipo, conforme a atualização de tentativas por questão abaixo. O estudante avança ao acertar ou esgotar essas chances. O resultado aparece após todas as questões e mostra acertos, erros e uma revisão das respostas. Nas lições de cinco questões, três acertos concluem a lição; dois ou menos exigem refazer as cinco com um placar novo. Para conjuntos de outro tamanho, o mínimo é 60%, arredondado para cima.
 
 A tentativa é salva no Supabase e retomada ao reabrir a lição. A correção e a aprovação são calculadas no servidor, com isolamento por usuário e proteção contra respostas fora de ordem ou duplicadas. A troca de áudio por uma questão de texto mantém a mesma posição e conta normalmente na tentativa. Lições já concluídas pela regra anterior são preservadas. Os acertos individuais continuam registrados no histórico geral, mas somente uma tentativa aprovada conclui uma nova lição.
 
@@ -249,3 +249,11 @@ Validação: `npm run test:admin-workflow`, `npm run test:reserve`, `npm run typ
 O botão antes de Conferir resposta oferece uma dica usando o rodízio gratuito já configurado. Cada aluno pode gerar uma dica a cada **40 minutos**, com controle no servidor para toda a conta. O contador indica quando poderá pedir outra; a última dica é restaurada na mesma questão sem nova chamada. Falhas de geração não consomem o intervalo e não alteram o progresso.
 
 **Antes do deploy, aplique `supabase/migrations/20261021210000_student_question_ai_help.sql`**, além das migrações anteriores de lições e provedores. Não são necessárias novas chaves ou variáveis. A ajuda funciona nas lições, sem incluir provas/avaliação inicial. O servidor retorna somente a dica, mantendo o gabarito privado. Detalhes em [configuração do gerador](docs/free-teaching-providers.md). Testes: `npm run test:student-ai`.
+
+### Tentativas por questão nas lições
+
+Aplique `supabase/migrations/20261021220000_lesson_question_attempts.sql` antes do deploy desta versão. Múltipla escolha permite 2 tentativas, mostrando a dica após o primeiro erro e desabilitando a alternativa errada. Completar a frase permite 3 tentativas e mostra a dica após o segundo erro. Áudio e ordenar palavras continuam com uma tentativa; questões de texto que substituíram áudio seguem a regra de múltipla escolha.
+
+O aluno avança ao acertar ou esgotar as chances. Um acerto dentro das chances vale um acerto na questão; esgotá-las vale um erro. Cada lição continua sendo avaliada pelo número de questões, exigindo no mínimo 3 de 5 acertos. As dicas automáticas são editoriais, sem chamada à IA nem consumo do uso de 40 minutos.
+
+O banco salva cada tentativa e a dica liberada, mantendo as chances ao recarregar. Reenvios de rede são idempotentes; requisições concorrentes de abas desatualizadas não gastam tentativas extras. Uma nova rodada começa com as chances zeradas, preservando resultados antigos. O protocolo de envio mudou: após aplicar a migração e o deploy, atualize abas antigas. Validação: `npm run test:lessons` inclui os testes específicos de tentativas.
