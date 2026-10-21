@@ -25,6 +25,9 @@ type ReplacementProjection = { question_id: string; prompt: string; choices: Jso
 export type Database = {
   public: {
     Tables: {
+      student_feedback: Table<{ id: string; user_id: string; request_id: string; message: string; created_at: string }, never, never>;
+      flashcard_progress: Table<{ user_id: string; card_id: string; rating: "remembered" | "review"; updated_at: string }, { user_id: string; card_id: string; rating: "remembered" | "review" }, { rating: "remembered" | "review" }>;
+
       question_reserve: Table<
         ReserveRow,
         Omit<ReserveRow, "id" | "created_at" | "updated_at" | "content_key"> & { id?: string; updated_at?: string },
@@ -311,6 +314,9 @@ export type Database = {
       };
     };
     Functions: {
+      submit_student_feedback: { Args: { p_message: string; p_request_id: string }; Returns: string };
+      get_student_feedback: { Args: { p_offset: number; p_limit: number }; Returns: Json };
+
       assign_reserve_question: { Args: { p_question_id: string }; Returns: ReplacementProjection[] };
       get_question_reserve_counts: { Args: Record<PropertyKey, never>; Returns: { level_code: string; pending: number; available: number; archived: number }[] };
       get_my_question_replacements: { Args: Record<PropertyKey, never>; Returns: ReplacementProjection[] };

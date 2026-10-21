@@ -1,6 +1,8 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import CardsPage from "./components/cards-page";
+import FeedbackForm from "./components/feedback-form";
 import { JourneyMetric, QuizHistoryPanel } from "./components/journey-widgets";
 import { useQuizHistory } from "./components/use-quiz-history";
 import { summarizeLearning, summarizeQuizHistory } from "@/lib/quiz/progress";
@@ -66,6 +68,7 @@ type Lesson = {
   questions: LessonQuestion[];
 };
 type Flashcard = {
+  id: string;
   front: string;
   back: string;
   pronunciation: string;
@@ -210,6 +213,7 @@ export default function Dashboard() {
   const answerPending = useRef(false);
   const replacementPending = useRef(false);
   const currentUserId = useRef<string | null>(null);
+  const authIdentity = useRef<string | null>(null);
   const [replacingAudio, setReplacingAudio] = useState(false);
   const activeQuestionId = useRef<string | null>(null);
   const [activeVideo, setActiveVideo] = useState<LearningVideo | null>(null);
@@ -286,10 +290,10 @@ export default function Dashboard() {
         completedLessons: [],
         completedQuestionIds: [],
       };
-      setProfile(nextProfile);
+      if (authIdentity.current === activeSession.user.id) setProfile(nextProfile);
       return nextProfile;
     } finally {
-      setProfileLoading(false);
+      if (authIdentity.current === activeSession.user.id) setProfileLoading(false);
     }
   }, []);
 
@@ -306,7 +310,7 @@ export default function Dashboard() {
         .range(from, to)),
       supabase
         .from("vocabulary_cards")
-        .select("front, back, pronunciation, sort_order")
+        .select("id, front, back, pronunciation, sort_order")
         .eq("level_id", activeProfile.currentLevelId)
         .eq("is_published", true)
         .order("sort_order"),
@@ -420,11 +424,13 @@ export default function Dashboard() {
       .filter((lesson) => lesson.questions.every((question) => correctQuestionIds.has(question.id)))
       .map((lesson) => lesson.id);
     const nextCards = cardsResult.data.map((card) => ({
+      id: card.id,
       front: card.front,
       back: card.back,
       pronunciation: card.pronunciation,
     }));
 
+    if (authIdentity.current !== activeProfile.userId) return;
     setLessons(nextLessons);
     setCards(nextCards);
     setVideos(nextVideos);
@@ -446,10 +452,16 @@ export default function Dashboard() {
     }
 
     let mounted = true;
+    let authRevision = 0;
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, nextSession) => {
       if (!mounted) return;
+      authRevision++;
+      const nextUserId = nextSession?.user.id ?? null;
+      const identityChanged = authIdentity.current !== nextUserId;
+      authIdentity.current = nextUserId;
+      setReady(true);
       void syncAdminSession(nextSession?.access_token ?? null).catch((error: unknown) => {
         console.error("Falha ao sincronizar a sessão administrativa.", error);
       });
@@ -457,13 +469,15 @@ export default function Dashboard() {
       setAuthMessage("");
       setAuthError("");
       setAppError("");
-      if (event === "SIGNED_IN" || !nextSession) {
+      if (identityChanged || !nextSession) {
         setPlacementQuestionIndex(0);
         setPlacementAnswers([]);
         setPlacementResult(null);
         setOnboardingExam(null);
       }
-      if (!nextSession) {
+      if (identityChanged || !nextSession) {
+        setProfileLoading(false);
+        setActiveLesson(null);
         setProfile(null);
         setLessons([]);
         setCards([]);
@@ -482,7 +496,10 @@ export default function Dashboard() {
           setReady(true);
           return;
         }
-        setSession(data.session);
+        if (authRevision === 0) {
+          authIdentity.current = data.session?.user.id ?? null;
+          setSession(data.session);
+        }
         setReady(true);
       })
       .catch((error: unknown) => {
@@ -946,7 +963,7 @@ export default function Dashboard() {
           {appError && <div className="app-error" role="alert">{appError}<button onClick={() => setAppError("")} aria-label="Fechar aviso">×</button></div>}
           {page === "home" && <div className="home-page"><HomePage profile={profile} lessons={currentLessons} progressPercent={progressPercent} completedInLevel={completedInLevel} levelIndex={currentLevelIndex} nextLesson={nextLesson} canTakePromotionExam={canTakePromotionExam} onPromotionExam={() => setPage("exam")} onStudy={() => nextLesson && openLesson(nextLesson)} onPage={setPage} onSelectLesson={openLesson} /></div>}
           {page === "lessons" && <LessonsPage onPromotionExam={() => setPage("exam")} profile={profile} lessons={lessons} videos={videos} onSelectLesson={openLesson} onSelectVideo={setActiveVideo} />}
-          {page === "cards" && <CardsPage key={profile.level} level={profile.level} cards={cards} studentName={profile.name} />}
+          {page === "cards" && <CardsPage userId={profile.userId} key={`${profile.userId}-${profile.level}`} level={profile.level} cards={cards} studentName={profile.name} />}
           <div hidden={page !== "quiz"}><VocabularyQuiz key={`${profile.userId}-${profile.level}`} userId={profile.userId} initialLevel={profile.level} /></div>
           {page === "progress" && <ProgressPage key={profile.userId} profile={profile} levelIndex={currentLevelIndex} lessons={lessons} canTakePromotionExam={canTakePromotionExam} onPage={setPage} />}
           {page === "profile" && <ProfilePage key={profile.userId} profile={profile} levelIndex={currentLevelIndex} lessons={lessons} onSave={saveProfileDetails} onPage={setPage} />}
@@ -1164,132 +1181,6 @@ function getVoiceTubeEmbedUrl(url: string) {
   }
 }
 
-function CardsPage({ level, cards, studentName }: { level: LevelId; cards: Flashcard[]; studentName: string }) {
-  const [deck, setDeck] = useState(cards);
-  const [index, setIndex] = useState(0);
-  const [flipped, setFlipped] = useState(false);
-  const [rememberedCount, setRememberedCount] = useState(0);
-  const [reviewCount, setReviewCount] = useState(0);
-  const [markedCards, setMarkedCards] = useState<Record<number, "remembered" | "review">>({});
-
-  useEffect(() => {
-    setDeck(cards);
-    setIndex(0);
-    setFlipped(false);
-    setRememberedCount(0);
-    setReviewCount(0);
-    setMarkedCards({});
-  }, [cards]);
-
-  const card = deck[index] ?? null;
-
-  function moveTo(nextIndex: number) {
-    setIndex(nextIndex);
-    setFlipped(false);
-  }
-
-  function shuffleCards() {
-    const shuffled = [...deck];
-    for (let current = shuffled.length - 1; current > 0; current -= 1) {
-      const randomIndex = Math.floor(Math.random() * (current + 1));
-      [shuffled[current], shuffled[randomIndex]] = [shuffled[randomIndex], shuffled[current]];
-    }
-    setDeck(shuffled);
-    setRememberedCount(0);
-    setReviewCount(0);
-    setMarkedCards({});
-    moveTo(0);
-  }
-
-  function restartCards() {
-    setDeck(cards);
-    setRememberedCount(0);
-    setReviewCount(0);
-    setMarkedCards({});
-    moveTo(0);
-  }
-
-  function markCard(mark: "remembered" | "review") {
-    if (markedCards[index]) {
-      moveTo(Math.min(index + 1, deck.length - 1));
-      return;
-    }
-    setMarkedCards((current) => ({ ...current, [index]: mark }));
-    if (mark === "remembered") setRememberedCount((current) => current + 1);
-    else setReviewCount((current) => current + 1);
-    moveTo(Math.min(index + 1, deck.length - 1));
-  }
-
-  return (
-    <section className="inner-page cards-page">
-      <div className="page-heading">
-        <span className="eyebrow"><span className="live-dot" /> REVISÃO INTELIGENTE · {level}</span>
-        <h1>Palavras que <span>ficam.</span></h1>
-        <p>Cards selecionados para o seu nível. Tente lembrar antes de virar.</p>
-      </div>
-      {card ? (
-        <div className="cards-layout">
-          <div className="flashcard-wrap">
-          <div className="cards-toolbar">
-            <button className="button button-dark" type="button" onClick={shuffleCards}>Embaralhar <span>⤨</span></button>
-            <button className="button button-dark" type="button" onClick={restartCards}>Reiniciar <span>↺</span></button>
-          </div>
-          <div
-            className={`flashcard ${flipped ? "flashcard-flipped" : ""}`}
-            role="button"
-            tabIndex={0}
-            aria-label={flipped ? "Card virado. Ative para ver a palavra em inglês." : "Ative para virar o card e ver o significado."}
-            onClick={() => setFlipped((current) => !current)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" || event.key === " ") {
-                event.preventDefault();
-                setFlipped((current) => !current);
-              }
-            }}
-          >
-            <div className="flashcard-top">
-              <span>{flipped ? "SIGNIFICADO" : "PALAVRA OU EXPRESSÃO"}</span>
-              <span>{String(index + 1).padStart(2, "0")} <i>/ {String(deck.length).padStart(2, "0")}</i></span>
-            </div>
-            <div className="flashcard-content">
-              <span className="flashcard-spark">✳</span>
-              <strong>{flipped ? card.back : card.front}</strong>
-              <small>{flipped ? card.front : card.pronunciation}</small>
-            </div>
-            <div className="flashcard-bottom"><span>✦ {flipped ? "Toque para ver a palavra" : "Toque para revelar o significado"}</span><span>↗</span></div>
-          </div>
-          <div className="cards-flip-control">
-            <button className="button button-dark" type="button" aria-pressed={flipped} onClick={() => setFlipped((current) => !current)}>
-              {flipped ? "Ver a palavra" : "Virar o card"} <span>↻</span>
-            </button>
-          </div>
-          <div className="cards-controls">
-            <button className="button button-dark" type="button" disabled={index === 0} onClick={() => moveTo(index - 1)}><span>←</span> Anterior</button>
-            <span className="cards-progress">{index + 1} de {deck.length}</span>
-            <button className="button button-primary" type="button" disabled={index === deck.length - 1} onClick={() => moveTo(index + 1)}>Próximo <span>→</span></button>
-          </div>
-          {flipped && <div className="cards-rating-actions"><span>Como foi?</span><button className="button button-success" type="button" onClick={() => markCard("remembered")}>Acertei <span>✓</span></button><button className="button button-review" type="button" onClick={() => markCard("review")}>Vou revisar <span>↻</span></button></div>}
-          </div>
-          <aside className="session-card">
-            <div className="session-card-heading"><span className="section-kicker">SUA SESSÃO</span><span className="session-live-dot" /></div>
-            <div className="session-avatar">{studentName.charAt(0).toUpperCase()}</div>
-            <h2>{studentName}</h2>
-            <p>Revisão de vocabulário · nível {level}</p>
-            <div className="session-stat"><span>Cards vistos</span><strong>{rememberedCount + reviewCount} <small>/ {deck.length}</small></strong></div>
-            <div className="session-track"><span style={{ width: `${((index + 1) / deck.length) * 100}%` }} /></div>
-            <div className="session-results"><div><span className="result-icon result-success">✓</span><small>Acertei</small><strong>{rememberedCount}</strong></div><div><span className="result-icon result-review">↻</span><small>Para revisar</small><strong>{reviewCount}</strong></div></div>
-            <p className="session-note">Continue no seu ritmo. Cada card ajuda uma palavra a ficar.</p>
-          </aside>
-        </div>
-      ) : <div className="empty-state">Ainda não há cards publicados para este nível.</div>}
-      <div className="cards-tip">
-        <span>✧</span>
-        <div><strong>Como estudar:</strong><p>escolha um nível, tente lembrar o significado antes de virar o card e marque mentalmente as palavras que precisa rever. A classificação CEFR é aproximada e serve como guia de estudo.</p></div>
-      </div>
-    </section>
-  );
-}
-
 function ProfilePage({ profile, levelIndex, lessons: allLessons, onSave, onPage }: {
   profile: Profile; levelIndex: number; lessons: Lesson[];
   onSave: (name: string, goal: string, minutes: number) => Promise<void>;
@@ -1333,6 +1224,7 @@ function ProfilePage({ profile, levelIndex, lessons: allLessons, onSave, onPage 
         <section className="journey-panel"><div className="journey-section-heading"><div><span className="section-kicker">SEUS PRÓXIMOS PASSOS</span><h2>Em movimento.</h2></div><span className="journey-level-pill">{profile.level}</span></div><div className="journey-progress-meta"><span>Questões do nível</span><strong>{current.completedQuestions} / {current.totalQuestions}</strong></div><div className="journey-track" role="progressbar" aria-label={`Questões concluídas em ${profile.level}`} aria-valuenow={current.percent} aria-valuemin={0} aria-valuemax={100}><span style={{ width: `${current.percent}%` }} /></div><p className="account-field-note">{current.totalQuestions ? `${current.percent}% das questões publicadas deste nível acertadas.` : "As questões deste nível aparecerão aqui quando forem publicadas."}</p><dl className="account-achievements"><div><dt>Lições concluídas</dt><dd>{new Set(profile.completedLessons).size}</dd></div><div><dt>Questões acertadas</dt><dd>{new Set(profile.completedQuestionIds).size}</dd></div><div><dt>Quizzes concluídos</dt><dd>{quiz.ready && !quiz.unavailable ? quizSummary.rounds : "—"}</dd></div></dl><p className="journey-history-note">Quizzes: histórico deste navegador.{quiz.unavailable ? " O armazenamento está indisponível." : ""}</p><button className="journey-text-button" onClick={() => onPage("progress")}>Ver todos os resultados <span>→</span></button></section>
       </aside>
     </div>
+    <FeedbackForm key={profile.userId} userId={profile.userId}/>
   </section>;
 }
 

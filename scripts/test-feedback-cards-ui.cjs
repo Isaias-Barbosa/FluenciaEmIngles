@@ -1,0 +1,24 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm'),ts=require('typescript');
+const compile=path=>ts.transpileModule(fs.readFileSync(path,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2020,jsx:ts.JsxEmit.ReactJSX}}).outputText;
+const tick=()=>new Promise(resolve=>setImmediate(resolve));
+function runtime(){let slots=[],deps=[],effects=[],cleanups=[],cursor=0;return {hooks:{useState(initial){const i=cursor++;if(!(i in slots))slots[i]=typeof initial==='function'?initial():initial;return [slots[i],value=>slots[i]=typeof value==='function'?value(slots[i]):value];},useRef(initial){const i=cursor++;if(!(i in slots))slots[i]={current:initial};return slots[i];},useEffect(fn,values){const i=cursor++;if(!deps[i]||values.some((v,j)=>v!==deps[i][j])){deps[i]=values;effects.push(()=>{cleanups[i]?.();cleanups[i]=fn();});}}},render(fn){cursor=0;const result=fn();effects.splice(0).forEach(fn=>fn());return result;},cleanup(){cleanups.forEach(fn=>fn?.());}};}
+function load(path,deps){const context={exports:{},Error,Object,crypto:require('node:crypto'),require:name=>{if(name in deps)return deps[name];throw Error(name);}};vm.runInNewContext(compile(path),context);return context.exports;}
+(async()=>{
+ const rows=new Map([['one:a','review']]);let fail=false,writes=0;
+ const client={from(){return {select(){return this;},eq(key,user){this.user=user;return this;},async in(key,ids){return {data:ids.filter(id=>rows.has(`${this.user}:${id}`)).map(id=>({card_id:id,rating:rows.get(`${this.user}:${id}`)})),error:null};},async upsert(row){writes++;if(fail)return {error:{}};rows.set(`${row.user_id}:${row.card_id}`,row.rating);return {error:null};}};}};
+ let rt=runtime(),hook=load('app/learn/components/use-flashcard-progress.ts',{'react':rt.hooks,'@/lib/supabase/client':{supabase:client}}).useFlashcardProgress;
+ const render=(user='one')=>rt.render(()=>hook(user,['a','b']));
+ assert.equal(render().ready,false);await tick();assert.equal(render().ratings.a,'review');
+ let first=render();const saving=first.rate('a','remembered');assert.equal(await first.rate('b','review'),false,'double-click guard');assert.equal(await saving,true);assert.equal(render().ratings.a,'remembered');assert.equal(Object.keys(render().ratings).length,1,'re-rating replaces existing count');
+ fail=true;assert.equal(await render().rate('b','review'),false);assert.equal(render().ratings.b,undefined);assert.match(render().error,/salvar/);fail=false;
+ assert.equal(render('two').ready,false,'hide previous account immediately');await tick();assert.equal(Object.keys(render('two').ratings).length,0);assert.equal(writes,2);
+ rt.cleanup();rt=runtime();hook=load('app/learn/components/use-flashcard-progress.ts',{'react':rt.hooks,'@/lib/supabase/client':{supabase:client}}).useFlashcardProgress;render();await tick();assert.equal(render().ratings.a,'remembered','remount restores saved progress');
+ const source=fs.readFileSync('app/learn/components/cards-page.tsx','utf8');assert.ok(!source.includes('setMarkedCards'));assert.ok(source.includes('progress.ratings[card.id]'));assert.ok(source.includes('Questões de revisão'));
+ const jsx=(type,props)=>({type,props:props||{}});let feedbackFail=true,requests=[];const feedbackClient={auth:{getUser:async()=>({data:{user:{id:'one'}},error:null})},rpc:async(name,args)=>{requests.push(args);return {error:feedbackFail?{}:null};}};
+ const formRuntime=runtime();const helpers=load('lib/learning/student-feedback.ts',{});const Form=load('app/learn/components/feedback-form.tsx',{'react':formRuntime.hooks,'react/jsx-runtime':{jsx,jsxs:jsx},'@/lib/supabase/client':{supabase:feedbackClient},'@/lib/learning/student-feedback':helpers}).default;
+ const view=()=>formRuntime.render(()=>Form({userId:'one'}));const nodes=(node,out=[])=>{if(Array.isArray(node))node.forEach(n=>nodes(n,out));else if(node&&typeof node==='object'){out.push(node);nodes(node.props?.children,out);}return out;};
+ let tree=view();nodes(tree).find(n=>n.type==='textarea').props.onChange({target:{value:'A useful feedback from a student'}});tree=view();
+ await nodes(tree).find(n=>n.type==='form').props.onSubmit({preventDefault(){}});tree=view();assert.equal(nodes(tree).find(n=>n.type==='textarea').props.value,'A useful feedback from a student');assert.ok(nodes(tree).some(n=>n.props.role==='alert'));
+ feedbackFail=false;await nodes(tree).find(n=>n.type==='form').props.onSubmit({preventDefault(){}});tree=view();assert.equal(requests[0].p_request_id,requests[1].p_request_id,'retry uses same idempotency key');assert.equal(nodes(tree).find(n=>n.type==='textarea').props.value,'');assert.ok(nodes(tree).some(n=>n.props.role==='status'));
+ rt.cleanup();console.log('Cards/feedback UI passed: persistent reload, account isolation, rating correction, save failures, double-click guard, preserved draft, idempotent retry and success.');
+})().catch(error=>{console.error(error);process.exitCode=1;});
