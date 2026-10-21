@@ -13,7 +13,7 @@ assert.equal(learning.length,6);assert.equal(learning[0].totalQuestions,3);asser
 
 // The hook uses the same v1 storage key as existing quizzes and reacts to real events.
 const store=new Map([[quizHistoryKey('one'),JSON.stringify(stats)]]);let blocked=false,reads=0;const window=new EventTarget();
-const vocabulary=vm.createContext({exports:{}});vm.runInContext(compile('lib/quiz/vocabulary.ts'),vocabulary);
+const vocabulary=vm.createContext({exports:{},require:name=>{if(name==='./data/tatoeba.json')return {default:require('../lib/quiz/data/tatoeba.json')};throw Error(name);}});vm.runInContext(compile('lib/quiz/vocabulary.ts'),vocabulary);
 let slots=[],deps=[],cleanups=[],cursor=0,pending=[];
 const hooks={useState(initial){const i=cursor++;if(!(i in slots))slots[i]=initial;return [slots[i],value=>slots[i]=value];},useEffect(fn,values){const i=cursor++;if(!deps[i]||values.some((v,j)=>v!==deps[i][j])){deps[i]=values;pending.push(()=>{cleanups[i]?.();cleanups[i]=fn();});}}};
 const context=vm.createContext({exports:{},window,localStorage:{getItem:key=>{reads++;if(blocked)throw Error('blocked');return store.get(key)||null;}},require:name=>{

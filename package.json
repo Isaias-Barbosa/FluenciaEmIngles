@@ -9,7 +9,7 @@
     "typecheck": "tsc --noEmit",
     "test:question-review": "node scripts/test-question-review.cjs",
     "test:reserve": "node scripts/test-reserve-db.cjs && node scripts/test-reserve-admin-api.cjs && node scripts/test-question-replacement-api.cjs",
-    "test:quiz": "node scripts/test-vocabulary-quiz.cjs && node scripts/test-sound-preference.cjs",
+    "test:quiz": "node scripts/test-tatoeba-quiz.cjs && node scripts/test-vocabulary-quiz.cjs && node scripts/test-sound-preference.cjs",
     "test:journey": "node scripts/test-journey-progress.cjs"
   },
   "dependencies": {

@@ -1,0 +1,2802 @@
+[
+  {
+    "level": "A1",
+    "word": "car",
+    "meaning": "carro",
+    "sentenceId": 3422170,
+    "translationId": 7333335
+  },
+  {
+    "level": "A1",
+    "word": "here",
+    "meaning": "aqui",
+    "sentenceId": 2646067,
+    "translationId": 4964805
+  },
+  {
+    "level": "A1",
+    "word": "house",
+    "meaning": "casa",
+    "sentenceId": 8357799,
+    "translationId": 8361043
+  },
+  {
+    "level": "A1",
+    "word": "hungry",
+    "meaning": "com fome",
+    "sentenceId": 3738925,
+    "translationId": 3741574
+  },
+  {
+    "level": "A1",
+    "word": "know",
+    "meaning": "saber; conhecer",
+    "sentenceId": 3408919,
+    "translationId": 3577534
+  },
+  {
+    "level": "A1",
+    "word": "open",
+    "meaning": "aberto; abrir",
+    "sentenceId": 2732245,
+    "translationId": 5305058
+  },
+  {
+    "level": "A1",
+    "word": "son",
+    "meaning": "filho",
+    "sentenceId": 2646011,
+    "translationId": 11463474
+  },
+  {
+    "level": "A1",
+    "word": "woman",
+    "meaning": "mulher",
+    "sentenceId": 2045780,
+    "translationId": 2624683
+  },
+  {
+    "level": "A1",
+    "word": "yes",
+    "meaning": "sim",
+    "sentenceId": 7537291,
+    "translationId": 8576918
+  },
+  {
+    "level": "A1",
+    "word": "blue",
+    "meaning": "azul",
+    "sentenceId": 18275,
+    "translationId": 397634
+  },
+  {
+    "level": "A1",
+    "word": "fast",
+    "meaning": "rápido",
+    "sentenceId": 2241538,
+    "translationId": 5037307
+  },
+  {
+    "level": "A1",
+    "word": "head",
+    "meaning": "cabeça",
+    "sentenceId": 3436693,
+    "translationId": 7289315
+  },
+  {
+    "level": "A1",
+    "word": "never",
+    "meaning": "nunca",
+    "sentenceId": 3823974,
+    "translationId": 4492775
+  },
+  {
+    "level": "A1",
+    "word": "price",
+    "meaning": "preço",
+    "sentenceId": 2234121,
+    "translationId": 935431
+  },
+  {
+    "level": "A1",
+    "word": "shirt",
+    "meaning": "camisa",
+    "sentenceId": 68688,
+    "translationId": 2472675
+  },
+  {
+    "level": "A1",
+    "word": "sing",
+    "meaning": "cantar",
+    "sentenceId": 9962465,
+    "translationId": 9962669
+  },
+  {
+    "level": "A1",
+    "word": "those",
+    "meaning": "aqueles; aquelas",
+    "sentenceId": 67046,
+    "translationId": 2911352
+  },
+  {
+    "level": "A1",
+    "word": "time",
+    "meaning": "hora",
+    "sentenceId": 433692,
+    "translationId": 1189911
+  },
+  {
+    "level": "A1",
+    "word": "two",
+    "meaning": "dois",
+    "sentenceId": 2714934,
+    "translationId": 1235324
+  },
+  {
+    "level": "A1",
+    "word": "year",
+    "meaning": "ano",
+    "sentenceId": 322472,
+    "translationId": 1200132
+  },
+  {
+    "level": "A1",
+    "word": "baby",
+    "meaning": "bebê",
+    "sentenceId": 272315,
+    "translationId": 10689254
+  },
+  {
+    "level": "A1",
+    "word": "call",
+    "meaning": "ligar; chamar",
+    "sentenceId": 2663365,
+    "translationId": 5892646
+  },
+  {
+    "level": "A1",
+    "word": "every day",
+    "meaning": "todos os dias",
+    "sentenceId": 1025843,
+    "translationId": 5409726
+  },
+  {
+    "level": "A1",
+    "word": "far",
+    "meaning": "longe",
+    "sentenceId": 8511150,
+    "translationId": 4097177
+  },
+  {
+    "level": "A1",
+    "word": "help",
+    "meaning": "ajudar",
+    "sentenceId": 1027812,
+    "translationId": 1466460
+  },
+  {
+    "level": "A1",
+    "word": "late",
+    "meaning": "atrasado; tarde",
+    "sentenceId": 7176514,
+    "translationId": 7728518
+  },
+  {
+    "level": "A1",
+    "word": "play",
+    "meaning": "brincar; jogar; tocar",
+    "sentenceId": 1026759,
+    "translationId": 1708487
+  },
+  {
+    "level": "A1",
+    "word": "tomorrow",
+    "meaning": "amanhã",
+    "sentenceId": 3448995,
+    "translationId": 8449307
+  },
+  {
+    "level": "A1",
+    "word": "what",
+    "meaning": "o quê; qual",
+    "sentenceId": 906793,
+    "translationId": 2464420
+  },
+  {
+    "level": "A1",
+    "word": "when",
+    "meaning": "quando",
+    "sentenceId": 65965,
+    "translationId": 956510
+  },
+  {
+    "level": "A1",
+    "word": "eat",
+    "meaning": "comer",
+    "sentenceId": 1830573,
+    "translationId": 3708443
+  },
+  {
+    "level": "A1",
+    "word": "hat",
+    "meaning": "chapéu",
+    "sentenceId": 7633505,
+    "translationId": 8624668
+  },
+  {
+    "level": "A1",
+    "word": "hour",
+    "meaning": "hora",
+    "sentenceId": 2262790,
+    "translationId": 5080894
+  },
+  {
+    "level": "A1",
+    "word": "police",
+    "meaning": "polícia",
+    "sentenceId": 5353389,
+    "translationId": 7331332
+  },
+  {
+    "level": "A1",
+    "word": "young",
+    "meaning": "jovem",
+    "sentenceId": 280706,
+    "translationId": 9921620
+  },
+  {
+    "level": "A1",
+    "word": "but",
+    "meaning": "mas",
+    "sentenceId": 3177874,
+    "translationId": 5030813
+  },
+  {
+    "level": "A1",
+    "word": "eye",
+    "meaning": "olho",
+    "sentenceId": 33680,
+    "translationId": 937352
+  },
+  {
+    "level": "A1",
+    "word": "green",
+    "meaning": "verde",
+    "sentenceId": 268842,
+    "translationId": 1553096
+  },
+  {
+    "level": "A1",
+    "word": "last",
+    "meaning": "último",
+    "sentenceId": 9769024,
+    "translationId": 9770148
+  },
+  {
+    "level": "A1",
+    "word": "that",
+    "meaning": "aquele; aquela; aquilo",
+    "sentenceId": 2044872,
+    "translationId": 3572750
+  },
+  {
+    "level": "A1",
+    "word": "wife",
+    "meaning": "esposa",
+    "sentenceId": 8177721,
+    "translationId": 10723634
+  },
+  {
+    "level": "A1",
+    "word": "brother",
+    "meaning": "irmão",
+    "sentenceId": 1186483,
+    "translationId": 3086304
+  },
+  {
+    "level": "A1",
+    "word": "coat",
+    "meaning": "casaco",
+    "sentenceId": 7385815,
+    "translationId": 12574602
+  },
+  {
+    "level": "A1",
+    "word": "many",
+    "meaning": "muitos (contável)",
+    "sentenceId": 6237987,
+    "translationId": 8444043
+  },
+  {
+    "level": "A1",
+    "word": "April",
+    "meaning": "abril",
+    "sentenceId": 1415555,
+    "translationId": 1417413
+  },
+  {
+    "level": "A1",
+    "word": "back",
+    "meaning": "costas",
+    "sentenceId": 5420245,
+    "translationId": 5468721
+  },
+  {
+    "level": "A1",
+    "word": "game",
+    "meaning": "jogo",
+    "sentenceId": 2931683,
+    "translationId": 2133835
+  },
+  {
+    "level": "A1",
+    "word": "hear",
+    "meaning": "ouvir",
+    "sentenceId": 1570568,
+    "translationId": 2661026
+  },
+  {
+    "level": "A1",
+    "word": "how many",
+    "meaning": "quantos",
+    "sentenceId": 6241523,
+    "translationId": 11020864
+  },
+  {
+    "level": "A1",
+    "word": "run",
+    "meaning": "correr",
+    "sentenceId": 278244,
+    "translationId": 1305272
+  },
+  {
+    "level": "A1",
+    "word": "a lot of",
+    "meaning": "muito(s); bastante",
+    "sentenceId": 6660998,
+    "translationId": 7657786
+  },
+  {
+    "level": "A1",
+    "word": "card",
+    "meaning": "cartão",
+    "sentenceId": 2747430,
+    "translationId": 2351496
+  },
+  {
+    "level": "A1",
+    "word": "full",
+    "meaning": "cheio",
+    "sentenceId": 3045677,
+    "translationId": 13979428
+  },
+  {
+    "level": "A1",
+    "word": "meat",
+    "meaning": "carne",
+    "sentenceId": 1986755,
+    "translationId": 2597884
+  },
+  {
+    "level": "A1",
+    "word": "bag",
+    "meaning": "bolsa; mochila",
+    "sentenceId": 8204052,
+    "translationId": 8203899
+  },
+  {
+    "level": "A1",
+    "word": "love",
+    "meaning": "amar; adorar",
+    "sentenceId": 11134855,
+    "translationId": 11134862
+  },
+  {
+    "level": "A1",
+    "word": "must",
+    "meaning": "dever; ter que",
+    "sentenceId": 270041,
+    "translationId": 5313082
+  },
+  {
+    "level": "A1",
+    "word": "star",
+    "meaning": "estrela",
+    "sentenceId": 8781842,
+    "translationId": 8778348
+  },
+  {
+    "level": "A1",
+    "word": "a cup of tea",
+    "meaning": "uma xícara de chá",
+    "sentenceId": 2926787,
+    "translationId": 2927199
+  },
+  {
+    "level": "A1",
+    "word": "road",
+    "meaning": "estrada",
+    "sentenceId": 13710862,
+    "translationId": 2699897
+  },
+  {
+    "level": "A1",
+    "word": "Tuesday",
+    "meaning": "terça-feira",
+    "sentenceId": 8895913,
+    "translationId": 8895909
+  },
+  {
+    "level": "A1",
+    "word": "five",
+    "meaning": "cinco",
+    "sentenceId": 8901074,
+    "translationId": 12017672
+  },
+  {
+    "level": "A1",
+    "word": "wash my hands",
+    "meaning": "lavar as mãos",
+    "sentenceId": 9966178,
+    "translationId": 1129599
+  },
+  {
+    "level": "A1",
+    "word": "how much",
+    "meaning": "quanto (incontável)",
+    "sentenceId": 10830424,
+    "translationId": 10830428
+  },
+  {
+    "level": "A1",
+    "word": "rain",
+    "meaning": "chuva",
+    "sentenceId": 13656034,
+    "translationId": 12410998
+  },
+  {
+    "level": "A1",
+    "word": "white",
+    "meaning": "branco",
+    "sentenceId": 8817839,
+    "translationId": 11017638
+  },
+  {
+    "level": "A1",
+    "word": "first",
+    "meaning": "primeiro",
+    "sentenceId": 10692052,
+    "translationId": 10692053
+  },
+  {
+    "level": "A2",
+    "word": "accident",
+    "meaning": "acidente",
+    "sentenceId": 953300,
+    "translationId": 1048376
+  },
+  {
+    "level": "A2",
+    "word": "argument",
+    "meaning": "discussão; briga",
+    "sentenceId": 5688154,
+    "translationId": 7684856
+  },
+  {
+    "level": "A2",
+    "word": "cost",
+    "meaning": "custar",
+    "sentenceId": 5498828,
+    "translationId": 12530299
+  },
+  {
+    "level": "A2",
+    "word": "idea",
+    "meaning": "ideia",
+    "sentenceId": 1412485,
+    "translationId": 1413066
+  },
+  {
+    "level": "A2",
+    "word": "interview",
+    "meaning": "entrevista",
+    "sentenceId": 1093876,
+    "translationId": 1487827
+  },
+  {
+    "level": "A2",
+    "word": "mean",
+    "meaning": "significar",
+    "sentenceId": 43015,
+    "translationId": 7442425
+  },
+  {
+    "level": "A2",
+    "word": "meeting",
+    "meaning": "reunião",
+    "sentenceId": 296878,
+    "translationId": 7341358
+  },
+  {
+    "level": "A2",
+    "word": "necessary",
+    "meaning": "necessário",
+    "sentenceId": 2776862,
+    "translationId": 2777107
+  },
+  {
+    "level": "A2",
+    "word": "news",
+    "meaning": "notícias",
+    "sentenceId": 2812749,
+    "translationId": 1672183
+  },
+  {
+    "level": "A2",
+    "word": "probably",
+    "meaning": "provavelmente",
+    "sentenceId": 8964582,
+    "translationId": 10021732
+  },
+  {
+    "level": "A2",
+    "word": "problem",
+    "meaning": "problema",
+    "sentenceId": 2663245,
+    "translationId": 4254195
+  },
+  {
+    "level": "A2",
+    "word": "allow",
+    "meaning": "permitir",
+    "sentenceId": 6346000,
+    "translationId": 7265114
+  },
+  {
+    "level": "A2",
+    "word": "choice",
+    "meaning": "escolha",
+    "sentenceId": 3732866,
+    "translationId": 5834610
+  },
+  {
+    "level": "A2",
+    "word": "customer",
+    "meaning": "cliente",
+    "sentenceId": 5364151,
+    "translationId": 5368804
+  },
+  {
+    "level": "A2",
+    "word": "exercise",
+    "meaning": "exercitar-se",
+    "sentenceId": 4568490,
+    "translationId": 5394753
+  },
+  {
+    "level": "A2",
+    "word": "explain",
+    "meaning": "explicar",
+    "sentenceId": 9475979,
+    "translationId": 10332450
+  },
+  {
+    "level": "A2",
+    "word": "go out",
+    "meaning": "sair",
+    "sentenceId": 5937310,
+    "translationId": 7333312
+  },
+  {
+    "level": "A2",
+    "word": "leave",
+    "meaning": "sair; partir",
+    "sentenceId": 5657443,
+    "translationId": 8784858
+  },
+  {
+    "level": "A2",
+    "word": "memory",
+    "meaning": "lembrança; memória",
+    "sentenceId": 4665931,
+    "translationId": 4838366
+  },
+  {
+    "level": "A2",
+    "word": "so far",
+    "meaning": "até agora",
+    "sentenceId": 2543861,
+    "translationId": 5093819
+  },
+  {
+    "level": "A2",
+    "word": "special",
+    "meaning": "especial",
+    "sentenceId": 3124782,
+    "translationId": 5152787
+  },
+  {
+    "level": "A2",
+    "word": "apologize",
+    "meaning": "pedir desculpas",
+    "sentenceId": 12112985,
+    "translationId": 12112989
+  },
+  {
+    "level": "A2",
+    "word": "common",
+    "meaning": "comum",
+    "sentenceId": 306367,
+    "translationId": 5312885
+  },
+  {
+    "level": "A2",
+    "word": "fair",
+    "meaning": "justo",
+    "sentenceId": 3824781,
+    "translationId": 5138838
+  },
+  {
+    "level": "A2",
+    "word": "honest",
+    "meaning": "honesto",
+    "sentenceId": 4955291,
+    "translationId": 5509008
+  },
+  {
+    "level": "A2",
+    "word": "patient",
+    "meaning": "paciente",
+    "sentenceId": 7737128,
+    "translationId": 10730689
+  },
+  {
+    "level": "A2",
+    "word": "popular",
+    "meaning": "popular",
+    "sentenceId": 313022,
+    "translationId": 10834607
+  },
+  {
+    "level": "A2",
+    "word": "reservation",
+    "meaning": "reserva",
+    "sentenceId": 1369387,
+    "translationId": 1969726
+  },
+  {
+    "level": "A2",
+    "word": "skill",
+    "meaning": "habilidade",
+    "sentenceId": 4500198,
+    "translationId": 5064584
+  },
+  {
+    "level": "A2",
+    "word": "voice",
+    "meaning": "voz",
+    "sentenceId": 45905,
+    "translationId": 977402
+  },
+  {
+    "level": "A2",
+    "word": "feeling",
+    "meaning": "sentindo-se",
+    "sentenceId": 1867847,
+    "translationId": 4312046
+  },
+  {
+    "level": "A2",
+    "word": "international",
+    "meaning": "internacional",
+    "sentenceId": 26275,
+    "translationId": 406500
+  },
+  {
+    "level": "A2",
+    "word": "invitation",
+    "meaning": "convite",
+    "sentenceId": 7476911,
+    "translationId": 8510199
+  },
+  {
+    "level": "A2",
+    "word": "newspaper",
+    "meaning": "jornal",
+    "sentenceId": 1316912,
+    "translationId": 1488104
+  },
+  {
+    "level": "A2",
+    "word": "sound",
+    "meaning": "som",
+    "sentenceId": 3732634,
+    "translationId": 5683332
+  },
+  {
+    "level": "A2",
+    "word": "translate",
+    "meaning": "traduzir",
+    "sentenceId": 4089994,
+    "editorialTranslation": "Você pode traduzir isto para mim?"
+  },
+  {
+    "level": "A2",
+    "word": "carefully",
+    "meaning": "cuidadosamente",
+    "sentenceId": 1503585,
+    "translationId": 10339290
+  },
+  {
+    "level": "A2",
+    "word": "careless",
+    "meaning": "descuidado",
+    "sentenceId": 21223,
+    "translationId": 375115
+  },
+  {
+    "level": "A2",
+    "word": "describe",
+    "meaning": "descrever",
+    "sentenceId": 44133,
+    "translationId": 933729
+  },
+  {
+    "level": "A2",
+    "word": "traffic",
+    "meaning": "trânsito",
+    "sentenceId": 1972606,
+    "translationId": 5316295
+  },
+  {
+    "level": "A2",
+    "word": "article",
+    "meaning": "artigo",
+    "sentenceId": 59737,
+    "translationId": 1795513
+  },
+  {
+    "level": "A2",
+    "word": "dangerous",
+    "meaning": "perigoso",
+    "sentenceId": 41407,
+    "translationId": 6564781
+  },
+  {
+    "level": "A2",
+    "word": "immediately",
+    "meaning": "imediatamente",
+    "sentenceId": 6531525,
+    "translationId": 11639546
+  },
+  {
+    "level": "A2",
+    "word": "mistake",
+    "meaning": "erro",
+    "sentenceId": 8311733,
+    "translationId": 10794315
+  },
+  {
+    "level": "A2",
+    "word": "national",
+    "meaning": "nacional",
+    "sentenceId": 807289,
+    "translationId": 6470698
+  },
+  {
+    "level": "A2",
+    "word": "private",
+    "meaning": "privado",
+    "sentenceId": 8424000,
+    "translationId": 11063626
+  },
+  {
+    "level": "A2",
+    "word": "purse",
+    "meaning": "bolsa pequena",
+    "sentenceId": 311723,
+    "translationId": 956095
+  },
+  {
+    "level": "A2",
+    "word": "shift",
+    "meaning": "turno",
+    "sentenceId": 3831383,
+    "translationId": 5132279
+  },
+  {
+    "level": "A2",
+    "word": "recommend",
+    "meaning": "recomendar",
+    "sentenceId": 2544907,
+    "translationId": 5946075
+  },
+  {
+    "level": "A2",
+    "word": "sidewalk",
+    "meaning": "calçada",
+    "sentenceId": 7732743,
+    "translationId": 8085241
+  },
+  {
+    "level": "A2",
+    "word": "fortunately",
+    "meaning": "felizmente",
+    "sentenceId": 7331426,
+    "translationId": 5272582
+  },
+  {
+    "level": "A2",
+    "word": "purpose",
+    "meaning": "objetivo",
+    "sentenceId": 681826,
+    "translationId": 1592751
+  },
+  {
+    "level": "A2",
+    "word": "reason",
+    "meaning": "motivo",
+    "sentenceId": 9092758,
+    "translationId": 9135631
+  },
+  {
+    "level": "A2",
+    "word": "attend",
+    "meaning": "comparecer; frequentar",
+    "sentenceId": 3733902,
+    "translationId": 6567351
+  },
+  {
+    "level": "A2",
+    "word": "backpack",
+    "meaning": "mochila",
+    "sentenceId": 3487350,
+    "translationId": 3487788
+  },
+  {
+    "level": "A2",
+    "word": "expensive",
+    "meaning": "caro",
+    "sentenceId": 2397358,
+    "translationId": 2397753
+  },
+  {
+    "level": "A2",
+    "word": "recently",
+    "meaning": "recentemente",
+    "sentenceId": 681545,
+    "translationId": 736177
+  },
+  {
+    "level": "A2",
+    "word": "task",
+    "meaning": "tarefa",
+    "sentenceId": 10774385,
+    "translationId": 10774392
+  },
+  {
+    "level": "A2",
+    "word": "traditional",
+    "meaning": "tradicional",
+    "sentenceId": 1641019,
+    "translationId": 1641720
+  },
+  {
+    "level": "A2",
+    "word": "useful",
+    "meaning": "útil",
+    "sentenceId": 9722479,
+    "translationId": 9722478
+  },
+  {
+    "level": "A2",
+    "word": "luck",
+    "meaning": "sorte",
+    "sentenceId": 885480,
+    "translationId": 885483
+  },
+  {
+    "level": "A2",
+    "word": "medicine",
+    "meaning": "remédio",
+    "sentenceId": 1116346,
+    "translationId": 1116152
+  },
+  {
+    "level": "A2",
+    "word": "already",
+    "meaning": "já",
+    "sentenceId": 6003842,
+    "translationId": 10899355
+  },
+  {
+    "level": "A2",
+    "word": "message",
+    "meaning": "mensagem",
+    "sentenceId": 3822442,
+    "translationId": 6993924
+  },
+  {
+    "level": "A2",
+    "word": "try on",
+    "meaning": "experimentar roupa",
+    "sentenceId": 7985960,
+    "translationId": 9966216
+  },
+  {
+    "level": "A2",
+    "word": "surprising",
+    "meaning": "surpreendente",
+    "sentenceId": 5135013,
+    "translationId": 5473050
+  },
+  {
+    "level": "A2",
+    "word": "feel like doing",
+    "meaning": "estar com vontade de fazer",
+    "sentenceId": 8361734,
+    "translationId": 8877098
+  },
+  {
+    "level": "B1",
+    "word": "improvement",
+    "meaning": "melhoria",
+    "sentenceId": 4500222,
+    "translationId": 5235999
+  },
+  {
+    "level": "B1",
+    "word": "used to do",
+    "meaning": "costumava fazer",
+    "sentenceId": 5189386,
+    "translationId": 5192789
+  },
+  {
+    "level": "B1",
+    "word": "worth",
+    "meaning": "valer a pena",
+    "sentenceId": 7948978,
+    "translationId": 10003755
+  },
+  {
+    "level": "B1",
+    "word": "look after",
+    "meaning": "cuidar de",
+    "sentenceId": 247125,
+    "translationId": 5268921
+  },
+  {
+    "level": "B1",
+    "word": "put off",
+    "meaning": "adiar",
+    "sentenceId": 26749,
+    "translationId": 1174650
+  },
+  {
+    "level": "B1",
+    "word": "run out of",
+    "meaning": "ficar sem",
+    "sentenceId": 8276362,
+    "translationId": 8291806
+  },
+  {
+    "level": "B1",
+    "word": "apply for",
+    "meaning": "candidatar-se a",
+    "sentenceId": 6663678,
+    "translationId": 11061193
+  },
+  {
+    "level": "B1",
+    "word": "at least",
+    "meaning": "pelo menos",
+    "sentenceId": 55081,
+    "translationId": 341076
+  },
+  {
+    "level": "B1",
+    "word": "find out",
+    "meaning": "descobrir",
+    "sentenceId": 3312123,
+    "translationId": 6820100
+  },
+  {
+    "level": "B1",
+    "word": "get rid of",
+    "meaning": "livrar-se de",
+    "sentenceId": 8936629,
+    "translationId": 8953992
+  },
+  {
+    "level": "B1",
+    "word": "impact",
+    "meaning": "impacto",
+    "sentenceId": 265338,
+    "translationId": 1648922
+  },
+  {
+    "level": "B1",
+    "word": "in common",
+    "meaning": "em comum",
+    "sentenceId": 10773453,
+    "translationId": 11245747
+  },
+  {
+    "level": "B1",
+    "word": "on purpose",
+    "meaning": "de propósito",
+    "sentenceId": 7168133,
+    "translationId": 4804301
+  },
+  {
+    "level": "B1",
+    "word": "pressure",
+    "meaning": "pressão",
+    "sentenceId": 4663509,
+    "translationId": 7360581
+  },
+  {
+    "level": "B1",
+    "word": "remember doing",
+    "meaning": "lembrar-se de ter feito",
+    "sentenceId": 1094356,
+    "translationId": 2488305
+  },
+  {
+    "level": "B1",
+    "word": "take responsibility",
+    "meaning": "assumir responsabilidade",
+    "sentenceId": 9049343,
+    "translationId": 9082315
+  },
+  {
+    "level": "B1",
+    "word": "behavior",
+    "meaning": "comportamento",
+    "sentenceId": 2957045,
+    "translationId": 6295628
+  },
+  {
+    "level": "B1",
+    "word": "effect",
+    "meaning": "efeito",
+    "sentenceId": 2114656,
+    "translationId": 2115073
+  },
+  {
+    "level": "B1",
+    "word": "get along",
+    "meaning": "dar-se bem",
+    "sentenceId": 69205,
+    "translationId": 3702110
+  },
+  {
+    "level": "B1",
+    "word": "have something in common",
+    "meaning": "ter algo em comum",
+    "sentenceId": 2361735,
+    "translationId": 5311351
+  },
+  {
+    "level": "B1",
+    "word": "in particular",
+    "meaning": "em particular",
+    "sentenceId": 259733,
+    "translationId": 912264
+  },
+  {
+    "level": "B1",
+    "word": "by accident",
+    "meaning": "por acidente",
+    "sentenceId": 5850653,
+    "translationId": 6150236
+  },
+  {
+    "level": "B1",
+    "word": "cut off",
+    "meaning": "cortar; interromper",
+    "sentenceId": 276773,
+    "translationId": 737198
+  },
+  {
+    "level": "B1",
+    "word": "in addition",
+    "meaning": "além disso",
+    "sentenceId": 1427961,
+    "translationId": 1429575
+  },
+  {
+    "level": "B1",
+    "word": "permission",
+    "meaning": "permissão",
+    "sentenceId": 2329577,
+    "translationId": 7327788
+  },
+  {
+    "level": "B1",
+    "word": "progress",
+    "meaning": "progresso",
+    "sentenceId": 285563,
+    "translationId": 748885
+  },
+  {
+    "level": "B1",
+    "word": "criminal",
+    "meaning": "criminoso",
+    "sentenceId": 3424163,
+    "translationId": 3835545
+  },
+  {
+    "level": "B1",
+    "word": "lack",
+    "meaning": "falta",
+    "sentenceId": 1092145,
+    "translationId": 1412237
+  },
+  {
+    "level": "B1",
+    "word": "poverty",
+    "meaning": "pobreza",
+    "sentenceId": 992006,
+    "translationId": 994155
+  },
+  {
+    "level": "B1",
+    "word": "relationship",
+    "meaning": "relacionamento",
+    "sentenceId": 903843,
+    "translationId": 904708
+  },
+  {
+    "level": "B1",
+    "word": "culture",
+    "meaning": "cultura",
+    "sentenceId": 302230,
+    "translationId": 971565
+  },
+  {
+    "level": "B1",
+    "word": "even if",
+    "meaning": "mesmo se",
+    "sentenceId": 11206165,
+    "translationId": 11206173
+  },
+  {
+    "level": "B1",
+    "word": "freedom",
+    "meaning": "liberdade",
+    "sentenceId": 244090,
+    "translationId": 3835196
+  },
+  {
+    "level": "B1",
+    "word": "in general",
+    "meaning": "em geral",
+    "sentenceId": 27365,
+    "translationId": 2418926
+  },
+  {
+    "level": "B1",
+    "word": "influence",
+    "meaning": "influência",
+    "sentenceId": 307616,
+    "translationId": 950420
+  },
+  {
+    "level": "B1",
+    "word": "safety",
+    "meaning": "segurança",
+    "sentenceId": 4496688,
+    "translationId": 5047650
+  },
+  {
+    "level": "B1",
+    "word": "strength",
+    "meaning": "força; ponto forte",
+    "sentenceId": 3348250,
+    "translationId": 13459418
+  },
+  {
+    "level": "B1",
+    "word": "volunteer",
+    "meaning": "voluntário; fazer trabalho voluntário",
+    "sentenceId": 2531349,
+    "translationId": 2533614
+  },
+  {
+    "level": "B1",
+    "word": "work out",
+    "meaning": "resolver; dar certo",
+    "sentenceId": 3729190,
+    "translationId": 5311394
+  },
+  {
+    "level": "B1",
+    "word": "belief",
+    "meaning": "crença",
+    "sentenceId": 4924797,
+    "translationId": 4927631
+  },
+  {
+    "level": "B1",
+    "word": "break up",
+    "meaning": "terminar relacionamento",
+    "sentenceId": 864262,
+    "translationId": 864265
+  },
+  {
+    "level": "B1",
+    "word": "condition",
+    "meaning": "condição",
+    "sentenceId": 31091,
+    "translationId": 3456836
+  },
+  {
+    "level": "B1",
+    "word": "education",
+    "meaning": "educação",
+    "sentenceId": 1567903,
+    "translationId": 1567897
+  },
+  {
+    "level": "B1",
+    "word": "wealth",
+    "meaning": "riqueza",
+    "sentenceId": 12991932,
+    "translationId": 12991794
+  },
+  {
+    "level": "B1",
+    "word": "a serious problem",
+    "meaning": "um problema sério",
+    "sentenceId": 7791097,
+    "translationId": 7791414
+  },
+  {
+    "level": "B1",
+    "word": "carry out",
+    "meaning": "realizar; executar",
+    "sentenceId": 248935,
+    "translationId": 2222311
+  },
+  {
+    "level": "B1",
+    "word": "damage",
+    "meaning": "dano; danificar",
+    "sentenceId": 4774777,
+    "translationId": 4776099
+  },
+  {
+    "level": "B1",
+    "word": "in private",
+    "meaning": "em particular",
+    "sentenceId": 4079970,
+    "translationId": 4444788
+  },
+  {
+    "level": "B1",
+    "word": "quality",
+    "meaning": "qualidade",
+    "sentenceId": 13596963,
+    "translationId": 13596899
+  },
+  {
+    "level": "B1",
+    "word": "technology",
+    "meaning": "tecnologia",
+    "sentenceId": 945535,
+    "translationId": 2827912
+  },
+  {
+    "level": "B1",
+    "word": "communication",
+    "meaning": "comunicação",
+    "sentenceId": 1570118,
+    "translationId": 1571249
+  },
+  {
+    "level": "B1",
+    "word": "variety",
+    "meaning": "variedade",
+    "sentenceId": 309093,
+    "translationId": 10572774
+  },
+  {
+    "level": "B1",
+    "word": "as a rule",
+    "meaning": "em geral; como regra",
+    "sentenceId": 254896,
+    "translationId": 3463132
+  },
+  {
+    "level": "B1",
+    "word": "owing to",
+    "meaning": "devido a",
+    "sentenceId": 34716,
+    "translationId": 2717588
+  },
+  {
+    "level": "B1",
+    "word": "custom",
+    "meaning": "costume",
+    "sentenceId": 4429495,
+    "translationId": 10644774
+  },
+  {
+    "level": "B1",
+    "word": "in detail",
+    "meaning": "em detalhes",
+    "sentenceId": 51448,
+    "translationId": 1734849
+  },
+  {
+    "level": "B1",
+    "word": "well-being",
+    "meaning": "bem-estar",
+    "sentenceId": 14066186,
+    "translationId": 14066172
+  },
+  {
+    "level": "B1",
+    "word": "industry",
+    "meaning": "indústria",
+    "sentenceId": 8575344,
+    "translationId": 11068486
+  },
+  {
+    "level": "B1",
+    "word": "fail to",
+    "meaning": "não conseguir; deixar de",
+    "sentenceId": 14050422,
+    "translationId": 14050400
+  },
+  {
+    "level": "B1",
+    "word": "make progress",
+    "meaning": "progredir",
+    "sentenceId": 12007551,
+    "translationId": 12007557
+  },
+  {
+    "level": "B1",
+    "word": "research",
+    "meaning": "pesquisa",
+    "sentenceId": 11737967,
+    "translationId": 13974341
+  },
+  {
+    "level": "B1",
+    "word": "fall behind",
+    "meaning": "ficar para trás",
+    "sentenceId": 23535,
+    "translationId": 913115
+  },
+  {
+    "level": "B1",
+    "word": "whereas",
+    "meaning": "enquanto que; ao passo que",
+    "sentenceId": 867205,
+    "translationId": 1553038
+  },
+  {
+    "level": "B1",
+    "word": "try doing",
+    "meaning": "experimentar fazer",
+    "sentenceId": 8341423,
+    "translationId": 8344332
+  },
+  {
+    "level": "B1",
+    "word": "turn down",
+    "meaning": "recusar; diminuir",
+    "sentenceId": 38870,
+    "translationId": 2550310
+  },
+  {
+    "level": "B1",
+    "word": "come up with",
+    "meaning": "ter uma ideia",
+    "sentenceId": 10692526,
+    "translationId": 12555103
+  },
+  {
+    "level": "B1",
+    "word": "in charge",
+    "meaning": "no comando; responsável",
+    "sentenceId": 5897266,
+    "translationId": 6991685
+  },
+  {
+    "level": "B2",
+    "word": "on the verge of",
+    "meaning": "à beira de",
+    "sentenceId": 12348046,
+    "translationId": 12386405
+  },
+  {
+    "level": "B2",
+    "word": "principle",
+    "meaning": "princípio",
+    "sentenceId": 284715,
+    "translationId": 2828650
+  },
+  {
+    "level": "B2",
+    "word": "propose",
+    "meaning": "propor",
+    "sentenceId": 5193423,
+    "translationId": 8493907
+  },
+  {
+    "level": "B2",
+    "word": "call off",
+    "meaning": "cancelar",
+    "sentenceId": 314198,
+    "translationId": 7288159
+  },
+  {
+    "level": "B2",
+    "word": "justify",
+    "meaning": "justificar",
+    "sentenceId": 323820,
+    "translationId": 3378966
+  },
+  {
+    "level": "B2",
+    "word": "evidence",
+    "meaning": "evidência",
+    "sentenceId": 1027382,
+    "translationId": 2441776
+  },
+  {
+    "level": "B2",
+    "word": "reputation",
+    "meaning": "reputação",
+    "sentenceId": 2361124,
+    "translationId": 4765985
+  },
+  {
+    "level": "B2",
+    "word": "remarkable",
+    "meaning": "notável",
+    "sentenceId": 10085504,
+    "translationId": 10779741
+  },
+  {
+    "level": "B2",
+    "word": "resolve",
+    "meaning": "resolver",
+    "sentenceId": 672187,
+    "translationId": 1371944
+  },
+  {
+    "level": "B2",
+    "word": "turn into",
+    "meaning": "transformar-se em",
+    "sentenceId": 8261317,
+    "translationId": 8301000
+  },
+  {
+    "level": "B2",
+    "word": "up to a point",
+    "meaning": "até certo ponto",
+    "sentenceId": 1096032,
+    "translationId": 5421239
+  },
+  {
+    "level": "B2",
+    "word": "capacity",
+    "meaning": "capacidade",
+    "sentenceId": 328610,
+    "translationId": 3455509
+  },
+  {
+    "level": "B2",
+    "word": "dispute",
+    "meaning": "disputa",
+    "sentenceId": 10355606,
+    "translationId": 10355611
+  },
+  {
+    "level": "B2",
+    "word": "generate",
+    "meaning": "gerar",
+    "sentenceId": 12110170,
+    "translationId": 12110163
+  },
+  {
+    "level": "B2",
+    "word": "offset the cost",
+    "meaning": "compensar o custo",
+    "sentenceId": 8673624,
+    "translationId": 8678982
+  },
+  {
+    "level": "B2",
+    "word": "substitute",
+    "meaning": "substituto; substituir",
+    "sentenceId": 1350,
+    "translationId": 3835987
+  },
+  {
+    "level": "B2",
+    "word": "commitment",
+    "meaning": "compromisso",
+    "sentenceId": 877791,
+    "translationId": 877790
+  },
+  {
+    "level": "B2",
+    "word": "interpretation",
+    "meaning": "interpretação",
+    "sentenceId": 12228348,
+    "translationId": 3120312
+  },
+  {
+    "level": "B2",
+    "word": "to some extent",
+    "meaning": "até certo ponto",
+    "sentenceId": 5883125,
+    "translationId": 5884952
+  },
+  {
+    "level": "B2",
+    "word": "as opposed to",
+    "meaning": "em oposição a",
+    "sentenceId": 32261,
+    "translationId": 1322957
+  },
+  {
+    "level": "B2",
+    "word": "evident",
+    "meaning": "evidente",
+    "sentenceId": 3029039,
+    "translationId": 3029648
+  },
+  {
+    "level": "B2",
+    "word": "objective",
+    "meaning": "objetivo",
+    "sentenceId": 3458212,
+    "translationId": 3458220
+  },
+  {
+    "level": "B2",
+    "word": "obtain",
+    "meaning": "obter",
+    "sentenceId": 687352,
+    "translationId": 902456
+  },
+  {
+    "level": "B2",
+    "word": "priority",
+    "meaning": "prioridade",
+    "sentenceId": 2096390,
+    "translationId": 1702421
+  },
+  {
+    "level": "B2",
+    "word": "biased",
+    "meaning": "tendencioso",
+    "sentenceId": 12319296,
+    "translationId": 12319237
+  },
+  {
+    "level": "B2",
+    "word": "ensure",
+    "meaning": "garantir",
+    "sentenceId": 704156,
+    "translationId": 729286
+  },
+  {
+    "level": "B2",
+    "word": "framework",
+    "meaning": "estrutura; arcabouço",
+    "sentenceId": 269142,
+    "translationId": 10673225
+  },
+  {
+    "level": "B2",
+    "word": "hold back",
+    "meaning": "conter; reter",
+    "sentenceId": 1552999,
+    "translationId": 1520029
+  },
+  {
+    "level": "B2",
+    "word": "transform",
+    "meaning": "transformar",
+    "sentenceId": 2467049,
+    "translationId": 2469147
+  },
+  {
+    "level": "B2",
+    "word": "be entitled to",
+    "meaning": "ter direito a",
+    "sentenceId": 9487070,
+    "translationId": 1608289
+  },
+  {
+    "level": "B2",
+    "word": "implement",
+    "meaning": "implementar",
+    "sentenceId": 1465098,
+    "translationId": 6943703
+  },
+  {
+    "level": "B2",
+    "word": "see through",
+    "meaning": "perceber a verdade; apoiar até o fim",
+    "sentenceId": 2962800,
+    "translationId": 2963043
+  },
+  {
+    "level": "B2",
+    "word": "specify",
+    "meaning": "especificar",
+    "sentenceId": 10584969,
+    "translationId": 10584962
+  },
+  {
+    "level": "B2",
+    "word": "in conjunction with",
+    "meaning": "em conjunto com",
+    "sentenceId": 29707,
+    "translationId": 10745986
+  },
+  {
+    "level": "B2",
+    "word": "justification",
+    "meaning": "justificativa",
+    "sentenceId": 2373203,
+    "translationId": 10720419
+  },
+  {
+    "level": "B2",
+    "word": "in the course of",
+    "meaning": "no decorrer de",
+    "sentenceId": 293166,
+    "editorialTranslation": "Ele aprenderá os fatos com o passar do tempo."
+  },
+  {
+    "level": "B2",
+    "word": "arbitrary",
+    "meaning": "sem quantidade previamente fixada",
+    "sentenceId": 726969,
+    "translationId": 732348
+  },
+  {
+    "level": "B2",
+    "word": "hypothesis",
+    "meaning": "hipótese",
+    "sentenceId": 9921852,
+    "translationId": 2582438
+  },
+  {
+    "level": "B2",
+    "word": "factor",
+    "meaning": "fator",
+    "sentenceId": 238989,
+    "editorialTranslation": "A saúde é um fator importante para a felicidade."
+  },
+  {
+    "level": "B2",
+    "word": "innovative",
+    "meaning": "inovador",
+    "sentenceId": 8110460,
+    "translationId": 10758205
+  },
+  {
+    "level": "B2",
+    "word": "substantial",
+    "meaning": "considerável ou de grande importância",
+    "sentenceId": 49944,
+    "translationId": 5139254
+  },
+  {
+    "level": "B2",
+    "word": "prohibit",
+    "meaning": "proibir",
+    "sentenceId": 11202290,
+    "translationId": 11202292
+  },
+  {
+    "level": "B2",
+    "word": "stand out",
+    "meaning": "destacar-se",
+    "sentenceId": 8105632,
+    "translationId": 8105620
+  },
+  {
+    "level": "B2",
+    "word": "violation",
+    "meaning": "violação",
+    "sentenceId": 12082866,
+    "translationId": 12082867
+  },
+  {
+    "level": "B2",
+    "word": "regulate",
+    "meaning": "regular",
+    "sentenceId": 8110004,
+    "translationId": 8250479
+  },
+  {
+    "level": "B2",
+    "word": "restrict",
+    "meaning": "restringir",
+    "sentenceId": 9984701,
+    "translationId": 9984695
+  },
+  {
+    "level": "B2",
+    "word": "vague",
+    "meaning": "vago",
+    "sentenceId": 12046553,
+    "translationId": 12046555
+  },
+  {
+    "level": "B2",
+    "word": "diversity",
+    "meaning": "diversidade",
+    "sentenceId": 3147024,
+    "translationId": 3150510
+  },
+  {
+    "level": "B2",
+    "word": "in pursuit of",
+    "meaning": "em busca de",
+    "sentenceId": 12364649,
+    "translationId": 12364650
+  },
+  {
+    "level": "B2",
+    "word": "resolve",
+    "meaning": "resolver",
+    "sentenceId": 14066281,
+    "translationId": 14066269
+  },
+  {
+    "level": "B2",
+    "word": "for fear of",
+    "meaning": "por medo de",
+    "sentenceId": 8621801,
+    "translationId": 9969567
+  },
+  {
+    "level": "B2",
+    "word": "reject",
+    "meaning": "rejeitar",
+    "sentenceId": 10798001,
+    "translationId": 10798002
+  },
+  {
+    "level": "B2",
+    "word": "take into account",
+    "meaning": "levar em consideração",
+    "sentenceId": 9965766,
+    "translationId": 9965762
+  },
+  {
+    "level": "B2",
+    "word": "with regard to",
+    "meaning": "em relação a",
+    "sentenceId": 59473,
+    "translationId": 1194137
+  },
+  {
+    "level": "B2",
+    "word": "crucial",
+    "meaning": "crucial",
+    "sentenceId": 12089892,
+    "translationId": 12090063
+  },
+  {
+    "level": "B2",
+    "word": "hence",
+    "meaning": "portanto; daí",
+    "sentenceId": 4427147,
+    "translationId": 6174766
+  },
+  {
+    "level": "B2",
+    "word": "follow up on",
+    "meaning": "dar seguimento a",
+    "sentenceId": 2649666,
+    "translationId": 2815504
+  },
+  {
+    "level": "B2",
+    "word": "get across",
+    "meaning": "transmitir uma ideia",
+    "sentenceId": 11762260,
+    "translationId": 11762261
+  },
+  {
+    "level": "B2",
+    "word": "apparent",
+    "meaning": "evidente ou perceptível",
+    "sentenceId": 1574304,
+    "translationId": 1573695
+  },
+  {
+    "level": "B2",
+    "word": "in due course",
+    "meaning": "no devido tempo",
+    "sentenceId": 22499,
+    "translationId": 10700054
+  },
+  {
+    "level": "B2",
+    "word": "albeit",
+    "meaning": "embora",
+    "sentenceId": 12381501,
+    "translationId": 12381503
+  },
+  {
+    "level": "B2",
+    "word": "in the event of",
+    "meaning": "em caso de",
+    "sentenceId": 10946114,
+    "translationId": 10946116
+  },
+  {
+    "level": "B2",
+    "word": "retain",
+    "meaning": "reter; manter",
+    "sentenceId": 10249025,
+    "translationId": 1608151
+  },
+  {
+    "level": "B2",
+    "word": "be subject to",
+    "meaning": "estar sujeito a",
+    "sentenceId": 13413499,
+    "translationId": 13413229
+  },
+  {
+    "level": "B2",
+    "word": "requirement",
+    "meaning": "requisito",
+    "sentenceId": 12111987,
+    "translationId": 12111991
+  },
+  {
+    "level": "B2",
+    "word": "allude to",
+    "meaning": "fazer alusão a",
+    "sentenceId": 11282349,
+    "translationId": 11282350
+  },
+  {
+    "level": "B2",
+    "word": "come to terms with",
+    "meaning": "aceitar; reconciliar-se com",
+    "sentenceId": 11058968,
+    "translationId": 11058969
+  },
+  {
+    "level": "C1",
+    "word": "inhibit",
+    "meaning": "inibir",
+    "sentenceId": 13749364,
+    "editorialTranslation": "O medo pode inibir o sucesso."
+  },
+  {
+    "level": "C1",
+    "word": "eloquent",
+    "meaning": "eloquente",
+    "sentenceId": 310295,
+    "translationId": 897342
+  },
+  {
+    "level": "C1",
+    "word": "read between the lines",
+    "meaning": "ler nas entrelinhas",
+    "sentenceId": 7197158,
+    "translationId": 7197213
+  },
+  {
+    "level": "C1",
+    "word": "versatile",
+    "meaning": "versátil",
+    "sentenceId": 3416761,
+    "translationId": 12539946
+  },
+  {
+    "level": "C1",
+    "word": "abstain",
+    "meaning": "abster-se",
+    "sentenceId": 293634,
+    "translationId": 1840759
+  },
+  {
+    "level": "C1",
+    "word": "prudent",
+    "meaning": "prudente",
+    "sentenceId": 6247856,
+    "translationId": 12016850
+  },
+  {
+    "level": "C1",
+    "word": "articulate",
+    "meaning": "capaz de se expressar com clareza",
+    "sentenceId": 3171968,
+    "translationId": 4800522
+  },
+  {
+    "level": "C1",
+    "word": "conscientious",
+    "meaning": "consciencioso",
+    "sentenceId": 10791371,
+    "translationId": 10791372
+  },
+  {
+    "level": "C1",
+    "word": "explicit",
+    "meaning": "explícito",
+    "sentenceId": 252750,
+    "translationId": 1021152
+  },
+  {
+    "level": "C1",
+    "word": "in a nutshell",
+    "meaning": "em poucas palavras",
+    "sentenceId": 10273492,
+    "translationId": 10273493
+  },
+  {
+    "level": "C1",
+    "word": "lucid",
+    "meaning": "lúcido; claro",
+    "sentenceId": 10304619,
+    "translationId": 10304622
+  },
+  {
+    "level": "C1",
+    "word": "contemplate",
+    "meaning": "contemplar; considerar",
+    "sentenceId": 12940737,
+    "translationId": 12940703
+  },
+  {
+    "level": "C1",
+    "word": "exemplary",
+    "meaning": "exemplar",
+    "sentenceId": 7544075,
+    "translationId": 8142187
+  },
+  {
+    "level": "C1",
+    "word": "gregarious",
+    "meaning": "sociável",
+    "sentenceId": 7493710,
+    "translationId": 4278843
+  },
+  {
+    "level": "C1",
+    "word": "obsolete",
+    "meaning": "obsoleto",
+    "sentenceId": 2982295,
+    "translationId": 6759550
+  },
+  {
+    "level": "C1",
+    "word": "to no avail",
+    "meaning": "sem sucesso",
+    "sentenceId": 518082,
+    "translationId": 1174587
+  },
+  {
+    "level": "C1",
+    "word": "in retrospect",
+    "meaning": "em retrospecto",
+    "sentenceId": 953970,
+    "editorialTranslation": "Olhando em retrospecto, eu deveria ter percebido que era um golpe."
+  },
+  {
+    "level": "C1",
+    "word": "aberration",
+    "meaning": "aberração; desvio",
+    "sentenceId": 11741935,
+    "translationId": 12909323
+  },
+  {
+    "level": "C1",
+    "word": "ambivalent",
+    "meaning": "ambivalente",
+    "sentenceId": 11459113,
+    "translationId": 11459115
+  },
+  {
+    "level": "C1",
+    "word": "austere",
+    "meaning": "austero",
+    "sentenceId": 12063836,
+    "translationId": 12063837
+  },
+  {
+    "level": "C1",
+    "word": "at face value",
+    "meaning": "pelo valor aparente, sem questionar",
+    "sentenceId": 2930399,
+    "editorialTranslation": "Não aceite o que Tom diz sem questionar."
+  },
+  {
+    "level": "C1",
+    "word": "augment",
+    "meaning": "aumentar",
+    "sentenceId": 1152259,
+    "translationId": 10735670
+  },
+  {
+    "level": "C1",
+    "word": "concur",
+    "meaning": "concordar",
+    "sentenceId": 2483481,
+    "translationId": 1236491
+  },
+  {
+    "level": "C1",
+    "word": "for the most part",
+    "meaning": "em sua maior parte",
+    "sentenceId": 305256,
+    "translationId": 1305979
+  },
+  {
+    "level": "C1",
+    "word": "all things considered",
+    "meaning": "considerando tudo",
+    "sentenceId": 67395,
+    "translationId": 377667
+  },
+  {
+    "level": "C1",
+    "word": "coerce",
+    "meaning": "coagir",
+    "sentenceId": 11035783,
+    "translationId": 11035784
+  },
+  {
+    "level": "C1",
+    "word": "obviate the need for",
+    "meaning": "eliminar a necessidade de",
+    "sentenceId": 10250411,
+    "translationId": 14045883
+  },
+  {
+    "level": "C1",
+    "word": "relinquish control",
+    "meaning": "abrir mão do controle",
+    "sentenceId": 10786710,
+    "translationId": 10786713
+  },
+  {
+    "level": "C1",
+    "word": "cut no ice",
+    "meaning": "não surtir efeito",
+    "sentenceId": 1042333,
+    "editorialTranslation": "Ele disse que era um amigo, mas isso não me convenceu."
+  },
+  {
+    "level": "C1",
+    "word": "fall short of",
+    "meaning": "ficar aquém de",
+    "sentenceId": 36686,
+    "editorialTranslation": "Qualquer tradução, por melhor que seja, ficará claramente aquém do original."
+  },
+  {
+    "level": "C1",
+    "word": "on a whim",
+    "meaning": "por impulso",
+    "sentenceId": 10007234,
+    "editorialTranslation": "Eu fiz isso por impulso."
+  },
+  {
+    "level": "C1",
+    "word": "by virtue of",
+    "meaning": "em virtude de",
+    "sentenceId": 18846,
+    "editorialTranslation": "Ela ficou rica graças ao trabalho árduo e ao bom senso para os negócios."
+  },
+  {
+    "level": "C1",
+    "word": "withstand",
+    "meaning": "resistir a",
+    "sentenceId": 847216,
+    "editorialTranslation": "A moralidade é, em grande parte, uma questão de quanto você consegue resistir à tentação."
+  },
+  {
+    "level": "C1",
+    "word": "astute",
+    "meaning": "perspicaz",
+    "sentenceId": 2981920,
+    "editorialTranslation": "Tom era um empresário perspicaz que ganhou muito dinheiro."
+  },
+  {
+    "level": "C1",
+    "word": "corroborate",
+    "meaning": "corroborar",
+    "sentenceId": 12156481,
+    "editorialTranslation": "Tom e Mary confirmam os relatos um do outro."
+  },
+  {
+    "level": "C1",
+    "word": "forthright",
+    "meaning": "direto; franco",
+    "sentenceId": 8380811,
+    "editorialTranslation": "Tom é incrivelmente franco e honesto."
+  },
+  {
+    "level": "C1",
+    "word": "in lieu of",
+    "meaning": "em lugar de",
+    "sentenceId": 13025337,
+    "editorialTranslation": "Em vez de dormir, passei a noite passada pensando em queijo."
+  },
+  {
+    "level": "C1",
+    "word": "insidious",
+    "meaning": "insidioso",
+    "sentenceId": 11246005,
+    "translationId": 11246007
+  },
+  {
+    "level": "C1",
+    "word": "a concerted effort",
+    "meaning": "um esforço conjunto",
+    "sentenceId": 11605165,
+    "editorialTranslation": "Todos os vizinhos fizeram um esforço conjunto para limpar o parque."
+  },
+  {
+    "level": "C1",
+    "word": "fall prey to",
+    "meaning": "ser vítima de",
+    "sentenceId": 8899357,
+    "editorialTranslation": "As moscas são vítimas da teia da aranha."
+  },
+  {
+    "level": "C1",
+    "word": "foster",
+    "meaning": "promover; fomentar",
+    "sentenceId": 13029921,
+    "editorialTranslation": "É importante promover uma cultura de respeito mútuo."
+  },
+  {
+    "level": "C1",
+    "word": "set in motion",
+    "meaning": "pôr em movimento",
+    "sentenceId": 10823555,
+    "editorialTranslation": "A Argélia pôs em andamento um plano para desenvolver suas regiões remotas do sul."
+  },
+  {
+    "level": "C1",
+    "word": "an acute shortage",
+    "meaning": "uma escassez aguda",
+    "sentenceId": 269510,
+    "editorialTranslation": "Há uma escassez aguda de água."
+  },
+  {
+    "level": "C1",
+    "word": "attest",
+    "meaning": "atestar",
+    "sentenceId": 3694556,
+    "editorialTranslation": "Eu atestarei que não ouvi aquilo."
+  },
+  {
+    "level": "C1",
+    "word": "by dint of",
+    "meaning": "por meio de; graças a",
+    "sentenceId": 295412,
+    "editorialTranslation": "Ele conquistou o prêmio à custa de muito trabalho."
+  },
+  {
+    "level": "C1",
+    "word": "cumbersome",
+    "meaning": "complicado; trabalhoso",
+    "sentenceId": 1564359,
+    "editorialTranslation": "O inglês é como um condomínio fechado: o acesso é possível, mas trabalhoso."
+  },
+  {
+    "level": "C1",
+    "word": "delineate",
+    "meaning": "delinear",
+    "sentenceId": 8860349,
+    "editorialTranslation": "Não há mapa que possa delimitar quais terras são nossas e quais são deles."
+  },
+  {
+    "level": "C1",
+    "word": "in tandem with",
+    "meaning": "em conjunto com",
+    "sentenceId": 3546420,
+    "editorialTranslation": "Tom administra o café em conjunto com sua esposa."
+  },
+  {
+    "level": "C1",
+    "word": "incongruous",
+    "meaning": "incongruente",
+    "sentenceId": 4995849,
+    "editorialTranslation": "Ele tem um nome de sonoridade incongruente, difícil de lembrar."
+  },
+  {
+    "level": "C1",
+    "word": "reconcile",
+    "meaning": "reconciliar",
+    "sentenceId": 11704754,
+    "editorialTranslation": "Esta é sua última chance de se reconciliar com Tom."
+  },
+  {
+    "level": "C1",
+    "word": "tacit",
+    "meaning": "tácito",
+    "sentenceId": 280884,
+    "editorialTranslation": "Deve ter havido um entendimento tácito entre eles."
+  },
+  {
+    "level": "C1",
+    "word": "an uphill struggle",
+    "meaning": "uma luta árdua",
+    "sentenceId": 28565,
+    "editorialTranslation": "Depois de uma luta árdua contra grandes dificuldades, eles finalmente reergueram a empresa."
+  },
+  {
+    "level": "C1",
+    "word": "contentious",
+    "meaning": "marcado por conflitos",
+    "sentenceId": 9008249,
+    "editorialTranslation": "O relacionamento de Yanni com Skura era extremamente conflituoso."
+  },
+  {
+    "level": "C1",
+    "word": "despondent",
+    "meaning": "desanimado",
+    "sentenceId": 10711810,
+    "editorialTranslation": "Pessoas próximas a ela dizem que ela estava desanimada."
+  },
+  {
+    "level": "C1",
+    "word": "emulate",
+    "meaning": "emular",
+    "sentenceId": 2994096,
+    "editorialTranslation": "Toda criança precisa de alguém para admirar e imitar."
+  },
+  {
+    "level": "C1",
+    "word": "lament",
+    "meaning": "lamentar; lamento",
+    "sentenceId": 8892594,
+    "editorialTranslation": "Lamentamos, reclamamos, gememos e começamos a gritar de dor."
+  },
+  {
+    "level": "C1",
+    "word": "stringent",
+    "meaning": "rigoroso",
+    "sentenceId": 10752287,
+    "editorialTranslation": "A abordagem vale a pena, mas há uma grave falta de avaliação quantitativa rigorosa."
+  },
+  {
+    "level": "C1",
+    "word": "bolster",
+    "meaning": "fortalecer",
+    "sentenceId": 9034284,
+    "editorialTranslation": "As novas evidências fortalecerão sua argumentação."
+  },
+  {
+    "level": "C1",
+    "word": "enigmatic",
+    "meaning": "enigmático",
+    "sentenceId": 2327236,
+    "editorialTranslation": "A Mona Lisa tem um sorriso enigmático."
+  },
+  {
+    "level": "C1",
+    "word": "miss the point",
+    "meaning": "não entender o essencial",
+    "sentenceId": 7555473,
+    "editorialTranslation": "Muitas de suas interpretações não captam o ponto principal."
+  },
+  {
+    "level": "C1",
+    "word": "with a view to",
+    "meaning": "com vistas a",
+    "sentenceId": 10104843,
+    "translationId": 10104844
+  },
+  {
+    "level": "C1",
+    "word": "acrimonious",
+    "meaning": "amargo; rancoroso",
+    "sentenceId": 9997082,
+    "editorialTranslation": "A separação da banda foi marcada por ressentimento."
+  },
+  {
+    "level": "C1",
+    "word": "devise",
+    "meaning": "conceber; elaborar",
+    "sentenceId": 12417932,
+    "editorialTranslation": "Precisamos elaborar um plano."
+  },
+  {
+    "level": "C1",
+    "word": "disparage",
+    "meaning": "menosprezar",
+    "sentenceId": 2946008,
+    "editorialTranslation": "Não tivemos a intenção de menosprezar nossos concorrentes."
+  },
+  {
+    "level": "C1",
+    "word": "dubious",
+    "meaning": "duvidoso",
+    "sentenceId": 6049468,
+    "editorialTranslation": "Essa abordagem é teoricamente sólida, mas duvidosa na prática."
+  },
+  {
+    "level": "C1",
+    "word": "flagrant",
+    "meaning": "flagrante",
+    "sentenceId": 6938253,
+    "editorialTranslation": "A decisão foi um erro flagrante."
+  },
+  {
+    "level": "C2",
+    "word": "languid",
+    "meaning": "lento e relaxado",
+    "sentenceId": 10675899,
+    "editorialTranslation": "Ela lhe lançou olhares longos e lânguidos."
+  },
+  {
+    "level": "C2",
+    "word": "abscond",
+    "meaning": "fugir; evadir-se",
+    "sentenceId": 3147036,
+    "translationId": 3150675
+  },
+  {
+    "level": "C2",
+    "word": "abstain from",
+    "meaning": "abster-se de",
+    "sentenceId": 3144304,
+    "translationId": 9991114
+  },
+  {
+    "level": "C2",
+    "word": "avarice",
+    "meaning": "avareza",
+    "sentenceId": 10519941,
+    "translationId": 3293586
+  },
+  {
+    "level": "C2",
+    "word": "derogatory",
+    "meaning": "depreciativo",
+    "sentenceId": 1507510,
+    "editorialTranslation": "Os comentários depreciativos dela sobre o chefe fizeram com que perdesse o emprego."
+  },
+  {
+    "level": "C2",
+    "word": "elicit a response",
+    "meaning": "obter uma resposta",
+    "sentenceId": 1027863,
+    "editorialTranslation": "Tom tentou obter uma resposta de Mary."
+  },
+  {
+    "level": "C2",
+    "word": "phlegmatic",
+    "meaning": "fleumático; calmo",
+    "sentenceId": 11524513,
+    "translationId": 11524514
+  },
+  {
+    "level": "C2",
+    "word": "come to grief",
+    "meaning": "terminar em fracasso",
+    "sentenceId": 2732955,
+    "editorialTranslation": "Meninos que não escutam os mais velhos sempre acabam se dando mal."
+  },
+  {
+    "level": "C2",
+    "word": "leave no stone unturned",
+    "meaning": "não poupar esforços ou possibilidades",
+    "sentenceId": 9676007,
+    "editorialTranslation": "Queremos esgotar todas as possibilidades."
+  },
+  {
+    "level": "C2",
+    "word": "of no consequence",
+    "meaning": "sem importância",
+    "sentenceId": 2287016,
+    "editorialTranslation": "Eles não têm importância."
+  },
+  {
+    "level": "C2",
+    "word": "on the strength of",
+    "meaning": "com base em",
+    "sentenceId": 3060850,
+    "editorialTranslation": "Tom conseguiu o emprego com base na sua recomendação."
+  },
+  {
+    "level": "C2",
+    "word": "sycophant",
+    "meaning": "bajulador",
+    "sentenceId": 12421449,
+    "editorialTranslation": "Ele era um bajulador, sempre tentando conquistar o favor dos ricos."
+  },
+  {
+    "level": "C2",
+    "word": "uxorious",
+    "meaning": "excessivamente dedicado à esposa",
+    "sentenceId": 11697242,
+    "translationId": 11697243
+  },
+  {
+    "level": "C2",
+    "word": "inimical",
+    "meaning": "hostil; prejudicial",
+    "sentenceId": 10693864,
+    "editorialTranslation": "Ninguém poderia confundir esse grupo hostil com um júri imparcial."
+  },
+  {
+    "level": "C2",
+    "word": "set great store by",
+    "meaning": "dar muito valor a",
+    "sentenceId": 8985198,
+    "editorialTranslation": "Minha mãe sempre deu muito valor ao leite dourado."
+  },
+  {
+    "level": "C2",
+    "word": "surreptitious",
+    "meaning": "feito às escondidas",
+    "sentenceId": 11834113,
+    "editorialTranslation": "O gesto disfarçado passou despercebido pelo restante das pessoas na sala."
+  },
+  {
+    "level": "C2",
+    "word": "with bated breath",
+    "meaning": "com grande ansiedade",
+    "sentenceId": 10503837,
+    "editorialTranslation": "Estamos esperando com grande expectativa."
+  },
+  {
+    "level": "C2",
+    "word": "calumny",
+    "meaning": "calúnia",
+    "sentenceId": 1554135,
+    "editorialTranslation": "Há algo ainda pior do que a calúnia: a verdade."
+  },
+  {
+    "level": "C2",
+    "word": "cast aspersions on",
+    "meaning": "lançar suspeitas sobre",
+    "sentenceId": 1211006,
+    "editorialTranslation": "Em seu discurso, ele lançou suspeitas sobre todas as religiões, exceto a sua."
+  },
+  {
+    "level": "C2",
+    "word": "expatiate",
+    "meaning": "discorrer longamente",
+    "sentenceId": 13982473,
+    "editorialTranslation": "Minha principal virtude é a humildade, sobre a qual posso discorrer por horas."
+  },
+  {
+    "level": "C2",
+    "word": "hermetic",
+    "meaning": "fechado à influência externa",
+    "sentenceId": 11568630,
+    "editorialTranslation": "Não permito que os outros entrem no meu mundo fechado."
+  },
+  {
+    "level": "C2",
+    "word": "iconoclast",
+    "meaning": "quem desafia crenças ou tradições estabelecidas",
+    "sentenceId": 13235619,
+    "editorialTranslation": "Decidi ser sempre alguém que desafia as tradições estabelecidas."
+  },
+  {
+    "level": "C2",
+    "word": "mendacious",
+    "meaning": "mentiroso",
+    "sentenceId": 4408651,
+    "editorialTranslation": "Em vez de me contar outra história mentirosa, seja honesto ao menos uma vez."
+  },
+  {
+    "level": "C2",
+    "word": "recondite",
+    "meaning": "obscuro; difícil de entender",
+    "sentenceId": 8211949,
+    "translationId": 8211954
+  },
+  {
+    "level": "C2",
+    "word": "anathema to",
+    "meaning": "inaceitável para",
+    "sentenceId": 10352317,
+    "editorialTranslation": "Aquela seita faz as pessoas acreditarem em coisas que são inaceitáveis para elas."
+  },
+  {
+    "level": "C2",
+    "word": "come to naught",
+    "meaning": "não dar em nada",
+    "sentenceId": 977479,
+    "editorialTranslation": "Ele seria um homem muito triste ao ver seu sonho não dar em nada."
+  },
+  {
+    "level": "C2",
+    "word": "fulminate against",
+    "meaning": "atacar verbalmente",
+    "sentenceId": 2000225,
+    "editorialTranslation": "Em seus livros, ele frequentemente atacava verbalmente o governo e suas políticas."
+  },
+  {
+    "level": "C2",
+    "word": "inveigh against",
+    "meaning": "protestar veementemente contra",
+    "sentenceId": 11234641,
+    "editorialTranslation": "Por que protestar veementemente contra a sentença, e não contra o crime?"
+  },
+  {
+    "level": "C2",
+    "word": "irascible",
+    "meaning": "que se irrita facilmente",
+    "sentenceId": 11062329,
+    "editorialTranslation": "Ziri sempre foi um marido irascível e difícil."
+  },
+  {
+    "level": "C2",
+    "word": "pernicious",
+    "meaning": "muito nocivo",
+    "sentenceId": 9958509,
+    "editorialTranslation": "Uma meia-verdade é mais nociva do que uma mentira."
+  },
+  {
+    "level": "C2",
+    "word": "polemic",
+    "meaning": "polêmica; discurso combativo",
+    "sentenceId": 12425880,
+    "editorialTranslation": "Acho que essa discussão acontece com polêmica demais e respeito de menos."
+  },
+  {
+    "level": "C2",
+    "word": "salubrious",
+    "meaning": "saudável e agradável",
+    "sentenceId": 10289331,
+    "editorialTranslation": "Tom teve de se mudar para um bairro menos salubre."
+  },
+  {
+    "level": "C2",
+    "word": "wizened",
+    "meaning": "enrugado; ressequido",
+    "sentenceId": 13217234,
+    "editorialTranslation": "O velho tinha o rosto enrugado."
+  },
+  {
+    "level": "C2",
+    "word": "bellicose",
+    "meaning": "agressivo e disposto a brigar",
+    "sentenceId": 9139541,
+    "editorialTranslation": "Uma atitude tão agressiva não lhe renderá amigos."
+  },
+  {
+    "level": "C2",
+    "word": "defenestrate",
+    "meaning": "jogar pela janela",
+    "sentenceId": 373485,
+    "editorialTranslation": "Jogue seu relógio pela janela para ver como o tempo voa."
+  },
+  {
+    "level": "C2",
+    "word": "effrontery",
+    "meaning": "atrevimento; descaramento",
+    "sentenceId": 10977074,
+    "editorialTranslation": "O descaramento dele fez com que todos na empresa se voltassem contra ele."
+  },
+  {
+    "level": "C2",
+    "word": "ennui",
+    "meaning": "tédio profundo",
+    "sentenceId": 9054783,
+    "editorialTranslation": "Uma grande noite escura envolveu a cidade num tédio profundo e opressivamente reconfortante."
+  },
+  {
+    "level": "C2",
+    "word": "adumbrate",
+    "meaning": "indicar antecipadamente de forma indireta",
+    "sentenceId": 10890862,
+    "editorialTranslation": "As respostas curtas da minha namorada começaram a sinalizar seu desejo de me deixar e voltar para Odessa."
+  },
+  {
+    "level": "C2",
+    "word": "ex post facto",
+    "meaning": "posterior ao fato",
+    "sentenceId": 12508102,
+    "editorialTranslation": "Você pode inventar regras, mas não pode aplicá-las retroativamente."
+  },
+  {
+    "level": "C2",
+    "word": "fractious",
+    "meaning": "irritadiço; difícil de controlar",
+    "sentenceId": 9728654,
+    "editorialTranslation": "Você é tão irritadiço quanto Tom."
+  },
+  {
+    "level": "C2",
+    "word": "implacable",
+    "meaning": "implacável",
+    "sentenceId": 4032603,
+    "editorialTranslation": "Não consigo entender o ódio implacável que ele ainda sente pelo antigo rival."
+  },
+  {
+    "level": "C2",
+    "word": "recalcitrance",
+    "meaning": "resistência obstinada",
+    "sentenceId": 12150100,
+    "editorialTranslation": "Alguns professores em formação não conseguem lidar com a resistência obstinada de muitos alunos."
+  },
+  {
+    "level": "C2",
+    "word": "sagacious",
+    "meaning": "sagaz e sábio",
+    "sentenceId": 10808892,
+    "editorialTranslation": "Aquele Confúcio nunca ficava sem um ou dois ditados sábios!"
+  },
+  {
+    "level": "C2",
+    "word": "speak volumes",
+    "meaning": "ser muito revelador",
+    "sentenceId": 10856781,
+    "editorialTranslation": "Isso será muito revelador para você."
+  },
+  {
+    "level": "C2",
+    "word": "ad nauseam",
+    "meaning": "até causar enjoo; excessivamente",
+    "sentenceId": 10333535,
+    "editorialTranslation": "Já falamos sobre o assunto à exaustão."
+  },
+  {
+    "level": "C2",
+    "word": "cast a pall over",
+    "meaning": "lançar uma sombra sobre",
+    "sentenceId": 8971773,
+    "editorialTranslation": "A notícia de que Tom havia aceitado um emprego em outra empresa deixou o almoço do departamento em clima sombrio."
+  },
+  {
+    "level": "C2",
+    "word": "desultory",
+    "meaning": "sem método; desconexo",
+    "sentenceId": 837366,
+    "editorialTranslation": "A maioria dos outros também acendeu seus cachimbos, e começou uma conversa desconexa."
+  },
+  {
+    "level": "C2",
+    "word": "lachrymose",
+    "meaning": "choroso; sentimental",
+    "sentenceId": 12426366,
+    "editorialTranslation": "Ela era tão chorosa que chorava em comerciais de empresas de telefonia de longa distância."
+  },
+  {
+    "level": "C2",
+    "word": "obdurate",
+    "meaning": "obstinado e inflexível",
+    "sentenceId": 10957309,
+    "editorialTranslation": "Chamavam-na de inflexível e, de fato, ela era a integrante mais teimosa da oposição."
+  },
+  {
+    "level": "C2",
+    "word": "probity",
+    "meaning": "integridade",
+    "sentenceId": 11074269,
+    "editorialTranslation": "Os advogados de defesa lançaram dúvidas sobre a integridade da testemunha."
+  },
+  {
+    "level": "C2",
+    "word": "propitious",
+    "meaning": "favorável e oportuno",
+    "sentenceId": 12903135,
+    "editorialTranslation": "Aguardamos um momento propício para agir."
+  },
+  {
+    "level": "C2",
+    "word": "sanguine",
+    "meaning": "otimista e confiante",
+    "sentenceId": 240284,
+    "editorialTranslation": "Não estou otimista quanto ao sucesso das negociações."
+  },
+  {
+    "level": "C2",
+    "word": "apocryphal",
+    "meaning": "de autenticidade duvidosa",
+    "sentenceId": 1640202,
+    "editorialTranslation": "Aquela história de uma maçã cair na cabeça de Newton é muito provavelmente de autenticidade duvidosa."
+  },
+  {
+    "level": "C2",
+    "word": "ineffable",
+    "meaning": "indescritível",
+    "sentenceId": 13982478,
+    "editorialTranslation": "O Real, segundo Jacques Lacan, é o próprio indizível."
+  },
+  {
+    "level": "C2",
+    "word": "prevaricate",
+    "meaning": "esquivar-se da verdade",
+    "sentenceId": 10076668,
+    "editorialTranslation": "Se nos esquivarmos da verdade e adiarmos essa questão, o comitê poderá continuar se escondendo atrás de sua inação."
+  },
+  {
+    "level": "C2",
+    "word": "proclivity",
+    "meaning": "inclinação",
+    "sentenceId": 11096401,
+    "editorialTranslation": "Você tem uma inclinação a se colocar em situações difíceis."
+  },
+  {
+    "level": "C2",
+    "word": "unctuous",
+    "meaning": "untuoso; bajulador",
+    "sentenceId": 13562108,
+    "editorialTranslation": "Os elogios bajuladores dele ao rei claramente pretendiam elevar sua própria posição na corte."
+  },
+  {
+    "level": "C2",
+    "word": "didactic",
+    "meaning": "didático; moralizante",
+    "sentenceId": 12133142,
+    "translationId": 12133143
+  },
+  {
+    "level": "C2",
+    "word": "insouciant",
+    "meaning": "despreocupado",
+    "sentenceId": 8985316,
+    "editorialTranslation": "Ela lançou um olhar despreocupado."
+  },
+  {
+    "level": "C2",
+    "word": "misanthrope",
+    "meaning": "pessoa que evita ou despreza a humanidade",
+    "sentenceId": 69084,
+    "editorialTranslation": "Você é um completo misantropo."
+  },
+  {
+    "level": "C2",
+    "word": "pugnacious",
+    "meaning": "combativo e agressivo",
+    "sentenceId": 6687721,
+    "editorialTranslation": "Sami era um empresário briguento."
+  },
+  {
+    "level": "C2",
+    "word": "reprobate",
+    "meaning": "depravado; pessoa sem princípios",
+    "sentenceId": 13557524,
+    "editorialTranslation": "O pregador bradou contra as almas depravadas que se recusavam a se arrepender."
+  },
+  {
+    "level": "C2",
+    "word": "abjure",
+    "meaning": "renunciar solenemente",
+    "sentenceId": 10614387,
+    "editorialTranslation": "Os que foram banidos do país foram obrigados a renunciar para sempre ao direito de voltar."
+  },
+  {
+    "level": "C2",
+    "word": "perfidious",
+    "meaning": "desleal e traiçoeiro",
+    "sentenceId": 12366870,
+    "editorialTranslation": "Descobri os planos desleais de Troy."
+  },
+  {
+    "level": "C2",
+    "word": "redoubtable",
+    "meaning": "formidável e digno de respeito",
+    "sentenceId": 9948829,
+    "editorialTranslation": "Ela foi descrita, de maneira educada, como uma viúva imponente."
+  },
+  {
+    "level": "C2",
+    "word": "garrulous",
+    "meaning": "excessivamente falante",
+    "sentenceId": 10808888,
+    "editorialTranslation": "Meu colega de apartamento é falante demais."
+  }
+]
