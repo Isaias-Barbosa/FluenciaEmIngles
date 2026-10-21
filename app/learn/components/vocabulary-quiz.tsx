@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useReducer, useRef, useState } from "react";
 import { cefrLevels, type CefrLevel } from "@/lib/cefr/types";
-import { initialQuizState, makeVocabularyRound, quizReducer, readQuizStats, vocabulary, type QuizStats } from "@/lib/quiz/vocabulary";
+import { drawVocabularyRound, initialQuizState, quizDrawHistoryKey, quizReducer, readQuizDrawHistory, readQuizStats, vocabulary, type QuizDrawHistory, type QuizStats } from "@/lib/quiz/vocabulary";
 import { quizHistoryEvent, quizHistoryKey } from "@/lib/quiz/progress";
 import { useAnswerSounds } from "./use-answer-sounds";
 
@@ -10,6 +10,7 @@ export default function VocabularyQuiz({ userId, initialLevel }: { userId: strin
   const [state, dispatch] = useReducer(quizReducer, initialQuizState);
   const [stats, setStats] = useState<QuizStats>({}); const [storageWarning, setStorageWarning] = useState(false);
   const completed = useRef(false); const focusTarget = useRef<HTMLHeadingElement | null>(null);
+  const drawHistory = useRef<{ userId: string; history: QuizDrawHistory; unsaved: boolean }>({ userId, history: {}, unsaved: false });
   const sounds = useAnswerSounds("vocabulary-quiz");
   const storageKey = quizHistoryKey(userId);
   const score = state.answers.filter((answer) => answer.correct).length;
@@ -27,7 +28,20 @@ export default function VocabularyQuiz({ userId, initialLevel }: { userId: strin
     try { localStorage.setItem(storageKey, JSON.stringify(next)); window.dispatchEvent(new Event(quizHistoryEvent)); } catch { setStorageWarning(true); }
   }, [state.phase, level, score, stats, storageKey]);
   useEffect(() => { if (state.phase !== "idle") focusTarget.current?.focus(); }, [state.index, state.phase]);
-  function start() { completed.current = false; sounds.prepare(); dispatch({ type: "start", round: makeVocabularyRound(level) }); }
+  function start() {
+    completed.current = false; sounds.prepare();
+    if (drawHistory.current.userId !== userId) drawHistory.current = { userId, history: {}, unsaved: false };
+    let history = drawHistory.current.history;
+    if (!drawHistory.current.unsaved) {
+      try { history = readQuizDrawHistory(localStorage.getItem(quizDrawHistoryKey(userId))); } catch { setStorageWarning(true); }
+    }
+    const draw = drawVocabularyRound(level, history[level]);
+    const next = { ...history, [level]: draw.seenIds };
+    drawHistory.current.history = next;
+    try { localStorage.setItem(quizDrawHistoryKey(userId), JSON.stringify(next)); drawHistory.current.unsaved = false; }
+    catch { drawHistory.current.unsaved = true; setStorageWarning(true); }
+    dispatch({ type: "start", round: draw.round });
+  }
   function check() {
     if (state.phase !== "playing" || state.checked || !state.selected) return;
     sounds.prepare(); sounds.play(state.selected === question.meaning ? "correct" : "incorrect"); dispatch({ type: "check" });
@@ -35,8 +49,8 @@ export default function VocabularyQuiz({ userId, initialLevel }: { userId: strin
   return <section className="vocabulary-quiz">
     <div className="quiz-page-heading"><div><span className="eyebrow"><span className="live-dot" /> PRÁTICA DE VOCABULÁRIO</span><h1>Quiz de Inglês<span>.</span></h1><p>Uma palavra, um contexto e uma nova descoberta a cada pergunta.</p></div><button type="button" className="practice-sound-toggle" aria-pressed={sounds.enabled} onClick={sounds.toggle}>{sounds.enabled ? "♪ Sons ligados" : "♪ Sons desligados"}</button></div>
     <div className="quiz-summary"><div><small>NÍVEL ESCOLHIDO</small><strong>{level}</strong></div><div><small>MELHOR RODADA</small><strong>{currentStats ? `${currentStats.best}/10` : "—"}</strong></div><div><small>RODADAS CONCLUÍDAS</small><strong>{currentStats?.rounds ?? 0}</strong></div></div>
-    {storageWarning && <p className="audio-session-notice" role="status">Seu navegador não permitiu salvar o histórico. Você pode continuar jogando nesta sessão.</p>}
-    {state.phase === "idle" ? <div className="quiz-card quiz-intro"><span className="quiz-art" aria-hidden="true">Aa<span>✦</span></span><span className="section-kicker">10 PERGUNTAS POR RODADA</span><h2>Qual é o significado?</h2><p>Leia a frase em inglês e escolha o significado da palavra destacada. Confira a tradução, aprenda com os erros e tente uma nova rodada.</p><label htmlFor="quiz-level">Escolha seu nível<select id="quiz-level" value={level} onChange={(event) => setLevel(event.target.value as CefrLevel)}>{cefrLevels.map((item) => <option key={item} value={item}>{item}</option>)}</select></label><small>{vocabulary.filter((item) => item.level === level).length} palavras e expressões disponíveis neste nível.</small><button className="button button-primary" onClick={start}>Começar quiz <span>→</span></button></div>
+    {storageWarning && <p className="audio-session-notice" role="status">Seu navegador não permitiu salvar o histórico. Você pode continuar jogando nesta sessão, mas os resultados e a sequência de questões podem não ser recuperados depois.</p>}
+    {state.phase === "idle" ? <div className="quiz-card quiz-intro"><span className="quiz-art" aria-hidden="true">Aa<span>✦</span></span><span className="section-kicker">10 PERGUNTAS POR RODADA</span><h2>Qual é o significado?</h2><p>Leia a frase em inglês e escolha o significado da palavra destacada. Confira a tradução, aprenda com os erros e tente uma nova rodada. As questões ainda não sorteadas têm prioridade até completar o banco do nível.</p><label htmlFor="quiz-level">Escolha seu nível<select id="quiz-level" value={level} onChange={(event) => setLevel(event.target.value as CefrLevel)}>{cefrLevels.map((item) => <option key={item} value={item}>{item}</option>)}</select></label><small>{vocabulary.filter((item) => item.level === level).length} palavras e expressões disponíveis neste nível.</small><button className="button button-primary" onClick={start}>Começar quiz <span>→</span></button></div>
       : state.phase === "playing" ? <div className="quiz-card">
         <div className="quiz-round-heading"><span>Questão {state.index + 1} de {state.round.length}</span><strong>{score} acerto{score !== 1 ? "s" : ""}</strong></div>
         <div className="quiz-track" role="progressbar" aria-label="Questões respondidas" aria-valuemin={0} aria-valuemax={state.round.length} aria-valuenow={state.answers.length}><span style={{ width: `${state.answers.length / state.round.length * 100}%` }} /></div>

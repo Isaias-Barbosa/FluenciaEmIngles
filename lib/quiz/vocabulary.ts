@@ -19,6 +19,26 @@ const content: Record<CefrLevel, [string, string, string, string][]> = {
     ["street","rua","There is a shop on this street.","Há uma loja nesta rua."],
     ["teacher","professor ou professora","Our teacher helps us read.","Nossa professora nos ajuda a ler."],
     ["small","pequeno","They live in a small house.","Eles moram em uma casa pequena."],
+    ["water","água","Can I have a glass of water?","Posso tomar um copo de água?"],
+    ["bread","pão","I eat bread with cheese.","Eu como pão com queijo."],
+    ["book","livro","This book has many pictures.","Este livro tem muitas figuras."],
+    ["door","porta","Please close the door.","Por favor, feche a porta."],
+    ["mother","mãe","My mother is at home.","Minha mãe está em casa."],
+    ["sister","irmã","My sister is ten years old.","Minha irmã tem dez anos."],
+    ["morning","manhã","I drink milk in the morning.","Eu bebo leite de manhã."],
+    ["night","noite","We sleep at night.","Nós dormimos à noite."],
+    ["cold","frio","The water is cold.","A água está fria."],
+    ["hot","quente","The soup is hot.","A sopa está quente."],
+    ["walk","andar a pé","I walk to school with my brother.","Eu vou a pé para a escola com meu irmão."],
+    ["read","ler","I read a short story every day.","Eu leio uma história curta todos os dias."],
+    ["write","escrever","Please write your name here.","Por favor, escreva seu nome aqui."],
+    ["work","trabalhar","I work in a shop.","Eu trabalho em uma loja."],
+    ["sleep","dormir","I sleep for eight hours.","Eu durmo por oito horas."],
+    ["table","mesa","Your cup is on the table.","Sua xícara está sobre a mesa."],
+    ["city","cidade","She lives in a big city.","Ela mora em uma cidade grande."],
+    ["train","trem","We go to London by train.","Nós vamos a Londres de trem."],
+    ["cat","gato","The cat is under the chair.","O gato está embaixo da cadeira."],
+    ["red","vermelho","My new bike is red.","Minha bicicleta nova é vermelha."],
   ],
   A2: [
     ["borrow","pegar emprestado","May I borrow your pen for a minute?","Posso pegar sua caneta emprestada por um minuto?"],
@@ -36,6 +56,26 @@ const content: Record<CefrLevel, [string, string, string, string][]> = {
     ["return","devolver","Please return the library book on Friday.","Por favor, devolva o livro da biblioteca na sexta-feira."],
     ["choose","escolher","You can choose a red or a blue shirt.","Você pode escolher uma camisa vermelha ou azul."],
     ["enough","suficiente","We have enough food for everyone.","Temos comida suficiente para todos."],
+    ["suitcase","mala","I put my clothes in a suitcase.","Eu coloquei minhas roupas em uma mala."],
+    ["ticket","bilhete ou passagem","You need a ticket to get on the bus.","Você precisa de uma passagem para entrar no ônibus."],
+    ["platform","plataforma de embarque","Our train leaves from platform three.","Nosso trem parte da plataforma três."],
+    ["entrance","entrada","The entrance to the museum is on the left.","A entrada do museu fica à esquerda."],
+    ["exit","saída","Use this exit to leave the building.","Use esta saída para sair do prédio."],
+    ["queue","fila","We waited in a queue outside the cinema.","Nós esperamos em uma fila do lado de fora do cinema."],
+    ["bill","conta a pagar","We asked the waiter for the bill after dinner.","Nós pedimos a conta ao garçom depois do jantar."],
+    ["change","troco","I paid ten pounds and got two pounds in change.","Eu paguei dez libras e recebi duas libras de troco."],
+    ["repair","consertar","Can you repair my broken bicycle?","Você pode consertar minha bicicleta quebrada?"],
+    ["complain","reclamar","We had to complain because our room was dirty.","Nós tivemos de reclamar porque nosso quarto estava sujo."],
+    ["forget","esquecer","Do not forget to bring your keys.","Não se esqueça de trazer suas chaves."],
+    ["remember","lembrar","Do you remember the name of that hotel?","Você se lembra do nome daquele hotel?"],
+    ["decide","decidir","We need to decide where to eat tonight.","Nós precisamos decidir onde comer esta noite."],
+    ["healthy","saudável","Fruit is a healthy snack.","Fruta é um lanche saudável."],
+    ["noisy","barulhento","The street is very noisy at night.","A rua é muito barulhenta à noite."],
+    ["quiet","silencioso","We found a quiet place to study.","Nós encontramos um lugar silencioso para estudar."],
+    ["polite","educado ou cortês","It is polite to say thank you.","É educado dizer obrigado."],
+    ["comfortable","confortável","This sofa is comfortable to sit on.","Este sofá é confortável para sentar."],
+    ["stairs","escada entre andares","We took the stairs to the second floor.","Nós subimos de escada até o segundo andar."],
+    ["across","do outro lado de","The bank is across the road from the supermarket.","O banco fica do outro lado da rua, em frente ao supermercado."],
   ],
   B1: [
     ["reliable","confiável","You can trust her; she is very reliable.","Você pode confiar nela; ela é muito confiável."],
@@ -53,6 +93,26 @@ const content: Record<CefrLevel, [string, string, string, string][]> = {
     ["require","exigir ou necessitar","This job will require some experience.","Este trabalho exigirá alguma experiência."],
     ["deal with","lidar com","She knows how to deal with difficult situations.","Ela sabe lidar com situações difíceis."],
     ["keep up with","acompanhar o ritmo de","I walk fast to keep up with my brother.","Eu ando rápido para acompanhar o ritmo do meu irmão."],
+    ["disappointed","decepcionado","She was disappointed when the concert was cancelled.","Ela ficou decepcionada quando o show foi cancelado."],
+    ["expect","esperar que algo aconteça","We expect the parcel to arrive tomorrow.","Nós esperamos que o pacote chegue amanhã."],
+    ["manage","conseguir realizar algo","Did you manage to finish the report on time?","Você conseguiu terminar o relatório no prazo?"],
+    ["suggest","sugerir","I suggest taking the earlier bus.","Eu sugiro pegar o ônibus mais cedo."],
+    ["opportunity","oportunidade","The course gave me an opportunity to meet new people.","O curso me deu uma oportunidade de conhecer pessoas novas."],
+    ["environment","meio ambiente","Using less plastic helps protect the environment.","Usar menos plástico ajuda a proteger o meio ambiente."],
+    ["reduce","reduzir","We want to reduce the amount of electricity we use.","Nós queremos reduzir a quantidade de eletricidade que usamos."],
+    ["waste","desperdiçar","Do not waste water while you brush your teeth.","Não desperdice água enquanto escova os dentes."],
+    ["increase","aumentar","The company plans to increase the number of buses.","A empresa planeja aumentar o número de ônibus."],
+    ["experience","experiência prática","She gained useful experience working in a hotel.","Ela ganhou experiência útil trabalhando em um hotel."],
+    ["advantage","vantagem","Living near the station is a big advantage.","Morar perto da estação é uma grande vantagem."],
+    ["would rather","preferir","I would rather stay home than go out tonight.","Eu preferiria ficar em casa a sair esta noite."],
+    ["unless","a menos que","We will have a picnic unless it rains.","Nós faremos um piquenique, a menos que chova."],
+    ["instead","em vez disso","We did not drive; we took the train instead.","Nós não fomos de carro; em vez disso, pegamos o trem."],
+    ["support","apoiar","My friends support my decision to study abroad.","Meus amigos apoiam minha decisão de estudar no exterior."],
+    ["belong","pertencer","Does this jacket belong to you?","Esta jaqueta pertence a você?"],
+    ["behave","comportar-se","The children behave well during the lessons.","As crianças se comportam bem durante as aulas."],
+    ["apply","candidatar-se","I want to apply for a job at the library.","Eu quero me candidatar a um emprego na biblioteca."],
+    ["give up","desistir","Learning takes time, so do not give up.","Aprender leva tempo, então não desista."],
+    ["look forward to","aguardar com expectativa positiva","I look forward to seeing you next week.","Eu estou animado para ver você na semana que vem."],
   ],
   B2: [
     ["reluctant","relutante","He was reluctant to share his personal details.","Ele estava relutante em compartilhar seus dados pessoais."],
@@ -70,6 +130,26 @@ const content: Record<CefrLevel, [string, string, string, string][]> = {
     ["assess","avaliar","The team will assess the risks before starting.","A equipe avaliará os riscos antes de começar."],
     ["compelling","convincente","She presented compelling evidence for her argument.","Ela apresentou evidências convincentes para seu argumento."],
     ["undermine","enfraquecer","Constant criticism can undermine a person's confidence.","Críticas constantes podem enfraquecer a confiança de uma pessoa."],
+    ["consequence","consequência","One consequence of the delay was a higher delivery cost.","Uma consequência do atraso foi um custo de entrega maior."],
+    ["sustainable","sustentável","The city is investing in sustainable transport.","A cidade está investindo em transporte sustentável."],
+    ["acknowledge","reconhecer ou admitir um fato","The manager had to acknowledge that mistakes had been made.","O gerente teve de reconhecer que erros haviam sido cometidos."],
+    ["negotiate","negociar","The union will negotiate better working conditions.","O sindicato negociará melhores condições de trabalho."],
+    ["assumption","suposição","The plan is based on the assumption that demand will rise.","O plano se baseia na suposição de que a demanda aumentará."],
+    ["significant","importante ou expressivo","There has been a significant improvement in air quality.","Houve uma melhoria expressiva na qualidade do ar."],
+    ["persuade","convencer alguém a fazer algo","We tried to persuade him to reconsider his decision.","Nós tentamos convencê-lo a reconsiderar sua decisão."],
+    ["prevent","impedir que algo aconteça","Regular checks can prevent equipment failures.","Verificações regulares podem impedir falhas nos equipamentos."],
+    ["obstacle","obstáculo","A lack of funding remains the biggest obstacle.","A falta de financiamento continua sendo o maior obstáculo."],
+    ["outcome","resultado final","Nobody could predict the outcome of the negotiations.","Ninguém conseguia prever o resultado das negociações."],
+    ["distinguish","distinguir","It is important to distinguish facts from opinions.","É importante distinguir fatos de opiniões."],
+    ["contribute","contribuir","Everyone can contribute to the success of the project.","Todos podem contribuir para o sucesso do projeto."],
+    ["establish","estabelecer ou criar","The charity hopes to establish a new training centre.","A instituição beneficente espera criar um novo centro de treinamento."],
+    ["undergo","passar por um processo","The building will undergo major repairs next year.","O prédio passará por grandes reparos no ano que vem."],
+    ["raise awareness","conscientizar","The campaign aims to raise awareness of food waste.","A campanha busca conscientizar as pessoas sobre o desperdício de alimentos."],
+    ["rule out","descartar uma possibilidade","We cannot rule out the possibility of further delays.","Nós não podemos descartar a possibilidade de novos atrasos."],
+    ["put up with","tolerar ou aguentar","Residents should not have to put up with constant noise.","Os moradores não deveriam ter de aguentar barulho constante."],
+    ["straightforward","simples e fácil de entender","The instructions are straightforward and easy to follow.","As instruções são simples e fáceis de seguir."],
+    ["thorough","completo e cuidadoso","The engineers carried out a thorough inspection.","Os engenheiros fizeram uma inspeção completa e cuidadosa."],
+    ["regardless","independentemente","The service is available to everyone, regardless of income.","O serviço está disponível para todos, independentemente da renda."],
   ],
   C1: [
     ["nuanced","que considera diferenças sutis","Her nuanced analysis considered several perspectives.","Sua análise detalhada e sensível às nuances considerou várias perspectivas."],
@@ -87,6 +167,26 @@ const content: Record<CefrLevel, [string, string, string, string][]> = {
     ["concede","admitir após resistência","He had to concede that his opponent was right.","Ele teve de admitir que seu oponente estava certo."],
     ["scrutinize","examinar com atenção crítica","The committee will scrutinize every detail of the budget.","O comitê examinará cuidadosamente cada detalhe do orçamento."],
     ["take for granted","não dar o devido valor por considerar garantido","We often take for granted the support we receive.","Muitas vezes não damos o devido valor ao apoio que recebemos."],
+    ["coherent","coerente e bem articulado","The essay presents a coherent argument despite its complexity.","O ensaio apresenta um argumento coerente, apesar de sua complexidade."],
+    ["allegedly","supostamente, segundo alegações","The documents were allegedly leaked by a former employee.","Segundo alegações, os documentos foram vazados por um ex-funcionário."],
+    ["notwithstanding","apesar de","Notwithstanding the criticism, the committee approved the proposal.","Apesar das críticas, o comitê aprovou a proposta."],
+    ["undoubtedly","sem dúvida","Her work has undoubtedly influenced a generation of researchers.","O trabalho dela sem dúvida influenciou uma geração de pesquisadores."],
+    ["comprehensive","abrangente","The review offers a comprehensive account of the available evidence.","A revisão oferece um relato abrangente das evidências disponíveis."],
+    ["subtle","sutil","There is a subtle difference between the two interpretations.","Há uma diferença sutil entre as duas interpretações."],
+    ["resilient","capaz de se recuperar diante de dificuldades","The community proved resilient after the severe economic shock.","A comunidade mostrou capacidade de recuperação após o grave choque econômico."],
+    ["inevitable","inevitável","Some disruption is inevitable during such a major transition.","Alguma perturbação é inevitável durante uma transição tão grande."],
+    ["viable","capaz de funcionar de forma sustentável","Without reliable funding, the organisation is no longer viable.","Sem financiamento confiável, a organização não tem mais condições de se manter."],
+    ["constraint","restrição ou limitação","Time is the main constraint on the scope of our research.","O tempo é a principal limitação ao alcance da nossa pesquisa."],
+    ["implication","consequência implícita ou possível","One implication of the ruling is that earlier cases may be reopened.","Uma possível consequência da decisão é que casos anteriores sejam reabertos."],
+    ["incentive","incentivo","The scheme offers an incentive for businesses to reduce emissions.","O programa oferece um incentivo para as empresas reduzirem as emissões."],
+    ["prevail","prevalecer","They hoped that reason would prevail over political pressure.","Eles esperavam que a razão prevalecesse sobre a pressão política."],
+    ["exacerbate","agravar","Poor communication could exacerbate existing tensions.","Uma comunicação ruim poderia agravar as tensões existentes."],
+    ["dispel","dissipar uma dúvida ou crença","The detailed report helped dispel fears about the proposal.","O relatório detalhado ajudou a dissipar os receios sobre a proposta."],
+    ["put into perspective","colocar em perspectiva","Comparing the figures over a decade helps put the recent decline into perspective.","Comparar os números ao longo de uma década ajuda a colocar a queda recente em perspectiva."],
+    ["contingent on","dependente de uma condição","Approval is contingent on the completion of an independent review.","A aprovação depende da conclusão de uma revisão independente."],
+    ["in the light of","à luz de ou considerando","The policy must be revised in the light of new evidence.","A política precisa ser revista à luz das novas evidências."],
+    ["tentative","provisório e sujeito a confirmação","The researchers offered a tentative explanation pending further tests.","Os pesquisadores apresentaram uma explicação provisória, aguardando mais testes."],
+    ["profound","profundo ou de grande intensidade","The discovery had a profound effect on our understanding of memory.","A descoberta teve um efeito profundo sobre nossa compreensão da memória."],
   ],
   C2: [
     ["ubiquitous","presente em toda parte","Smartphones have become ubiquitous in daily life.","Os smartphones se tornaram presentes em toda parte no cotidiano."],
@@ -104,6 +204,26 @@ const content: Record<CefrLevel, [string, string, string, string][]> = {
     ["abstruse","difícil de compreender","The article's abstruse argument puzzled even specialists.","O argumento difícil de compreender do artigo confundiu até especialistas."],
     ["magnanimous","generoso, especialmente com um adversário","She was magnanimous in victory and praised her rival.","Ela foi generosa na vitória e elogiou sua rival."],
     ["conundrum","problema complexo ou enigma","The conflicting evidence presented a conundrum for investigators.","As evidências conflitantes representaram um enigma para os investigadores."],
+    ["inchoate","ainda não plenamente formado","The movement gave expression to an inchoate sense of public discontent.","O movimento deu expressão a uma sensação ainda indefinida de descontentamento público."],
+    ["inscrutable","difícil de interpretar ou decifrar","Her inscrutable expression gave no hint of her reaction to the verdict.","Sua expressão indecifrável não dava pistas de sua reação ao veredito."],
+    ["disingenuous","que disfarça suas reais intenções","It was disingenuous to present a carefully orchestrated campaign as spontaneous.","Foi pouco sincero apresentar uma campanha cuidadosamente orquestrada como espontânea."],
+    ["acquiesce","aceitar sem protestar, mesmo sem entusiasmo","Rather than prolong the dispute, the board chose to acquiesce in the decision.","Em vez de prolongar a disputa, o conselho optou por aceitar a decisão sem protestar."],
+    ["ostensibly","aparentemente, segundo a razão declarada","The meeting was ostensibly about budgets, though succession dominated the discussion.","A reunião era aparentemente sobre orçamentos, embora a sucessão tenha dominado a discussão."],
+    ["excoriate","criticar com extrema severidade","The editorial proceeded to excoriate officials for their prolonged inaction.","O editorial passou a criticar duramente os responsáveis por sua inação prolongada."],
+    ["ameliorate","melhorar uma situação desfavorável","The reforms sought to ameliorate conditions without addressing their underlying causes.","As reformas buscavam melhorar as condições sem tratar de suas causas subjacentes."],
+    ["trenchant","incisivo e contundente","Her trenchant critique exposed contradictions that earlier reviewers had overlooked.","Sua crítica incisiva expôs contradições que os avaliadores anteriores haviam ignorado."],
+    ["equivocal","deliberadamente pouco claro ou inconclusivo","His equivocal response left both sides unsure of where he stood.","Sua resposta pouco clara deixou ambos os lados sem saber qual era sua posição."],
+    ["recalcitrant","resistente a obedecer ou cooperar","The mediator struggled to bring the recalcitrant factions back to the table.","O mediador teve dificuldade para trazer as facções resistentes à cooperação de volta à mesa."],
+    ["perspicacious","que percebe e compreende com grande clareza","A perspicacious observer would have noticed the flaw in their reasoning.","Um observador perspicaz teria percebido a falha no raciocínio deles."],
+    ["assiduous","persistentemente dedicado e aplicado","Her assiduous attention to archival sources transformed the investigation.","Sua atenção diligente às fontes dos arquivos transformou a investigação."],
+    ["capricious","que muda de modo imprevisível","Investment suffered under a capricious administration that repeatedly reversed its policies.","Os investimentos sofreram sob uma administração imprevisível que repetidamente revertia suas políticas."],
+    ["laconic","que se expressa com poucas palavras","His laconic reply revealed little beyond a firm refusal to negotiate.","Sua resposta lacônica revelou pouco além de uma firme recusa em negociar."],
+    ["inveterate","habitual e profundamente arraigado","An inveterate sceptic, she demanded evidence for even the most widely accepted claims.","Cética por hábito arraigado, ela exigia evidências até para as alegações mais amplamente aceitas."],
+    ["cogent","logicamente forte e persuasivo","The judgement offered a cogent analysis of the competing constitutional principles.","A decisão apresentou uma análise logicamente convincente dos princípios constitucionais em conflito."],
+    ["specious","aparentemente correto, mas enganoso","The argument was specious: its elegant wording concealed a fundamental contradiction.","O argumento parecia correto, mas era enganoso: sua redação elegante escondia uma contradição fundamental."],
+    ["inexorable","impossível de deter","The novel traces the inexorable decline of a once influential dynasty.","O romance acompanha o declínio impossível de deter de uma dinastia antes influente."],
+    ["circumspect","cauteloso ao avaliar riscos e consequências","Diplomats remained circumspect, unwilling to endorse an agreement they had not examined.","Os diplomatas permaneceram cautelosos, sem disposição para apoiar um acordo que não haviam examinado."],
+    ["prescient","capaz de antecipar acontecimentos","Her once dismissed warning now seems remarkably prescient.","Seu alerta, antes ignorado, agora parece ter antecipado os acontecimentos de forma notável."],
   ],
 };
 export const vocabulary: VocabularyEntry[] = Object.entries(content).flatMap(([level, rows]) => rows.map(([word, meaning, example, translation], i) => ({ id: `${level}-vocab-${i + 1}`, level: level as CefrLevel, word, meaning, example, translation })));
@@ -113,10 +233,47 @@ function shuffle<T>(items: T[], random: () => number): T[] {
   for (let i = result.length - 1; i > 0; i--) { const j = Math.floor(random() * (i + 1)); [result[i], result[j]] = [result[j], result[i]]; }
   return result;
 }
-export function makeVocabularyRound(level: CefrLevel, random = Math.random): QuizQuestion[] {
+export type QuizDrawHistory = Partial<Record<CefrLevel, string[]>>;
+export const quizDrawHistoryKey = (userId: string) => `fluencia-vocabulary-draws-v1:${userId}`;
+
+/** Ignore removed, duplicate and foreign-level IDs; new entries remain unseen. */
+export function readQuizDrawHistory(raw: string | null): QuizDrawHistory {
+  try {
+    const value = JSON.parse(raw || "{}");
+    const history: QuizDrawHistory = {};
+    for (const level of Object.keys(content) as CefrLevel[]) {
+      const ids = value?.[level];
+      if (!Array.isArray(ids)) continue;
+      const valid = new Set(vocabulary.filter((item) => item.level === level).map((item) => item.id));
+      history[level] = [...new Set(ids.filter((id): id is string => typeof id === "string" && valid.has(id)))];
+    }
+    return history;
+  } catch { return {}; }
+}
+
+/** Exhaust unseen entries before starting a new cycle, even across reloads.
+ * A cycle boundary can fall inside a round; never repeat an ID in that round.
+ * Persist draws independently of scores: abandoning a round earns no credit.
+ */
+export function drawVocabularyRound(level: CefrLevel, seenIds: readonly string[] = [], random = Math.random): { round: QuizQuestion[]; seenIds: string[] } {
   const pool = vocabulary.filter((item) => item.level === level);
-  return shuffle(pool, random).slice(0, 10).map((item) => ({ ...item,
-    options: shuffle([item.meaning, ...shuffle(pool.filter((other) => other.id !== item.id), random).slice(0, 3).map((other) => other.meaning)], random) }));
+  const valid = new Set(pool.map((item) => item.id));
+  const seen = new Set(seenIds.filter((id) => valid.has(id)));
+  const size = Math.min(10, pool.length);
+  const selected = shuffle(pool.filter((item) => !seen.has(item.id)), random).slice(0, size);
+  let nextSeen = [...seen, ...selected.map((item) => item.id)];
+  if (selected.length < size) {
+    const current = new Set(selected.map((item) => item.id));
+    const refill = shuffle(pool.filter((item) => !current.has(item.id)), random).slice(0, size - selected.length);
+    selected.push(...refill);
+    nextSeen = refill.map((item) => item.id);
+  }
+  return { seenIds: nextSeen, round: selected.map((item) => ({ ...item,
+    options: shuffle([item.meaning, ...shuffle([...new Set(pool.filter((other) => other.meaning !== item.meaning).map((other) => other.meaning))], random).slice(0, 3)], random) })) };
+}
+
+export function makeVocabularyRound(level: CefrLevel, random = Math.random): QuizQuestion[] {
+  return drawVocabularyRound(level, [], random).round;
 }
 export type QuizAnswer = { id: string; selected: string; correct: boolean };
 export type QuizState = { phase: "idle" | "playing" | "finished"; round: QuizQuestion[]; index: number; selected: string; checked: boolean; answers: QuizAnswer[] };
